@@ -6,6 +6,7 @@
  */
 
 import { SystemID, DomainID } from '../types/identifiers.ts';
+import { FixedRuntimeClock, RuntimeClock } from './runtime-clock.ts';
 
 export interface ExecutionTraceEntry {
   executionId: string;
@@ -22,17 +23,25 @@ export interface ExecutionTraceEntry {
 }
 
 export class ExecutionTracer {
+  private readonly runtimeClock: RuntimeClock;
   private entries: ExecutionTraceEntry[] = [];
 
-  constructor(private readonly executionId: string) {}
+  constructor(
+    private readonly executionId: string,
+    runtimeClock: RuntimeClock = new FixedRuntimeClock()
+  ) {
+    this.runtimeClock = runtimeClock;
+  }
 
   public record(entry: Omit<ExecutionTraceEntry, 'executionId' | 'timestamp'>): void {
     const traceItem: ExecutionTraceEntry = Object.freeze({
       executionId: this.executionId,
-      timestamp: Date.now(),
+      timestamp: this.runtimeClock.now(),
       ...entry,
       ruleRefs: entry.ruleRefs ? Object.freeze([...entry.ruleRefs]) : undefined,
-      validationRefs: entry.validationRefs ? Object.freeze([...entry.validationRefs]) : undefined,
+      validationRefs: entry.validationRefs
+        ? Object.freeze([...entry.validationRefs])
+        : undefined,
       details: entry.details ? Object.freeze({ ...entry.details }) : undefined
     });
 

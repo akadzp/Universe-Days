@@ -18,6 +18,8 @@ export * from './workflow.ts';
 export * from './llm-boundary.ts';
 export * from './result.ts';
 export * from './orchestrator.ts';
+export * from './runtime-clock.ts';
+export * from './determinism.ts';
 
 // Pre-existing Phase 2 Engine Exports
 export * from './rule-engine.ts';

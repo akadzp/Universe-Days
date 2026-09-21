@@ -2,11 +2,15 @@
  * Phase 9: Idempotency Manager
  *
  * Enforces command idempotency based on command policy and correlation/idempotency keys.
+ *
+ * Timestamp values are runtime metadata supplied by an injected clock.
+ * The default clock is deterministic.
  */
 
 import { UniverseCommand } from './command.ts';
 import { Result, success, failure, conflict } from '../types/result.ts';
 import { EngineErrorCode } from '../types/errors.ts';
+import { FixedRuntimeClock, RuntimeClock } from './runtime-clock.ts';
 
 export interface IdempotencyRecord {
   idempotencyKey: string;
@@ -19,13 +23,20 @@ export interface IdempotencyRecord {
 }
 
 export class IdempotencyStore {
+  private readonly runtimeClock: RuntimeClock;
   private records: Map<string, IdempotencyRecord> = new Map();
 
-  public checkAndRegister(command: UniverseCommand): Result<{ isDuplicate: boolean; previousRecord?: IdempotencyRecord }> {
-    const key = command.idempotencyKey || (command.isIdempotent ? command.commandId : undefined);
+  constructor(runtimeClock: RuntimeClock = new FixedRuntimeClock()) {
+    this.runtimeClock = runtimeClock;
+  }
+
+  public checkAndRegister(
+    command: UniverseCommand
+  ): Result<{ isDuplicate: boolean; previousRecord?: IdempotencyRecord }> {
+    const key = command.idempotencyKey ||
+      (command.isIdempotent ? command.commandId : undefined);
 
     if (!key) {
-      // Non-idempotent command, allowed to execute
       return success({ isDuplicate: false });
     }
 
@@ -39,17 +50,22 @@ export class IdempotencyStore {
       }
 
       existing.executionCount++;
-      existing.lastExecutedAt = Date.now();
-      return success({ isDuplicate: true, previousRecord: Object.freeze({ ...existing }) });
+      existing.lastExecutedAt = this.runtimeClock.now();
+
+      return success({
+        isDuplicate: true,
+        previousRecord: Object.freeze({ ...existing })
+      });
     }
 
-    // Register new key
+    const timestamp = this.runtimeClock.now();
+
     const record: IdempotencyRecord = {
       idempotencyKey: key,
       commandId: command.commandId,
       commandType: command.commandType,
-      firstExecutedAt: Date.now(),
-      lastExecutedAt: Date.now(),
+      firstExecutedAt: timestamp,
+      lastExecutedAt: timestamp,
       executionCount: 1
     };
 

@@ -1,17 +1,11 @@
 /**
  * Phase 9: LLM Boundary & Non-Authority Adapter
  *
- * Defines the contract and boundary for LLM interaction.
- *
- * CRITICAL INVARIANTS:
- * 1. LLM is NOT an architectural authority.
- * 2. LLM cannot mutate Canon directly.
- * 3. LLM cannot determine Universe Date or Clocks.
- * 4. LLM cannot invent IDs, ownership, or permissions.
- * 5. LLM output must pass full domain owner validation.
+ * LLM is a proposal/semantic adapter only.
+ * Mock output is deterministic and contains no wall-clock metadata.
  */
 
-import { Result, success, failure, blocked } from '../types/result.ts';
+import { Result, success, failure } from '../types/result.ts';
 import { EngineErrorCode } from '../types/errors.ts';
 
 export type LLMCapability = 'TEXT_GENERATION' | 'STRUCTURED_DATA' | 'SUMMARIZATION' | 'PROPOSAL';
@@ -37,10 +31,6 @@ export interface LLMAdapter {
   invoke<TData = unknown>(request: LLMRequest): Promise<Result<LLMResponse<TData>>>;
 }
 
-/**
- * Mock LLM Adapter for Phase 9 testing.
- * Strictly guarantees that LLM outputs are treated as PROPOSALS, not authoritative facts.
- */
 export class MockLLMAdapter implements LLMAdapter {
   private responses: Map<string, unknown> = new Map();
 
@@ -48,7 +38,9 @@ export class MockLLMAdapter implements LLMAdapter {
     this.responses.set(promptKeyword, responseData);
   }
 
-  public async invoke<TData = unknown>(request: LLMRequest): Promise<Result<LLMResponse<TData>>> {
+  public async invoke<TData = unknown>(
+    request: LLMRequest
+  ): Promise<Result<LLMResponse<TData>>> {
     if (!request.requestId || !request.prompt) {
       return failure(
         EngineErrorCode.INVALID_DOMAIN_REQUEST,
@@ -57,6 +49,7 @@ export class MockLLMAdapter implements LLMAdapter {
     }
 
     let matchingData: unknown = null;
+
     for (const [key, val] of this.responses.entries()) {
       if (request.prompt.includes(key)) {
         matchingData = val;
@@ -66,10 +59,15 @@ export class MockLLMAdapter implements LLMAdapter {
 
     const response: LLMResponse<TData> = {
       requestId: request.requestId,
-      rawText: JSON.stringify(matchingData ?? { text: 'Mock LLM proposal output' }),
+      rawText: JSON.stringify(
+        matchingData ?? { text: 'Mock LLM proposal output' }
+      ),
       parsedData: (matchingData as TData) ?? undefined,
       tokensUsed: 42,
-      metadata: { mock: true, generatedAt: Date.now() }
+      metadata: {
+        mock: true,
+        deterministic: true
+      }
     };
 
     return success(response);

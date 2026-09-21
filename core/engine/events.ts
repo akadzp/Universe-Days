@@ -5,6 +5,8 @@
  * Strictly decoupled from in-universe factual events (UniverseEvent).
  */
 
+import { FixedRuntimeClock, RuntimeClock } from './runtime-clock.ts';
+
 export type EngineEventName =
   | 'execution.started'
   | 'execution.step.started'
@@ -23,10 +25,16 @@ export interface EngineRuntimeEvent<TPayload = unknown> {
   payload: TPayload;
 }
 
-export type EngineEventListener<TPayload = unknown> = (event: EngineRuntimeEvent<TPayload>) => void | Promise<void>;
+export type EngineEventListener<TPayload = unknown> =
+  (event: EngineRuntimeEvent<TPayload>) => void | Promise<void>;
 
 export class EngineEventBus {
+  private readonly runtimeClock: RuntimeClock;
   private listeners: Map<EngineEventName, Set<EngineEventListener<any>>> = new Map();
+
+  constructor(runtimeClock: RuntimeClock = new FixedRuntimeClock()) {
+    this.runtimeClock = runtimeClock;
+  }
 
   public subscribe<TPayload = unknown>(
     eventName: EngineEventName,
@@ -50,7 +58,7 @@ export class EngineEventBus {
     const event: EngineRuntimeEvent<TPayload> = {
       eventName,
       executionId,
-      timestamp: Date.now(),
+      timestamp: this.runtimeClock.now(),
       payload
     };
 

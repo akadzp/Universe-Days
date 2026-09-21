@@ -1,5 +1,6 @@
 import { TaskID, RuleID, EntityID, makeTaskID } from '../types/identifiers.ts';
 import { ExecutionContextData, CompactRuntimeContext } from '../types/execution-context.ts';
+import { FixedRuntimeClock, RuntimeClock } from './runtime-clock.ts';
 
 export interface ValidationState {
   isValid: boolean;
@@ -21,6 +22,8 @@ export interface ExecutionContext<TState = unknown> {
 }
 
 export class ContextBuilder<TState = unknown> {
+  private readonly clock: RuntimeClock;
+
   private task: TaskID = makeTaskID('TASK-UNASSIGNED');
   private activeRules: RuleID[] = [];
   private relevantState: TState = {} as TState;
@@ -30,11 +33,16 @@ export class ContextBuilder<TState = unknown> {
   private entityReferences: EntityID[] = [];
   private constraints: string[] = [];
   private dependencyStatus: Record<string, string> = {};
-  private validationState: ValidationState = {
-    isValid: true,
-    checkedAt: Date.now(),
-    violations: []
-  };
+  private validationState: ValidationState;
+
+  constructor(clock: RuntimeClock = new FixedRuntimeClock()) {
+    this.clock = clock;
+    this.validationState = {
+      isValid: true,
+      checkedAt: this.clock.now(),
+      violations: []
+    };
+  }
 
   public setTask(taskId: TaskID | string): this {
     this.task = makeTaskID(String(taskId));
@@ -99,15 +107,12 @@ export class ContextBuilder<TState = unknown> {
   public setValidationState(isValid: boolean, violations: string[] = []): this {
     this.validationState = {
       isValid,
-      checkedAt: Date.now(),
+      checkedAt: this.clock.now(),
       violations
     };
     return this;
   }
 
-  /**
-   * Builds backward-compatible ExecutionContext.
-   */
   public build(): ExecutionContext<TState> {
     return {
       task: this.task,
@@ -119,13 +124,10 @@ export class ContextBuilder<TState = unknown> {
       entityReferences: [...this.entityReferences],
       constraints: [...this.constraints],
       validationState: { ...this.validationState },
-      generatedAt: Date.now()
+      generatedAt: this.clock.now()
     };
   }
 
-  /**
-   * Produces ExecutionContextData suitable for the deterministic RuleEvaluator.
-   */
   public toExecutionContextData(): ExecutionContextData {
     return {
       flags: { ...this.flags },
@@ -146,9 +148,6 @@ export class ContextBuilder<TState = unknown> {
     };
   }
 
-  /**
-   * Produces compact machine-readable context representation.
-   */
   public buildCompactContext(): CompactRuntimeContext {
     return {
       task: this.task,
@@ -163,7 +162,7 @@ export class ContextBuilder<TState = unknown> {
         isValid: this.validationState.isValid,
         violations: [...this.validationState.violations]
       },
-      generatedAt: Date.now()
+      generatedAt: this.clock.now()
     };
   }
 }

@@ -13,6 +13,7 @@ import { RuntimeRule } from '../types/rules.ts';
 import { ConflictRecord } from '../architecture/conflict.ts';
 import { DomainChangeResult } from '../domains/contracts/common.ts';
 import { UniverseModel } from '../universe/model/universe.ts';
+import { FixedRuntimeClock, RuntimeClock } from './runtime-clock.ts';
 
 export interface ScopedTemporalContext {
   universeTime: string;
@@ -35,6 +36,7 @@ export interface ExecutionContextParams {
   temporalContext: ScopedTemporalContext;
   relevantRules?: RuntimeRule[];
   permissions?: Set<string>;
+  runtimeClock?: RuntimeClock;
 }
 
 export class ExecutionContext {
@@ -46,6 +48,8 @@ export class ExecutionContext {
   public readonly lifecycle: ExecutionLifecycleStateMachine;
   public readonly tracer: ExecutionTracer;
 
+  private readonly runtimeClock: RuntimeClock;
+
   public relevantRules: RuntimeRule[] = [];
   public permissions: Set<string> = new Set();
   public loadedEntities: Map<string, unknown> = new Map();
@@ -54,11 +58,12 @@ export class ExecutionContext {
   public conflicts: ConflictRecord[] = [];
   public metadata: Record<string, unknown> = {};
 
-  // Track changed entity IDs for transaction boundary and notifications
   public changedEntityRefs: Set<string> = new Set();
   public openUnresolvedConditions: string[] = [];
 
   constructor(params: ExecutionContextParams) {
+    this.runtimeClock = params.runtimeClock ?? new FixedRuntimeClock();
+
     this.executionId = params.executionId;
     this.command = params.command;
     this.actor = typeof params.actor === 'string' ? makeSystemID(params.actor) : params.actor;
@@ -67,46 +72,31 @@ export class ExecutionContext {
     this.relevantRules = params.relevantRules ?? [];
     this.permissions = params.permissions ?? new Set();
     this.lifecycle = new ExecutionLifecycleStateMachine(ExecutionLifecycleStatus.CREATED);
-    this.tracer = new ExecutionTracer(this.executionId);
+    this.tracer = new ExecutionTracer(this.executionId, this.runtimeClock);
   }
 
-  /**
-   * Helper to add a validation result to the context.
-   */
   public recordValidation(validatorName: string, valid: boolean, violations: string[] = []): void {
     const record: ValidationRecord = {
       validatorName,
       valid,
       violations: [...violations],
-      checkedAt: Date.now()
+      checkedAt: this.runtimeClock.now()
     };
     this.validationResults.push(record);
   }
 
-  /**
-   * Helper to record an identified conflict.
-   */
   public recordConflict(conflictRecord: ConflictRecord): void {
     this.conflicts.push(conflictRecord);
   }
 
-  /**
-   * Check if any validation has failed.
-   */
   public hasValidationFailures(): boolean {
     return this.validationResults.some(v => !v.valid);
   }
 
-  /**
-   * Check if any unresolved critical conflicts exist.
-   */
   public hasCriticalConflicts(): boolean {
     return this.conflicts.some(c => c.severity === 'CRITICAL' && c.status !== 'RESOLVED');
   }
 
-  /**
-   * Minimized export of context data for rule evaluation.
-   */
   public toRuleEvaluationContext(): Record<string, unknown> {
     return {
       command: {

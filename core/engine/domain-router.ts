@@ -3,15 +3,20 @@
  *
  * Routes domain operations to authoritative Domain Owners using Phase 7 DomainGateway.
  * Strictly enforces READ -> REQUEST -> APPLY -> RESULT and rejects unauthorized or unknown owners.
+ *
+ * Determinism:
+ * - Query request IDs are derived from explicit request inputs.
+ * - No wall-clock or random fallback is used.
  */
 
-import { DomainID, SystemID, makeDomainID, makeSystemID } from '../types/identifiers.ts';
-import { Result, success, failure, blocked, conflict } from '../types/result.ts';
+import { DomainID, SystemID, makeDomainID } from '../types/identifiers.ts';
+import { Result, success, failure, blocked } from '../types/result.ts';
 import { EngineErrorCode } from '../types/errors.ts';
 import { getOwner, isKnownDomain } from '../architecture/ownership.ts';
 import { ArchitectureAction, canPerformAction } from '../architecture/authority.ts';
 import { DomainGateway } from '../domains/gateway.ts';
 import { DomainChangeRequest, DomainChangeResult, DomainQueryResult } from '../domains/contracts/common.ts';
+import { deterministicId } from './determinism.ts';
 
 export interface RoutedDomainOperation<TData = unknown> {
   domain: DomainID;
@@ -21,9 +26,6 @@ export interface RoutedDomainOperation<TData = unknown> {
 }
 
 export class DomainRouter {
-  /**
-   * Resolves the authoritative owner for a given domain string or DomainID.
-   */
   public static resolveOwner(domain: DomainID | string): Result<SystemID> {
     const domainStr = String(domain);
     const domainId = makeDomainID(domainStr);
@@ -46,9 +48,6 @@ export class DomainRouter {
     return success(owner.ownerId);
   }
 
-  /**
-   * Executes an authorized read query via DomainGateway.
-   */
   public static executeQuery<TFilter = unknown, TData = unknown>(
     actor: SystemID | string,
     domain: DomainID | string,
@@ -59,17 +58,21 @@ export class DomainRouter {
       return failure(ownerRes.error, ownerRes.message);
     }
 
+    const requestId = deterministicId(
+      'Q',
+      String(actor),
+      String(domain),
+      query.queryType,
+      query.filter ?? null
+    );
+
     return DomainGateway.query<TFilter, TData>(actor, domain, {
-      requestId: `Q_${Date.now()}`,
+      requestId: requestId as any,
       queryType: query.queryType,
       filter: query.filter
     });
   }
 
-  /**
-   * Routes a change request to the authoritative domain owner via DomainGateway.
-   * Enforces: requester can only REQUEST; Domain Owner APPLYs.
-   */
   public static executeChangeRequest<TChange = unknown, TResult = unknown>(
     actor: SystemID | string,
     domain: DomainID | string,
@@ -80,7 +83,6 @@ export class DomainRouter {
       return failure(ownerRes.error, ownerRes.message);
     }
 
-    // Check authority: actor must have at least REQUEST or WRITE authority for the domain
     const canReq = canPerformAction(actor, domain, ArchitectureAction.REQUEST);
     const canWrite = canPerformAction(actor, domain, ArchitectureAction.WRITE);
 

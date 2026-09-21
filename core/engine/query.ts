@@ -3,6 +3,10 @@
  *
  * Defines structured read-only queries across the Universe state.
  * Enforces zero-mutation guarantees and returns deep-frozen snapshots.
+ *
+ * Determinism:
+ * - Query execution metadata is derived from the explicit query.requestedAt input.
+ * - The processor never reads wall-clock time.
  */
 
 import { DomainID, SystemID, makeSystemID, makeDomainID } from '../types/identifiers.ts';
@@ -89,7 +93,6 @@ export class QueryProcessor {
         else if (domain === 'UNRESOLVED') data = universe.unresolvedConditions[id];
         else if (domain === 'ENGINE' || domain === 'EVENT') data = universe.events[id];
         else {
-          // Search across all domain maps
           data =
             universe.characters[id] ??
             universe.relationships[id] ??
@@ -113,7 +116,9 @@ export class QueryProcessor {
         break;
 
       case 'RELATIONSHIP':
-        data = query.targetEntityId ? universe.relationships[query.targetEntityId] : universe.relationships;
+        data = query.targetEntityId
+          ? universe.relationships[query.targetEntityId]
+          : universe.relationships;
         break;
 
       case 'CONTINUITY':
@@ -142,7 +147,7 @@ export class QueryProcessor {
       queryType: query.queryType,
       universeId: query.universeId,
       data: Object.freeze(data as TData),
-      executedAt: Date.now(),
+      executedAt: query.requestedAt,
       readOnly: true
     };
 

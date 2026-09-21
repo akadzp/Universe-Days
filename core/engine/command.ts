@@ -3,6 +3,12 @@
  *
  * Defines the generic Universe Command model strictly separating
  * mutating Commands from read-only Queries and output Results.
+ *
+ * Determinism:
+ * - No wall-clock fallback.
+ * - No random fallback.
+ * - requestedAt is caller-provided metadata; when omitted it is 0.
+ * - correlationId defaults deterministically from commandId.
  */
 
 import { DomainID, SystemID, makeSystemID, makeDomainID } from '../types/identifiers.ts';
@@ -76,30 +82,45 @@ export class CommandValidator {
       );
     }
 
+    const commandId = command.commandId.trim();
+
     const validated: UniverseCommand = {
-      commandId: command.commandId.trim(),
+      commandId,
       commandType: command.commandType.trim(),
-      requestedBy: typeof command.requestedBy === 'string' ? makeSystemID(command.requestedBy.trim()) : command.requestedBy,
-      target: command.target ? {
-        entityId: command.target.entityId?.trim(),
-        domain: command.target.domain ? makeDomainID(String(command.target.domain).trim()) : undefined,
-        entityType: command.target.entityType?.trim(),
-        path: command.target.path?.trim()
-      } : undefined,
+      requestedBy: typeof command.requestedBy === 'string'
+        ? makeSystemID(command.requestedBy.trim())
+        : command.requestedBy,
+      target: command.target
+        ? {
+            entityId: command.target.entityId?.trim(),
+            domain: command.target.domain
+              ? makeDomainID(String(command.target.domain).trim())
+              : undefined,
+            entityType: command.target.entityType?.trim(),
+            path: command.target.path?.trim()
+          }
+        : undefined,
       input: command.input ?? {},
       universeContext: {
         universeId: command.universeContext.universeId.trim(),
         periodRef: command.universeContext.periodRef?.trim(),
         universeTime: command.universeContext.universeTime?.trim()
       },
-      temporalContext: command.temporalContext ? {
-        effectiveTime: command.temporalContext.effectiveTime?.trim(),
-        expectedDurationMs: command.temporalContext.expectedDurationMs,
-        temporalAnchor: command.temporalContext.temporalAnchor?.trim()
-      } : undefined,
+      temporalContext: command.temporalContext
+        ? {
+            effectiveTime: command.temporalContext.effectiveTime?.trim(),
+            expectedDurationMs: command.temporalContext.expectedDurationMs,
+            temporalAnchor: command.temporalContext.temporalAnchor?.trim()
+          }
+        : undefined,
       executionMode: command.executionMode ?? 'TRANSACTIONAL',
-      requestedAt: command.requestedAt ?? Date.now(),
-      correlationId: command.correlationId?.trim() || `CORR_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+
+      // Runtime must never invent nondeterministic time.
+      requestedAt: command.requestedAt ?? 0,
+
+      // Stable fallback derived only from explicit input.
+      correlationId: command.correlationId?.trim() || `CORR_${commandId}`,
+
       idempotencyKey: command.idempotencyKey?.trim(),
       isIdempotent: command.isIdempotent ?? (command.idempotencyKey !== undefined),
       metadata: Object.freeze({ ...(command.metadata ?? {}) })
