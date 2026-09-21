@@ -1,0 +1,70 @@
+{
+  "version": "1.0.0",
+  "domains": {
+    "TEMPORAL": {
+      "owner": "TEMPORAL_SYSTEM",
+      "authorityLevel": 1,
+      "description": "Authoritative owner of temporal truth, cycle progression, and chronological ordering."
+    },
+    "CHARACTER": {
+      "owner": "CHARACTER_SYSTEM",
+      "authorityLevel": 2,
+      "description": "Authoritative owner of character identity, traits, status, and physical bounds."
+    },
+    "RELATIONSHIP": {
+      "owner": "RELATIONSHIP_SYSTEM",
+      "authorityLevel": 2,
+      "description": "Authoritative owner of inter-entity relationships, affinity, and relational dynamics."
+    },
+    "OBJECT": {
+      "owner": "OBJECT_SYSTEM",
+      "authorityLevel": 2,
+      "description": "Authoritative owner of items, relics, physical state, and possession."
+    },
+    "KNOWLEDGE": {
+      "owner": "KNOWLEDGE_SYSTEM",
+      "authorityLevel": 2,
+      "description": "Authoritative owner of epistemic secrets, rumors, and facts."
+    },
+    "STATE": {
+      "owner": "STATE_SYSTEM",
+      "authorityLevel": 1,
+      "description": "Authoritative owner of global universe state vectors."
+    },
+    "LOCATION": {
+      "owner": "LOCATION_SYSTEM",
+      "authorityLevel": 2,
+      "description": "Authoritative owner of spatial nodes, geography, and containment."
+    },
+    "DAILY_UNIVERSE": {
+      "owner": "DAILY_UNIVERSE_SYSTEM",
+      "authorityLevel": 2,
+      "description": "Authoritative owner of diurnal cycles and daily universe orchestration."
+    },
+    "DAILY_STORY": {
+      "owner": "DAILY_STORY_SYSTEM",
+      "authorityLevel": 3,
+      "description": "Authoritative owner of daily story lifecycles and narrative beat progression."
+    },
+    "DAILY_PAGE": {
+      "owner": "DAILY_PAGE_SYSTEM",
+      "authorityLevel": 3,
+      "description": "Authoritative owner of daily page composition and presentation layout."
+    },
+    "NARRATOR": {
+      "owner": "NARRATOR_SYSTEM",
+      "authorityLevel": 4,
+      "description": "Authoritative owner of narrative transformation and stylistic voice."
+    },
+    "INSTANCE_MANAGEMENT": {
+      "owner": "INSTANCE_MANAGEMENT_SYSTEM",
+      "authorityLevel": 1,
+      "description": "Authoritative owner of persistent storage and instance snapshots."
+    },
+    "ENGINE": {
+      "owner": "ENGINE_SYSTEM",
+      "authorityLevel": 1,
+      "description": "Authoritative owner of execution flow, state machines, and task resolution."
+    }
+  }
+}
