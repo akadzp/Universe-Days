@@ -1,5 +1,9 @@
 /**
  * Generic Result types supporting standard architectural outcomes.
+ *
+ * Determinism:
+ * Result timestamps are explicit metadata. The core default is 0.
+ * Callers that require a runtime timestamp must provide it explicitly.
  */
 
 export enum ResultStatus {
@@ -20,51 +24,75 @@ export interface Result<T = unknown, E = unknown> {
   timestamp: number;
 }
 
-export const success = <T>(data?: T, message?: string): Result<T, never> => ({
+export const success = <T>(
+  data?: T,
+  message?: string,
+  timestamp = 0
+): Result<T, never> => ({
   status: ResultStatus.SUCCESS,
   success: true,
   data,
   message,
-  timestamp: Date.now()
+  timestamp
 });
 
-export const failure = <E>(error: E, message?: string): Result<never, E> => ({
+export const failure = <E>(
+  error: E,
+  message?: string,
+  timestamp = 0
+): Result<never, E> => ({
   status: ResultStatus.FAILURE,
   success: false,
   error,
   message,
-  timestamp: Date.now()
+  timestamp
 });
 
-export const blocked = <E>(error?: E, message?: string): Result<never, E> => ({
+export const blocked = <E>(
+  error?: E,
+  message?: string,
+  timestamp = 0
+): Result<never, E> => ({
   status: ResultStatus.BLOCKED,
   success: false,
   error,
   message,
-  timestamp: Date.now()
+  timestamp
 });
 
-export const reviewRequired = <T, E>(data?: T, error?: E, message?: string): Result<T, E> => ({
+export const reviewRequired = <T, E>(
+  data?: T,
+  error?: E,
+  message?: string,
+  timestamp = 0
+): Result<T, E> => ({
   status: ResultStatus.REVIEW_REQUIRED,
   success: false,
   data,
   error,
   message,
-  timestamp: Date.now()
+  timestamp
 });
 
-export const conflict = <E>(error: E, message?: string): Result<never, E> => ({
+export const conflict = <E>(
+  error: E,
+  message?: string,
+  timestamp = 0
+): Result<never, E> => ({
   status: ResultStatus.CONFLICT,
   success: false,
   error,
   message,
-  timestamp: Date.now()
+  timestamp
 });
 
-export const notFound = (message = 'Resource not found'): Result<never, string> => ({
+export const notFound = (
+  message = 'Resource not found',
+  timestamp = 0
+): Result<never, string> => ({
   status: ResultStatus.NOT_FOUND,
   success: false,
   error: message,
   message,
-  timestamp: Date.now()
+  timestamp
 });
