@@ -1,26 +1,21 @@
-# Phase 04 — Final Production Hardening
+# Phase 05 — Final Acceptance / Architecture Freeze
 
-This overlay hardens the existing production runtime without adding a new business subsystem.
+This closure contains no new business subsystem.
 
-## Changes
+It performs only final acceptance cleanup required before freezing the current architecture:
 
-- External production HTTP input is now allowlisted and typed; owner-produced Daily Context, Story packages, progression state, and Page packages cannot be injected through the Control API.
-- Canonical Universe mounting requires the Instance Management authority actor; direct HTTP mounting remains SANDBOX-only.
-- Persistence failures are fail-fast instead of silently degrading to in-memory state.
-- Production Run, Scheduler Job, and Universe Snapshot stores reject malformed/corrupt records instead of ignoring them.
-- Startup auto-load failures are surfaced as `UNREADY` rather than hidden behind an unmounted runtime.
-- Cached production results are persisted for an auditable run record.
-- Runtime concurrency and production generation parameters are bounded.
-- Production and scheduler API failures now distinguish persistence outages from ordinary request errors.
-- Atomic file writes remain deterministic and do not use wall-clock IDs.
+- removes the remaining synthetic `UNIVERSE_PRIME` mount action from the Control Center UI;
+- makes the UI load the persisted current Universe instead of inventing a runtime Universe;
+- removes the legacy synthetic production-run record `RUN_b720fec3.json` when present;
+- ignores `data/runtime/*` so operational state is not committed into source control;
+- adds `docs/FINAL_ACCEPTANCE_FREEZE.md` defining the accepted architecture boundaries and deployment verification requirement.
 
-## Apply
-
-From repository root:
+Apply from repository root:
 
 ```bash
-node apply-phase04.mjs
+node apply-phase05.mjs
 npm run lint
+npm run build
 ```
 
-No new test phase is introduced.
+The installer deliberately refuses ambiguous UI replacement rather than overwriting unrelated UI changes.
