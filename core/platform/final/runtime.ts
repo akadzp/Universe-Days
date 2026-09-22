@@ -1,4 +1,4 @@
-/** Phase 25 — final production composition root. */
+/** Phase 25 + Phase 26 — final production composition root. */
 
 import { PageCatalog } from '../scaling/catalog.ts';
 import { BoundedPageBatchExecutor } from '../parallel/executor.ts';
@@ -11,6 +11,7 @@ import { InMemoryCheckpointStore } from '../recovery/checkpoint.ts';
 import { RecoveryManager } from '../recovery/manager.ts';
 import { VersionRegistry } from '../versioning/registry.ts';
 import { ModelAdapter, ModelRouter } from '../model/index.ts';
+import { createGeminiAdapterFromEnv, AIProductionService } from '../ai/index.ts';
 import { HardenedRuntimeBoundary } from '../hardening/index.ts';
 import { DefaultProductionPageService } from './service.ts';
 
@@ -27,6 +28,7 @@ export interface ProductionRuntime {
   readonly recovery: RecoveryManager<any>;
   readonly versions: VersionRegistry;
   readonly models: ModelRouter;
+  readonly ai: AIProductionService;
   readonly hardening: HardenedRuntimeBoundary;
 }
 
@@ -34,6 +36,7 @@ export interface ProductionRuntimeOptions {
   readonly modelAdapters?: readonly ModelAdapter[];
   readonly concurrency?: number;
   readonly hardening?: ConstructorParameters<typeof HardenedRuntimeBoundary>[0];
+  readonly loadEnvironmentProviders?: boolean;
 }
 
 export function createProductionRuntime(options?: ProductionRuntimeOptions): ProductionRuntime {
@@ -41,6 +44,12 @@ export function createProductionRuntime(options?: ProductionRuntimeOptions): Pro
   const pageBatchExecutor = new BoundedPageBatchExecutor<any, any>(options?.concurrency ?? 4);
   const hardening = new HardenedRuntimeBoundary(options?.hardening);
   const checkpoints = new InMemoryCheckpointStore<any>();
+
+  const explicitAdapters = options?.modelAdapters ?? [];
+  const envAdapter = options?.loadEnvironmentProviders === false ? null : createGeminiAdapterFromEnv();
+  const modelAdapters = envAdapter ? [...explicitAdapters, envAdapter] : [...explicitAdapters];
+  const models = new ModelRouter(modelAdapters);
+
   return Object.freeze({
     pageCatalog,
     pageBatchExecutor,
@@ -53,7 +62,8 @@ export function createProductionRuntime(options?: ProductionRuntimeOptions): Pro
     checkpoints,
     recovery: new RecoveryManager(checkpoints),
     versions: new VersionRegistry(),
-    models: new ModelRouter(options?.modelAdapters ?? []),
+    models,
+    ai: new AIProductionService(models),
     hardening
   });
 }
