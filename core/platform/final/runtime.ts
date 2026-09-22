@@ -1,4 +1,4 @@
-/** Phase 34 — final production composition root. */
+/** Phase 34 — hardened production composition root. */
 import { PageCatalog } from '../scaling/catalog.ts';
 import { BoundedPageBatchExecutor } from '../parallel/executor.ts';
 import { TokenBudgetManager } from '../token/budget.ts';
@@ -52,6 +52,7 @@ export interface ProductionRuntime {
   readonly universeAuthority: UniverseAuthorityStore;
   readonly universeStore: FileUniverseSnapshotStore;
   readonly universeInstances: UniverseInstanceManager;
+  readonly universeStartupLoadError: string | null;
   readonly costController: CostController;
   readonly providerRegistry: ProviderRegistry;
   readonly hardening: HardenedRuntimeBoundary;
@@ -69,9 +70,15 @@ export interface ProductionRuntimeOptions {
   readonly costBudget?: ConstructorParameters<typeof CostController>[0];
 }
 
+function boundedConcurrency(value: number | undefined): number {
+  const requested = value ?? 4;
+  if (!Number.isInteger(requested) || requested < 1 || requested > 32) throw new Error('Runtime concurrency must be an integer between 1 and 32.');
+  return requested;
+}
+
 export function createProductionRuntime(options?: ProductionRuntimeOptions): ProductionRuntime {
   const pageCatalog = new PageCatalog();
-  const pageBatchExecutor = new BoundedPageBatchExecutor<any, any>(options?.concurrency ?? 4);
+  const pageBatchExecutor = new BoundedPageBatchExecutor<any, any>(boundedConcurrency(options?.concurrency));
   const hardening = new HardenedRuntimeBoundary(options?.hardening);
   const checkpoints = new InMemoryCheckpointStore<any>();
   const explicit = options?.modelAdapters ?? [];
@@ -94,38 +101,21 @@ export function createProductionRuntime(options?: ProductionRuntimeOptions): Pro
   const universeStore = new FileUniverseSnapshotStore({ rootDir: options?.universeDataDir });
   const costController = new CostController(options?.costBudget);
   const semanticCache = new SemanticCache<any>();
-  const productionRunner = new ProductionRunner(
-    contextCompiler,
-    ai,
-    semanticCache,
-    costController,
-    productionStore
-  );
+  const productionRunner = new ProductionRunner(contextCompiler, ai, semanticCache, costController, productionStore);
   const scheduler = new PageProductionScheduler(pageCatalog);
   const universeAuthority = new UniverseAuthorityStore();
   const universeInstances = new UniverseInstanceManager(universeAuthority, universeStore);
-  const dailyBridge = new DailyProductionBridge({
-    productionRunner,
-    pageBatchExecutor,
-    listPageDefinitions: () => pageCatalog.list({ enabledOnly: true })
-  });
+  const dailyBridge = new DailyProductionBridge({ productionRunner, pageBatchExecutor, listPageDefinitions: () => pageCatalog.list({ enabledOnly: true }) });
   const scheduledJobStore = new FileScheduledJobStore({ rootDir: options?.scheduledDataDir });
-  const schedulerDispatcher = new ScheduledProductionDispatcher({
-    scheduler,
-    pageCatalog,
-    bridge: dailyBridge,
-    authority: universeAuthority,
-    executor: pageBatchExecutor as BoundedPageBatchExecutor<any, any>,
-    jobStore: scheduledJobStore
-  });
+  const schedulerDispatcher = new ScheduledProductionDispatcher({ scheduler, pageCatalog, bridge: dailyBridge, authority: universeAuthority, executor: pageBatchExecutor as BoundedPageBatchExecutor<any, any>, jobStore: scheduledJobStore });
 
+  let universeStartupLoadError: string | null = null;
   if (options?.autoLoadPersistedUniverse !== false) {
     try {
       universeInstances.loadCurrent();
     } catch (error) {
-      // Persistent corruption must not be silently repaired or replaced.
-      // Keep the runtime unmounted so Control Center can surface the failure.
-      console.error(`[UniverseInstanceManager] Auto-load blocked: ${String(error)}`);
+      universeStartupLoadError = error instanceof Error ? error.message : String(error);
+      console.error(`[UniverseInstanceManager] Auto-load blocked: ${universeStartupLoadError}`);
     }
   }
 
@@ -154,6 +144,7 @@ export function createProductionRuntime(options?: ProductionRuntimeOptions): Pro
     universeAuthority,
     universeStore,
     universeInstances,
+    universeStartupLoadError,
     costController,
     providerRegistry,
     hardening
