@@ -1,105 +1,105 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const packageDir = path.dirname(fileURLToPath(import.meta.url));
-const root = fs.existsSync(path.join(packageDir, 'core')) && fs.existsSync(path.join(packageDir, 'README.md'))
-  ? packageDir
-  : path.resolve(packageDir, '..');
+const ROOT = process.cwd();
 
-function read(rel) { return fs.readFileSync(path.join(root, rel), 'utf8'); }
-function write(rel, content) {
-  const abs = path.join(root, rel);
-  fs.mkdirSync(path.dirname(abs), { recursive: true });
-  fs.writeFileSync(abs, content, 'utf8');
-}
-function replaceOnce(rel, needle, replacement) {
-  const s = read(rel);
-  if (!s.includes(needle)) throw new Error(`Anchor tidak ditemukan pada ${rel}: ${needle}`);
-  write(rel, s.replace(needle, replacement));
-}
-function backup(rel) {
-  const abs = path.join(root, rel);
-  if (fs.existsSync(abs)) fs.copyFileSync(abs, `${abs}.bak`);
-}
-function copyPackage(rel) {
-  const src = path.join(packageDir, rel);
-  const dst = path.join(root, rel);
-  fs.mkdirSync(path.dirname(dst), { recursive: true });
-  if (path.resolve(src) !== path.resolve(dst)) fs.copyFileSync(src, dst);
+function read(rel) {
+  const file = path.join(ROOT, rel);
+  if (!fs.existsSync(file)) throw new Error(`File tidak ditemukan: ${rel}`);
+  return { file, text: fs.readFileSync(file, 'utf8') };
 }
 
-for (const f of [
-  'core/universe/model/relationship.ts',
-  'core/universe/model/character.ts',
-  'core/universe/model/validation.ts'
-]) backup(f);
+function write(rel, text) {
+  const { file } = read(rel);
+  if (text === fs.readFileSync(file, 'utf8')) return false;
+  const backup = `${file}.bak`;
+  if (!fs.existsSync(backup)) fs.copyFileSync(file, backup);
+  fs.writeFileSync(file, text, 'utf8');
+  return true;
+}
 
-copyPackage('core/universe/model/relationship.ts');
+function insertOnce(text, marker, insertion, label) {
+  if (text.includes(insertion.trim())) return text;
+  const index = text.indexOf(marker);
+  if (index < 0) throw new Error(`Anchor tidak ditemukan untuk ${label}`);
+  return text.slice(0, index) + insertion + text.slice(index);
+}
 
-// Character already owns relationship references in the current runtime.
-// Add no new field here; only validation of those references is introduced.
+const continuitySource = fs.readFileSync(
+  path.join(ROOT, 'core/universe/model/character-continuity.ts'),
+  'utf8'
+);
 
-let validation = read('core/universe/model/validation.ts');
-if (!validation.includes("import { validateRelationship } from './relationship.ts';")) {
-  replaceOnce(
-    'core/universe/model/validation.ts',
-    "import { validateActorClassification } from './actor.ts';\n",
-    "import { validateActorClassification } from './actor.ts';\nimport { validateRelationship } from './relationship.ts';\n"
+// 1. Install the new source file from this package.
+fs.mkdirSync(path.join(ROOT, 'core/universe/model'), { recursive: true });
+const continuityPath = path.join(ROOT, 'core/universe/model/character-continuity.ts');
+if (!fs.existsSync(continuityPath) || fs.readFileSync(continuityPath, 'utf8') !== continuitySource) {
+  if (fs.existsSync(continuityPath) && !fs.existsSync(`${continuityPath}.bak`)) fs.copyFileSync(continuityPath, `${continuityPath}.bak`);
+  fs.writeFileSync(continuityPath, continuitySource, 'utf8');
+}
+
+// 2. Export Character Continuity from the model entry point.
+{
+  const { text } = read('core/universe/model/index.ts');
+  const next = insertOnce(
+    text,
+    "export * from './character.ts';\n",
+    "export * from './character-continuity.ts';\n",
+    'model index export'
   );
+  write('core/universe/model/index.ts', next);
 }
 
-validation = read('core/universe/model/validation.ts');
-if (!validation.includes('DANGLING_RELATIONSHIP_REFERENCE')) {
-  replaceOnce(
-    'core/universe/model/validation.ts',
-    "      for (const styleRef of char.styleReferences ?? []) {\n",
-`      for (const relationshipRef of char.relationshipReferences ?? []) {
-        if (!universe.relationships || !universe.relationships[relationshipRef]) {
-          issues.push({
-            code: 'DANGLING_RELATIONSHIP_REFERENCE',
-            path: \`characters.\${id}.relationshipReferences\`,
-            message: \`Character relationship reference '\${relationshipRef}' not found in relationships\`,
-            severity: 'ERROR'
-          });
-        } else {
-          const relationship = universe.relationships[relationshipRef];
-          if (String(relationship.subjectRef) !== id && String(relationship.targetRef) !== id) {
-            issues.push({
-              code: 'RELATIONSHIP_CHARACTER_MISMATCH',
-              path: \`characters.\${id}.relationshipReferences.\${relationshipRef}\`,
-              message: \`Relationship '\${relationshipRef}' tidak melibatkan character '\${id}'.\`,
-              severity: 'ERROR'
-            });
-          }
-        }
-      }
-
-      for (const styleRef of char.styleReferences ?? []) {
-`
+// 3. Add the continuity collection to UniverseModel.
+{
+  const { text } = read('core/universe/model/universe.ts');
+  let next = text;
+  next = insertOnce(
+    next,
+    "import { CharacterStyleEntity } from './character-style.ts';\n",
+    "import { CharacterContinuityEntity } from './character-continuity.ts';\n",
+    'Universe continuity import'
   );
-}
-
-validation = read('core/universe/model/validation.ts');
-if (!validation.includes("for (const [relId, rel] of Object.entries(universe.relationships || {})) {\n      const relationshipValidation")) {
-  replaceOnce(
-    'core/universe/model/validation.ts',
-    "    for (const [relId, rel] of Object.entries(universe.relationships || {})) {\n",
-`    for (const [relId, rel] of Object.entries(universe.relationships || {})) {
-      const relationshipValidation = validateRelationship(rel, {
-        subjectGender: universe.characters[String(rel.subjectRef)]?.actor?.gender,
-        targetGender: universe.characters[String(rel.targetRef)]?.actor?.gender
-      });
-      for (const issue of relationshipValidation.issues) {
-        issues.push({
-          code: issue.code,
-          path: \`relationships.\${relId}.\${issue.path}\`,
-          message: issue.message,
-          severity: 'ERROR'
-        });
-      }
-`
+  next = insertOnce(
+    next,
+    '  readonly styles: Readonly<Record<string, CharacterStyleEntity>>;\n',
+    '  readonly continuities: Readonly<Record<string, CharacterContinuityEntity>>;\n',
+    'Universe continuity collection'
   );
+  next = insertOnce(
+    next,
+    '  styles?: Record<string, CharacterStyleEntity>;\n',
+    '  continuities?: Record<string, CharacterContinuityEntity>;\n',
+    'Universe continuity factory parameter'
+  );
+  next = insertOnce(
+    next,
+    '      styles: freezeMap(params.styles),\n',
+    '      continuities: freezeMap(params.continuities),\n',
+    'Universe continuity factory output'
+  );
+  write('core/universe/model/universe.ts', next);
 }
 
-console.log('Relationship System berhasil dipasang. Backup dibuat sebagai *.bak.');
+// 4. Add Character continuity reference and cross-domain validation.
+{
+  const { text } = read('core/universe/model/validation.ts');
+  let next = text;
+  next = insertOnce(
+    next,
+    "import { CharacterStyleEntity, validateCharacterStyle } from './character-style.ts';\n",
+    "import { CharacterContinuityEntity, validateCharacterContinuity } from './character-continuity.ts';\n",
+    'continuity validator import'
+  );
+
+  const characterAnchor = "      if (char.stateReference && (!universe.states || !universe.states[char.stateReference])) {\n";
+  const continuityCharacterBlock = `      if (char.continuityReference && (!universe.continuities || !universe.continuities[char.continuityReference])) {\n        issues.push({\n          code: 'DANGLING_CONTINUITY_REFERENCE',\n          path: \`characters.\${id}.continuityReference\`,\n          message: \`Character continuity '\${char.continuityReference}' not found in continuities\`,\n          severity: 'ERROR'\n        });\n      } else if (char.continuityReference && universe.continuities[char.continuityReference]) {\n        const continuity = universe.continuities[char.continuityReference];\n        if (continuity.characterId !== id) {\n          issues.push({\n            code: 'CONTINUITY_CHARACTER_MISMATCH',\n            path: \`characters.\${id}.continuityReference\`,\n            message: \`Continuity '\${char.continuityReference}' belongs to '\${continuity.characterId}', not '\${id}'\`,\n            severity: 'ERROR'\n          });\n        }\n      }\n\n`;
+  next = insertOnce(next, characterAnchor, continuityCharacterBlock, 'Character continuity reference validation');
+
+  const collectionAnchor = "    for (const [id, state] of Object.entries(universe.states || {})) {\n";
+  const continuityCollectionBlock = `    for (const [id, continuity] of Object.entries(universe.continuities || {})) {\n      if (continuity.continuityId !== id) {\n        issues.push({\n          code: 'ID_KEY_MISMATCH',\n          path: \`continuities.\${id}\`,\n          message: \`Continuity map key '\${id}' does not match continuity id '\${continuity.continuityId}'\`,\n          severity: 'ERROR'\n        });\n      }\n      const continuityReport = validateCharacterContinuity(continuity as CharacterContinuityEntity, universe);\n      for (const message of continuityReport.issues) {\n        issues.push({\n          code: continuityReport.result === 'CONFLICT' ? 'CHARACTER_CONTINUITY_CONFLICT' : 'CHARACTER_CONTINUITY_INVALID',\n          path: \`continuities.\${id}\`,\n          message,\n          severity: 'ERROR'\n        });\n      }\n      if (continuityReport.result === 'REVIEW_REQUIRED' && continuityReport.issues.length === 0) {\n        issues.push({\n          code: 'CHARACTER_CONTINUITY_REVIEW_REQUIRED',\n          path: \`continuities.\${id}.validationResult\`,\n          message: 'Character Continuity has not completed all checks.',\n          severity: 'WARNING'\n        });\n      }\n    }\n\n`;
+  next = insertOnce(next, collectionAnchor, continuityCollectionBlock, 'Character continuity collection validation');
+  write('core/universe/model/validation.ts', next);
+}
+
+console.log('Character Continuity System berhasil dipasang.');
