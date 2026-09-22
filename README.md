@@ -1,21 +1,21 @@
-Character Core / Sims System
+# Behavior System
 
-This package adds the Character Profile layer to the Actor/Character system.
-It does not alter the UI and does not redefine State, Behavior, Knowledge,
-Style, Relationship, or Location ownership.
+Patch untuk menambahkan **Behavior System** ke Universe-Days.
 
-Repository paths are mirrored directly. No version/phase suffixes are used in
-source filenames.
+## Prinsip
+- Behavior adalah pola perilaku, bukan Personality, State, Knowledge, atau Relationship.
+- Behavior tidak boleh diisi dengan asumsi.
+- Satu kejadian tunggal yang tidak signifikan tidak cukup untuk membentuk pola persisten.
+- Perubahan behavior wajib memiliki trigger/basis peristiwa dan mempertahankan pola lama sebagai history.
+- `AI_PROPOSAL` dan `UNKNOWN` tidak dapat menjadi sumber otoritatif.
+- Character hanya menyimpan referensi Behavior; data Behavior sendiri tersimpan pada koleksi Universe sebagai entitas domain model.
 
-Files:
-- core/universe/model/character-profile.ts
-- core/universe/model/character.ts
-- core/universe/model/index.ts
-- core/universe/model/validation.ts
-- tests/unit/universe-model/character-profile.test.ts
-- docs/character-system.md
+## Isi
+- `core/universe/model/behavior.ts`
+- perubahan `character.ts` untuk `behaviorReferences`
+- perubahan `types.ts` untuk `EntityType.BEHAVIOR`
+- perubahan `universe.ts` agar Behavior tersedia sebagai koleksi model
+- perubahan `validation.ts` dan `index.ts`
+- dokumentasi dan unit test
 
-Apply:
-  node apply.mjs
-  npm run lint
-  npm run test
+Gunakan `node apply.mjs` dari root repository untuk memasang patch.
