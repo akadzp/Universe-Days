@@ -1,0 +1,35 @@
+POCER UNIVERSE ENGINE
+PHASE 15 -> PHASE 25 COMPLETE OVERLAY
+
+NEW ROOT
+core/platform/
+
+PHASES
+15 Page Scalability
+16 Parallel Page Production
+17 Token Optimization
+18 Context Compression
+19 Semantic Cache
+20 Operational Long-Term Continuity Ledger (dedicated test phase skipped)
+21 Failure Recovery
+22 Versioning
+23 AI Model Independence
+24 Production Hardening
+25 Final Production Architecture
+
+REQUIRED EXISTING DEPENDENCIES
+- Phase 11 Daily Page System must already exist at core/page/daily/
+- Phase 14 Specification -> Runtime migration should already exist
+- Existing core/types/result.ts, core/engine/llm-boundary.ts are used by adapters
+
+MODIFIED EXISTING FILE (MERGE, DO NOT OVERWRITE)
+core/index.ts
+Add:
+  export * from './platform/index.ts';
+
+NO PACKAGE DEPENDENCY CHANGE
+No new npm package is required.
+
+IMPORTANT
+This archive is an overlay, not a replacement of the entire repository.
+Do not delete existing files when copying it into the repo.
