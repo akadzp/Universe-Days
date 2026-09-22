@@ -26,7 +26,8 @@ import {
   Check,
   ShieldAlert,
   HelpCircle,
-  Tag
+  Tag,
+  Search
 } from 'lucide-react';
 import { Card, StatusBadge, Button, InfoCallout, Modal } from '../components/UIElements.tsx';
 import type { CharacterWorkspaceData, UniverseCharacter } from '../types.ts';
@@ -63,6 +64,7 @@ export function CharacterWorkspaceView({
   >('overview');
   const [data, setData] = useState<CharacterWorkspaceData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [characterQuery, setCharacterQuery] = useState('');
 
   // Modals
   const [isCreateCharModalOpen, setIsCreateCharModalOpen] = useState(false);
@@ -98,28 +100,28 @@ export function CharacterWorkspaceView({
   const [editValues, setEditValues] = useState('');
   const [editOccupation, setEditOccupation] = useState('');
   const [editDailyRoutine, setEditDailyRoutine] = useState('');
-  const [editSocialOrientation, setEditSocialOrientation] = useState('AMBIVERT');
+  const [editSocialOrientation, setEditSocialOrientation] = useState('');
   const [editInnerWound, setEditInnerWound] = useState('');
   const [editPrimaryGoal, setEditPrimaryGoal] = useState('');
   const [editAspiration, setEditAspiration] = useState('');
   const [editSecretBackstory, setEditSecretBackstory] = useState('');
   const [editNotes, setEditNotes] = useState('');
-  const [editRole, setEditRole] = useState('ROLE_PROTAGONIST');
+  const [editRole, setEditRole] = useState('');
 
   // State Modal form
   const [stateMood, setStateMood] = useState('');
   const [stateActivity, setStateActivity] = useState('');
   const [stateCondition, setStateCondition] = useState('');
   const [stateGoal, setStateGoal] = useState('');
-  const [stateVitality, setStateVitality] = useState('NORMAL');
+  const [stateVitality, setStateVitality] = useState('');
 
   // Behavior Modal form
   const [behPattern, setBehPattern] = useState('');
   const [behContext, setBehContext] = useState('');
-  const [behFrequency, setBehFrequency] = useState('FREQUENT');
+  const [behFrequency, setBehFrequency] = useState('');
   const [behTriggers, setBehTriggers] = useState('');
   const [behTypicalResponse, setBehTypicalResponse] = useState('');
-  const [behIntensity, setBehIntensity] = useState('MODERATE');
+  const [behIntensity, setBehIntensity] = useState('');
 
   // Style Modal form
   const [styleLanguage, setStyleLanguage] = useState('');
@@ -133,7 +135,7 @@ export function CharacterWorkspaceView({
   const [knowStatement, setKnowStatement] = useState('');
   const [knowSubject, setKnowSubject] = useState('');
   const [knowCertainty, setKnowCertainty] = useState('FACT');
-  const [knowSource, setKnowSource] = useState('Pengalaman Langsung');
+  const [knowSource, setKnowSource] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -161,27 +163,27 @@ export function CharacterWorkspaceView({
         setEditValues((res.personality.values || []).join(', '));
         setEditOccupation(res.life.occupation || '');
         setEditDailyRoutine(res.life.dailyRoutine || '');
-        setEditSocialOrientation(res.social.socialOrientation || 'AMBIVERT');
+        setEditSocialOrientation(res.social.socialOrientation || '');
         setEditInnerWound(res.narrative.innerWound || '');
         setEditPrimaryGoal(res.narrative.primaryGoal || '');
         setEditAspiration(res.narrative.aspiration || '');
         setEditSecretBackstory(res.narrative.secretBackstory || '');
         setEditNotes(res.narrative.notes || '');
-        setEditRole(res.actor.role || 'ROLE_PROTAGONIST');
+        setEditRole(res.actor.role || '');
 
         setStateMood(res.currentState.mood || '');
         setStateActivity(res.currentState.activity || '');
         setStateCondition(res.currentState.condition || '');
         setStateGoal(res.currentState.goal || '');
-        setStateVitality(res.currentState.vitality || 'NORMAL');
+        setStateVitality(res.currentState.vitality || '');
 
         if (res.behavior) {
           setBehPattern(res.behavior.behaviorPattern || '');
           setBehContext(res.behavior.behaviorContext || '');
-          setBehFrequency(res.behavior.behaviorFrequency || 'FREQUENT');
+          setBehFrequency(res.behavior.behaviorFrequency || '');
           setBehTriggers((res.behavior.triggers || []).join(', '));
           setBehTypicalResponse(res.behavior.typicalResponse || '');
-          setBehIntensity(res.behavior.responseIntensity || 'MODERATE');
+          setBehIntensity(res.behavior.responseIntensity || '');
         }
 
         if (res.style) {
@@ -233,6 +235,16 @@ export function CharacterWorkspaceView({
 
   // If no character is selected, render the clean Character List View directly
   if (!characterId) {
+    const normalizedQuery = characterQuery.trim().toLocaleLowerCase('id-ID');
+    const visibleCharacters = normalizedQuery
+      ? allCharacters.filter((c) => {
+          const haystack = [c.displayName, c.role, c.occupation, c.personalityType, ...(c.traits || [])]
+            .filter(Boolean)
+            .join(' ')
+            .toLocaleLowerCase('id-ID');
+          return haystack.includes(normalizedQuery);
+        })
+      : allCharacters;
     return (
       <div className="space-y-6 animate-fade-in">
         {/* Header with direct + Buat Tokoh button */}
@@ -257,9 +269,24 @@ export function CharacterWorkspaceView({
           </Button>
         </div>
 
+        {allCharacters.length > 0 && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="search"
+              value={characterQuery}
+              onChange={(e) => setCharacterQuery(e.target.value)}
+              placeholder="Cari nama, peran, pekerjaan, atau sifat..."
+              aria-label="Cari tokoh"
+              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:border-amber-400"
+            />
+          </div>
+        )}
+
         {allCharacters.length > 0 ? (
+          visibleCharacters.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {allCharacters.map((c) => (
+            {visibleCharacters.map((c) => (
               <Card
                 key={c.id}
                 className="p-5 cursor-pointer hover:border-amber-400 hover:shadow-md transition group"
@@ -312,6 +339,13 @@ export function CharacterWorkspaceView({
               </Card>
             ))}
           </div>
+          ) : (
+            <Card className="p-10 text-center border-slate-200 bg-white shadow-xs">
+              <Search className="h-6 w-6 mx-auto text-slate-300" />
+              <h3 className="mt-3 text-sm font-black text-slate-800">Tokoh tidak ditemukan</h3>
+              <p className="mt-1 text-xs text-slate-500">Tidak ada tokoh yang cocok dengan pencarian saat ini.</p>
+            </Card>
+          )
         ) : (
           <Card className="p-12 text-center space-y-4 max-w-lg mx-auto border border-slate-200 bg-white shadow-xs">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-900 shadow-xs">
@@ -677,39 +711,53 @@ export function CharacterWorkspaceView({
         </div>
       </Card>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2 overflow-x-auto no-scrollbar">
-        {[
-          { id: 'overview', label: 'Ringkasan', icon: Eye },
-          { id: 'profile', label: 'Profil & Fisik', icon: User },
-          { id: 'actor', label: 'Pemeran', icon: Award },
-          { id: 'state', label: 'Kondisi Dinamis', icon: Activity },
-          { id: 'behavior', label: 'Pola Perilaku', icon: Zap },
-          { id: 'style', label: 'Gaya Bahasa', icon: MessageSquare },
-          { id: 'knowledge', label: `Pengetahuan (${data.knowledge.length})`, icon: BookOpen },
-          { id: 'relationships', label: `Relasi (${data.relationships.length})`, icon: Heart },
-          { id: 'possessions', label: `Benda (${data.possessions.length})`, icon: Package },
-          { id: 'location', label: 'Lokasi', icon: Compass },
-          { id: 'timeline', label: 'Garis Waktu', icon: Clock },
-          { id: 'continuity', label: 'Kontinuitas', icon: Shield },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 ${
-                isActive
-                  ? 'bg-amber-400 text-slate-950 shadow-xs border border-amber-300'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
+      {/* Workspace Navigation */}
+      <div className="space-y-2 border-b border-slate-200 pb-3">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar" aria-label="Bagian utama profil tokoh">
+          {[
+            { id: 'overview', label: 'Ringkasan', icon: Eye },
+            { id: 'profile', label: 'Profil', icon: User },
+            { id: 'state', label: 'Kondisi', icon: Activity },
+            { id: 'relationships', label: `Relasi (${data.relationships.length})`, icon: Heart },
+            { id: 'timeline', label: 'Riwayat', icon: Clock },
+            { id: 'continuity', label: 'Kontinuitas', icon: Shield },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 ${
+                  isActive
+                    ? 'bg-amber-400 text-slate-950 shadow-xs border border-amber-300'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">Detail</span>
+          <select
+            aria-label="Bagian detail profil tokoh"
+            value={['actor','behavior','style','knowledge','possessions','location'].includes(activeTab) ? activeTab : ''}
+            onChange={(e) => e.target.value && setActiveTab(e.target.value as any)}
+            className="min-w-0 flex-1 sm:flex-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 focus:outline-hidden focus:border-amber-400"
+          >
+            <option value="">Pilih bagian detail…</option>
+            <option value="actor">Pemeran</option>
+            <option value="behavior">Pola Perilaku</option>
+            <option value="style">Gaya Bahasa</option>
+            <option value="knowledge">Pengetahuan ({data.knowledge.length})</option>
+            <option value="possessions">Benda ({data.possessions.length})</option>
+            <option value="location">Lokasi</option>
+          </select>
+        </div>
       </div>
 
       {/* Tab 1: Ringkasan */}
@@ -727,7 +775,7 @@ export function CharacterWorkspaceView({
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-100">
                 <span className="text-slate-500 font-medium">Orientasi Sosial</span>
-                <span className="font-bold text-slate-800">{data.social.socialOrientation || 'AMBIVERT'}</span>
+                <span className="font-bold text-slate-800">{data.social.socialOrientation || 'Belum ditentukan'}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-100">
                 <span className="text-slate-500 font-medium">Pekerjaan / Peran</span>
@@ -941,11 +989,11 @@ export function CharacterWorkspaceView({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                     <span className="text-slate-500 font-bold block mb-1">Frekuensi:</span>
-                    <span className="font-bold text-slate-900">{data.behavior.behaviorFrequency || 'FREQUENT'}</span>
+                    <span className="font-bold text-slate-900">{data.behavior.behaviorFrequency || 'Belum ditentukan'}</span>
                   </div>
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                     <span className="text-slate-500 font-bold block mb-1">Intensitas Respons:</span>
-                    <span className="font-bold text-slate-900">{data.behavior.responseIntensity || 'MODERATE'}</span>
+                    <span className="font-bold text-slate-900">{data.behavior.responseIntensity || 'Belum ditentukan'}</span>
                   </div>
                 </div>
                 {data.behavior.typicalResponse && (
@@ -1401,6 +1449,7 @@ export function CharacterWorkspaceView({
               onChange={(e) => setStateVitality(e.target.value)}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
             >
+              <option value="">Belum ditentukan</option>
               <option value="NORMAL">NORMAL & BUGAR</option>
               <option value="TIRED">LELAH</option>
               <option value="INJURED">TERLUKA</option>
@@ -1486,6 +1535,7 @@ export function CharacterWorkspaceView({
                 onChange={(e) => setBehFrequency(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
               >
+                <option value="">Belum ditentukan</option>
                 <option value="ALWAYS">SELALU</option>
                 <option value="FREQUENT">SERING</option>
                 <option value="OCCASIONAL">KADANG-KADANG</option>
@@ -1499,6 +1549,7 @@ export function CharacterWorkspaceView({
                 onChange={(e) => setBehIntensity(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
               >
+                <option value="">Belum ditentukan</option>
                 <option value="HIGH">TINGGI</option>
                 <option value="MODERATE">SEDANG</option>
                 <option value="LOW">RENDAH</option>

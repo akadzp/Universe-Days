@@ -17,7 +17,8 @@ import {
   Shield,
   Layers,
   Flame,
-  Users
+  Users,
+  PlusCircle
 } from 'lucide-react';
 import { Card, StatusBadge, Button, ModeBadge, InfoCallout } from '../components/UIElements.tsx';
 import type {
@@ -128,24 +129,33 @@ export function StoryView({
               <ModeBadge isSandbox={isSandbox} />
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              {meta.title || 'Cerita Tanpa Judul'}
+              {meta.title || 'Belum diberi judul'}
             </h2>
             <p className="text-xs text-slate-600 font-medium line-clamp-2 max-w-2xl">
               {meta.premise || meta.synopsis || 'Belum ada ringkasan premis yang dicatat.'}
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-            <Button
-              kind="clay"
-              size="md"
-              onClick={handleRunProduction}
-              disabled={isProducing}
-              className="flex items-center justify-center gap-2 shadow-xs"
-            >
-              <Sparkles className={`h-4 w-4 ${isProducing ? 'animate-spin' : ''}`} />
-              <span>{isProducing ? 'Menulis Naskah...' : '⚡ Lanjutkan Kisah'}</span>
-            </Button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+              <Button
+                kind="secondary"
+                size="md"
+                onClick={onOpenCreateStory}
+                className="flex items-center justify-center gap-2"
+              >
+                <PlusCircle className="h-4 w-4" />
+                <span>Cerita Baru</span>
+              </Button>
+              <Button
+                kind="clay"
+                size="md"
+                onClick={handleRunProduction}
+                disabled={isProducing}
+                className="flex items-center justify-center gap-2 shadow-xs"
+              >
+                <Sparkles className={`h-4 w-4 ${isProducing ? 'animate-spin' : ''}`} />
+                <span>{isProducing ? 'Menulis Naskah...' : '⚡ Lanjutkan Kisah'}</span>
+              </Button>
           </div>
         </div>
       </Card>

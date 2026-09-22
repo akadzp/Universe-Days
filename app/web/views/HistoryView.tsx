@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Clock, BookOpen, FileText, CheckCircle2, Copy, Check, Filter } from 'lucide-react';
 import { Card, StatusBadge, Button, InfoCallout } from '../components/UIElements.tsx';
 import type { ProductionRunRecord } from '../types.ts';
@@ -12,6 +12,10 @@ export function HistoryView({
 }) {
   const [selectedRun, setSelectedRun] = useState<ProductionRunRecord | null>(runs[0] || null);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setSelectedRun(runs[0] || null);
+  }, [runs]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);

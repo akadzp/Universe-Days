@@ -28,7 +28,7 @@ import type {
 export function UniverseView({
   universe,
   onOpenCharacterWorkspace,
-  onAddCharacter,
+  onOpenCharacterList,
   onAddLocation,
   onAddObject,
   onAddRelationship,
@@ -37,7 +37,7 @@ export function UniverseView({
 }: {
   universe: UniverseDetails | null;
   onOpenCharacterWorkspace: (characterId: string) => void;
-  onAddCharacter: (data: any) => Promise<void>;
+  onOpenCharacterList: () => void;
   onAddLocation: (data: any) => Promise<void>;
   onAddObject: (data: any) => Promise<void>;
   onAddRelationship: (data: any) => Promise<void>;
@@ -51,7 +51,6 @@ export function UniverseView({
   const [isObjModalOpen, setIsObjModalOpen] = useState(false);
   const [isRelModalOpen, setIsRelModalOpen] = useState(false);
   const [isMysteryModalOpen, setIsMysteryModalOpen] = useState(false);
-  const [isCharModalOpen, setIsCharModalOpen] = useState(false);
 
   // Forms
   const [locName, setLocName] = useState('');
@@ -74,12 +73,6 @@ export function UniverseView({
   const [mysteryType, setMysteryType] = useState('MYSTERY');
   const [mysterySignificance, setMysterySignificance] = useState('MAJOR');
 
-  const [charName, setCharName] = useState('');
-  const [charRole, setCharRole] = useState('');
-  const [charPersonality, setCharPersonality] = useState('');
-  const [charTraits, setCharTraits] = useState('');
-  const [charOccupation, setCharOccupation] = useState('');
-  const [charGoal, setCharGoal] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -167,31 +160,6 @@ export function UniverseView({
     }
   };
 
-  const handleCreateCharacter = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!charName.trim()) return;
-    setIsSubmitting(true);
-    try {
-      await onAddCharacter({
-        displayName: charName.trim(),
-        role: charRole.trim() || undefined,
-        personalityType: charPersonality.trim() || undefined,
-        traits: charTraits ? charTraits.split(',').map((s) => s.trim()).filter(Boolean) : [],
-        occupation: charOccupation.trim() || undefined,
-        goal: charGoal.trim() || undefined,
-      });
-      setCharName('');
-      setCharRole('');
-      setCharPersonality('');
-      setCharTraits('');
-      setCharOccupation('');
-      setCharGoal('');
-      setIsCharModalOpen(false);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Top Header */}
@@ -231,9 +199,9 @@ export function UniverseView({
             </Button>
           )}
           {activeTab === 'characters' && (
-            <Button kind="clay" size="sm" onClick={() => setIsCharModalOpen(true)} className="gap-1.5 shadow-xs">
-              <PlusCircle className="h-4 w-4" />
-              <span>+ Tokoh</span>
+            <Button kind="clay" size="sm" onClick={onOpenCharacterList} className="gap-1.5 shadow-xs">
+              <Users className="h-4 w-4" />
+              <span>Kelola Tokoh</span>
             </Button>
           )}
         </div>
@@ -397,7 +365,7 @@ export function UniverseView({
 
           {universe.unresolvedConditions.length === 0 && (
             <div className="col-span-3 p-12 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-100">
-              Belum ada misteri terbuka. Klik "+ Misteri Baru" untuk memicu intrik alur.
+              Belum ada misteri yang tercatat.
             </div>
           )}
         </div>
@@ -405,59 +373,64 @@ export function UniverseView({
 
       {/* TAB: Tokoh */}
       {activeTab === 'characters' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
-          {universe.characters.map((c) => (
-            <Card
-              key={c.id}
-              className="p-5 cursor-pointer hover:border-amber-400 hover:shadow-md transition group"
-            >
-              <div onClick={() => onOpenCharacterWorkspace(c.id)} className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-100 border border-amber-300 text-amber-900 font-black text-sm shadow-inner shrink-0">
-                      {c.displayName.charAt(0)}
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900 group-hover:text-amber-800 transition truncate max-w-[150px]">
-                        {c.displayName}
-                      </h4>
-                      <p className="text-xs text-slate-500 font-medium">
-                        {c.role || 'Belum ditentukan'}
-                      </p>
-                    </div>
-                  </div>
-                  <StatusBadge status={c.status} />
+        <div className="space-y-4 animate-fade-in">
+          <Card className="p-4 sm:p-5 border-amber-200 bg-amber-50/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-amber-200 text-amber-800 shrink-0">
+                  <Users className="h-5 w-5" />
                 </div>
-
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-600">
-                  <span className="font-bold text-slate-700">Tipe: </span>
-                  <span>{c.personalityType || 'Belum diisi'}</span>
-                </div>
-
-                <div className="flex flex-wrap gap-1.5 min-h-[24px]">
-                  {c.traits && c.traits.length > 0 ? (
-                    c.traits.slice(0, 3).map((t, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2 py-0.5 bg-amber-50 text-amber-800 text-[11px] font-semibold rounded-lg border border-amber-200"
-                      >
-                        {t}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-[11px] text-slate-400 italic">
-                      Belum ada sifat yang tercatat
-                    </span>
-                  )}
-                </div>
-
-                <div className="pt-2 flex items-center justify-between text-xs font-bold text-amber-700">
-                  <span>Buka Ruang Profil Tokoh</span>
-                  <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition" />
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">Tokoh dikelola di Ruang Tokoh</h3>
+                  <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                    Daftar di bawah membaca tokoh yang sudah tercatat. Gunakan Ruang Tokoh untuk membuat atau mengubah profil.
+                  </p>
                 </div>
               </div>
+              <Button kind="clay" size="sm" onClick={onOpenCharacterList} className="gap-1.5 shrink-0">
+                <Users className="h-4 w-4" />
+                <span>Buka Ruang Tokoh</span>
+              </Button>
+            </div>
+          </Card>
+
+          {universe.characters.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {universe.characters.map((c) => (
+                <Card key={c.id} className="p-5 cursor-pointer hover:border-amber-400 hover:shadow-md transition group">
+                  <button type="button" onClick={() => onOpenCharacterWorkspace(c.id)} className="w-full text-left space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-100 border border-amber-300 text-amber-900 font-black text-sm shrink-0">
+                          {c.displayName.charAt(0)}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-bold text-slate-900 group-hover:text-amber-800 transition truncate">{c.displayName}</h4>
+                          <p className="text-xs text-slate-500 font-medium truncate">{c.role || 'Peran belum tercatat'}</p>
+                        </div>
+                      </div>
+                      <StatusBadge status={c.status} />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 min-h-[24px]">
+                      {c.traits?.length ? c.traits.slice(0, 3).map((t, idx) => (
+                        <span key={idx} className="px-2 py-0.5 bg-amber-50 text-amber-800 text-[11px] font-semibold rounded-lg border border-amber-200">{t}</span>
+                      )) : <span className="text-[11px] text-slate-400 italic">Belum ada sifat yang tercatat</span>}
+                    </div>
+                    <div className="pt-2 flex items-center justify-between text-xs font-bold text-amber-700">
+                      <span>Buka profil tokoh</span>
+                      <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition" />
+                    </div>
+                  </button>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="p-10 text-center border-slate-200">
+              <Users className="h-7 w-7 mx-auto text-slate-300" />
+              <p className="mt-3 text-sm font-bold text-slate-700">Belum ada tokoh yang tercatat</p>
+              <p className="mt-1 text-xs text-slate-500">Buka Ruang Tokoh untuk mendaftarkan tokoh pertama.</p>
             </Card>
-          ))}
+          )}
         </div>
       )}
 
@@ -728,88 +701,6 @@ export function UniverseView({
         </form>
       </Modal>
 
-      {/* MODAL: Add Character */}
-      <Modal
-        isOpen={isCharModalOpen}
-        onClose={() => setIsCharModalOpen(false)}
-        title="Daftarkan Tokoh Baru"
-        subtitle="Tambahkan figur baru ke dalam panggung semesta."
-      >
-        <form onSubmit={handleCreateCharacter} className="space-y-4 text-xs">
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Nama Tokoh *</label>
-            <input
-              type="text"
-              required
-              value={charName}
-              onChange={(e) => setCharName(e.target.value)}
-              placeholder="Contoh: Kaelen"
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Peran Naratif</label>
-              <input
-                type="text"
-                value={charRole}
-                onChange={(e) => setCharRole(e.target.value)}
-                placeholder="Contoh: Protagonis / Pendamping"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
-              />
-            </div>
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Pekerjaan / Peran</label>
-              <input
-                type="text"
-                value={charOccupation}
-                onChange={(e) => setCharOccupation(e.target.value)}
-                placeholder="Contoh: Tabib / Peneliti"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Tipe Kepribadian</label>
-            <input
-              type="text"
-              value={charPersonality}
-              onChange={(e) => setCharPersonality(e.target.value)}
-              placeholder="Contoh: Tenang & Waspada"
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
-            />
-          </div>
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Sifat & Karakter (Pisahkan koma)</label>
-            <input
-              type="text"
-              value={charTraits}
-              onChange={(e) => setCharTraits(e.target.value)}
-              placeholder="Contoh: Gigih, Cerdas, Setia"
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
-            />
-          </div>
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Tujuan Pribadi</label>
-            <input
-              type="text"
-              value={charGoal}
-              onChange={(e) => setCharGoal(e.target.value)}
-              placeholder="Contoh: Menemukan obat penawar untuk desanya"
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
-            <Button type="button" kind="secondary" size="sm" onClick={() => setIsCharModalOpen(false)}>
-              Batal
-            </Button>
-            <Button type="submit" kind="clay" size="sm" disabled={isSubmitting || !charName.trim()}>
-              {isSubmitting ? 'Mendaftarkan...' : 'Simpan Tokoh'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 }

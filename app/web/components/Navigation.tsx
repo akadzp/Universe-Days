@@ -6,15 +6,10 @@ import {
   TestTube,
   Clock,
   Sliders,
-  Sparkles,
   ChevronRight,
-  PlusCircle,
   HelpCircle,
-  Play,
-  Layers,
   MoreHorizontal,
   X,
-  RefreshCw,
   FolderPlus
 } from 'lucide-react';
 import { View } from '../types.ts';
@@ -77,7 +72,6 @@ export function Sidebar({
   systemStatus,
   onOpenGuide,
   isSandbox,
-  onOpenCreateStory,
   activeStoryTitle,
   currentDate,
 }: {
@@ -86,7 +80,6 @@ export function Sidebar({
   systemStatus: string;
   onOpenGuide: () => void;
   isSandbox: boolean;
-  onOpenCreateStory: () => void;
   activeStoryTitle?: string;
   currentDate?: string;
 }) {
@@ -124,13 +117,9 @@ export function Sidebar({
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] text-slate-500 font-medium">
               <span>📅 {currentDate || 'Belum tercatat'}</span>
-              <button
-                type="button"
-                onClick={onOpenCreateStory}
-                className="text-[11px] font-bold text-amber-700 hover:text-amber-800 hover:underline flex items-center gap-1"
-              >
-                <span>+ Cerita Baru</span>
-              </button>
+              <span className="text-[10px] font-semibold text-slate-400">
+                Pilih Cerita dari halaman Cerita
+              </span>
             </div>
           </div>
         </div>
@@ -346,18 +335,14 @@ export function MobileMoreSheet({
   isOpen,
   onClose,
   onNavigate,
-  onOpenCreateStory,
   onOpenGuide,
-  onRefresh,
   systemStatus,
   isSandbox,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onNavigate: (view: View) => void;
-  onOpenCreateStory: () => void;
   onOpenGuide: () => void;
-  onRefresh: () => void;
   systemStatus: string;
   isSandbox: boolean;
 }) {
@@ -429,47 +414,16 @@ export function MobileMoreSheet({
             <ChevronRight className="h-4 w-4 text-slate-400" />
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              onOpenCreateStory();
-              onClose();
-            }}
-            className="w-full flex items-center justify-between p-3 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-left transition"
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center shadow-xs">
-                <PlusCircle className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-amber-950">Buat Cerita Baru</div>
-                <div className="text-[10px] text-amber-800">Mulai dunia cerita atau kanun baru</div>
-              </div>
-            </div>
-            <ChevronRight className="h-4 w-4 text-amber-600" />
-          </button>
         </div>
 
-        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              onRefresh();
-              onClose();
-            }}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            <span>Segarkan Data</span>
-          </button>
-
+        <div className="pt-2 border-t border-slate-100">
           <button
             type="button"
             onClick={() => {
               onOpenGuide();
               onClose();
             }}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-amber-100 text-amber-900 text-xs font-bold hover:bg-amber-200 transition"
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-amber-100 text-amber-900 text-xs font-bold hover:bg-amber-200 transition"
           >
             <HelpCircle className="h-3.5 w-3.5 text-amber-700" />
             <span>Panduan</span>

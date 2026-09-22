@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   AlertCircle,
   XCircle,
-  RefreshCw,
   PlusCircle,
   Menu,
   X,
@@ -500,7 +499,6 @@ export function App() {
           systemStatus={overview?.runtime?.status || 'INITIALIZED'}
           onOpenGuide={() => setGuideOpen(true)}
           isSandbox={Boolean(isSandbox)}
-          onOpenCreateStory={() => setCreateStoryOpen(true)}
           activeStoryTitle={activeTitle}
           currentDate={universe?.temporal?.currentUniverseDate || overview?.universe?.universeDate || 'Belum tercatat'}
         />
@@ -541,17 +539,6 @@ export function App() {
             <Button
               kind="secondary"
               size="sm"
-              onClick={refresh}
-              disabled={loading || busy}
-              className="flex items-center gap-1.5"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${loading || busy ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Segarkan</span>
-            </Button>
-
-            <Button
-              kind="secondary"
-              size="sm"
               onClick={() => setGuideOpen(true)}
               className="hidden sm:inline-flex items-center gap-1.5"
             >
@@ -580,7 +567,7 @@ export function App() {
             <UniverseView
               universe={universe}
               onOpenCharacterWorkspace={handleOpenCharacterWorkspace}
-              onAddCharacter={handleAddCharacter}
+              onOpenCharacterList={() => { setSelectedCharacterId(null); setView('character'); }}
               onAddLocation={handleAddLocation}
               onAddObject={handleAddObject}
               onAddRelationship={handleAddRelationship}
@@ -601,7 +588,6 @@ export function App() {
               onUpdateBehavior={handleUpdateCharacterBehavior}
               onUpdateStyle={handleUpdateCharacterStyle}
               onAddKnowledge={handleAddCharacterKnowledge}
-              onAddCharacter={handleAddCharacter}
               onAiAssist={handleAiAssist}
             />
           )}
@@ -648,9 +634,7 @@ export function App() {
         isOpen={mobileMoreOpen}
         onClose={() => setMobileMoreOpen(false)}
         onNavigate={handleNavigate}
-        onOpenCreateStory={() => setCreateStoryOpen(true)}
         onOpenGuide={() => setGuideOpen(true)}
-        onRefresh={refresh}
         systemStatus={overview?.runtime?.status || 'INITIALIZED'}
         isSandbox={Boolean(isSandbox)}
       />
