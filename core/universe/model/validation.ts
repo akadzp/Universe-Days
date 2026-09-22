@@ -15,6 +15,7 @@ import { validateActorClassification } from './actor.ts';
 import { validateCharacterProfile } from './character-profile.ts';
 import { validateBehavior } from './behavior.ts';
 import { CharacterStateEntity, validateCharacterState } from './character-state.ts';
+import { CharacterStyleEntity, validateCharacterStyle } from './character-style.ts';
 
 export interface ValidationIssue {
   readonly code: string;
@@ -107,6 +108,24 @@ export class UniverseModelValidator {
         }
       }
 
+      for (const styleRef of char.styleReferences ?? []) {
+        if (!universe.styles || !universe.styles[styleRef]) {
+          issues.push({
+            code: 'DANGLING_STYLE_REFERENCE',
+            path: `characters.${id}.styleReferences`,
+            message: `Character style reference '${styleRef}' not found in styles`,
+            severity: 'ERROR'
+          });
+        } else if (universe.styles[styleRef].characterId !== id) {
+          issues.push({
+            code: 'STYLE_CHARACTER_MISMATCH',
+            path: `characters.${id}.styleReferences.${styleRef}`,
+            message: `Style '${styleRef}' belongs to character '${universe.styles[styleRef].characterId}', not '${id}'`,
+            severity: 'ERROR'
+          });
+        }
+      }
+
       if (char.stateReference && (!universe.states || !universe.states[char.stateReference])) {
         issues.push({
           code: 'DANGLING_STATE_REFERENCE',
@@ -155,6 +174,34 @@ export class UniverseModelValidator {
             severity: 'ERROR'
           });
         }
+      }
+    }
+
+    for (const [id, style] of Object.entries(universe.styles || {})) {
+      if (style.identity.id !== id) {
+        issues.push({
+          code: 'ID_KEY_MISMATCH',
+          path: `styles.${id}`,
+          message: `Style map key '${id}' does not match entity id '${style.identity.id}'`,
+          severity: 'ERROR'
+        });
+      }
+      const styleValidation = validateCharacterStyle(style as CharacterStyleEntity);
+      for (const issue of styleValidation.issues) {
+        issues.push({
+          code: issue.code,
+          path: `styles.${id}.${issue.path}`,
+          message: issue.message,
+          severity: 'ERROR'
+        });
+      }
+      if (!universe.characters[style.characterId]) {
+        issues.push({
+          code: 'DANGLING_STYLE_CHARACTER_REFERENCE',
+          path: `styles.${id}.characterId`,
+          message: `Style character '${style.characterId}' not found in characters`,
+          severity: 'ERROR'
+        });
       }
     }
 

@@ -17,7 +17,9 @@ export enum EntityType {
   LOCATION = 'LOCATION',
   EVENT = 'EVENT',
   PROCESS = 'PROCESS',
-  UNRESOLVED_CONDITION = 'UNRESOLVED_CONDITION'
+  UNRESOLVED_CONDITION = 'UNRESOLVED_CONDITION',
+  BEHAVIOR = 'BEHAVIOR',
+  STYLE = 'STYLE'
 }
 
 export enum EntityLifecycleStatus {
@@ -46,7 +48,4 @@ export enum ModelValidationStatus {
   REQUIRES_REVALIDATION = 'REQUIRES_REVALIDATION'
 }
 
-/**
- * Epistemic categories for facts/knowledge vs Universe ground truth.
- */
 export { TemporalStatus as TemporalAssertionCategory };

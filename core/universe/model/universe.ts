@@ -18,6 +18,8 @@ import { LocationEntity } from './location.ts';
 import { EventEntity } from './event.ts';
 import { ProcessEntity } from './process.ts';
 import { UnresolvedConditionEntity } from './unresolved.ts';
+import { BehaviorEntity } from './behavior.ts';
+import { CharacterStyleEntity } from './character-style.ts';
 import { RevisionHistory, RevisionHistoryManager } from './history.ts';
 import { SourceAuthorityMetadata, createProvenanceMetadata } from './provenance.ts';
 import { AuthorityLevel } from './types.ts';
@@ -34,30 +36,29 @@ export interface UniverseContinuityContext {
 }
 
 export interface UniverseTemporalContext {
-  readonly currentUniverseDate: string;      // e.g. "2024-01-01"
-  readonly currentUniverseTime: string;      // e.g. "2024-01-01T12:00:00Z"
-  readonly currentPeriodRef?: string;       // Reference to active Daily Universe period
+  readonly currentUniverseDate: string;
+  readonly currentUniverseTime: string;
+  readonly currentPeriodRef?: string;
   readonly activeTimezoneOrEra?: string;
 }
 
 export interface UniverseModel {
   readonly universeId: string;
   readonly temporalContext: UniverseTemporalContext;
-  
-  // Domain Entity Collections (Immutable dictionaries keyed by stable ID)
+
   readonly characters: Readonly<Record<string, CharacterEntity>>;
   readonly relationships: Readonly<Record<string, RelationshipEntity>>;
   readonly objects: Readonly<Record<string, ObjectEntity>>;
   readonly knowledge: Readonly<Record<string, KnowledgeEntity>>;
   readonly states: Readonly<Record<string, StateEntity>>;
   readonly locations: Readonly<Record<string, LocationEntity>>;
+  readonly behaviors: Readonly<Record<string, BehaviorEntity>>;
+  readonly styles: Readonly<Record<string, CharacterStyleEntity>>;
 
-  // Temporal Progression Collections
   readonly events: Readonly<Record<string, EventEntity>>;
   readonly processes: Readonly<Record<string, ProcessEntity>>;
   readonly unresolvedConditions: Readonly<Record<string, UnresolvedConditionEntity>>;
 
-  // Context & Metadata
   readonly continuityContext: UniverseContinuityContext;
   readonly domainBindings: readonly UniverseDomainBinding[];
   readonly revisionHistory: RevisionHistory;
@@ -75,6 +76,8 @@ export interface CreateUniverseModelParams {
   knowledge?: Record<string, KnowledgeEntity>;
   states?: Record<string, StateEntity>;
   locations?: Record<string, LocationEntity>;
+  behaviors?: Record<string, BehaviorEntity>;
+  styles?: Record<string, CharacterStyleEntity>;
   events?: Record<string, EventEntity>;
   processes?: Record<string, ProcessEntity>;
   unresolvedConditions?: Record<string, UnresolvedConditionEntity>;
@@ -84,9 +87,6 @@ export interface CreateUniverseModelParams {
 }
 
 export class UniverseModelFactory {
-  /**
-   * Instantiates an immutable UniverseModel root container.
-   */
   public static create(params: CreateUniverseModelParams): UniverseModel {
     const universeTime = params.universeTime ?? `${params.universeDate}T00:00:00Z`;
     const source = params.sourceSystem ?? makeSystemID('UNIVERSE_ROOT_SYSTEM');
@@ -134,6 +134,8 @@ export class UniverseModelFactory {
       knowledge: freezeMap(params.knowledge),
       states: freezeMap(params.states),
       locations: freezeMap(params.locations),
+      behaviors: freezeMap(params.behaviors),
+      styles: freezeMap(params.styles),
       events: freezeMap(params.events),
       processes: freezeMap(params.processes),
       unresolvedConditions: freezeMap(params.unresolvedConditions),

@@ -11,6 +11,7 @@ export * from './actor.ts';
 export * from './character-profile.ts';
 export * from './behavior.ts';
 export * from './character-state.ts';
+export * from './character-style.ts';
 export * from './character.ts';
 export * from './relationship.ts';
 export * from './object.ts';

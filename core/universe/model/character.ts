@@ -17,6 +17,7 @@ export interface CharacterEntity {
   readonly actor?: ActorClassification;
   readonly profile?: CharacterProfile;
   readonly behaviorReferences?: readonly string[];
+  readonly styleReferences?: readonly string[];
   readonly roleReferences: readonly string[];
   readonly stateReference?: string;
   readonly knowledgeReferences: readonly string[];
