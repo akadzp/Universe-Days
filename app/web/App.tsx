@@ -145,7 +145,7 @@ export const App: React.FC = () => {
 
   const fetchDevelopment = useCallback(async () => {
     try {
-      return await safeFetchJson<DevelopmentData>('/api/control/universe/developments');
+      return await safeFetchJson<DevelopmentData>('/api/control/universe/development');
     } catch {
       return null;
     }
@@ -171,7 +171,7 @@ export const App: React.FC = () => {
   const handleCreateStory = async (storyData: any) => {
     setBusy(true);
     try {
-      const result = await safeFetchJson('/api/control/story/create', {
+      await safeFetchJson('/api/control/story/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(storyData),
@@ -181,6 +181,91 @@ export const App: React.FC = () => {
         message: `Kisah "${storyData.title}" berhasil dibuat dan dibuka di ${storyData.universeScope === 'SANDBOX' ? 'Sandbox' : 'Kanon Resmi'}!`,
       });
       setView('story');
+      await refresh();
+    } catch (error) {
+      showToast({ tone: 'error', message: decodeFriendlyError(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleEditCharacter = async (charId: string, charData: any) => {
+    setBusy(true);
+    try {
+      await safeFetchJson(`/api/control/universe/character/${encodeURIComponent(charId)}/edit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(charData),
+      });
+      showToast({ tone: 'ok', message: 'Profil tokoh berhasil diperbarui!' });
+      await refresh();
+    } catch (error) {
+      showToast({ tone: 'error', message: decodeFriendlyError(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleUpdateCharacterState = async (charId: string, stateData: any) => {
+    setBusy(true);
+    try {
+      await safeFetchJson(`/api/control/universe/character/${encodeURIComponent(charId)}/state`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(stateData),
+      });
+      showToast({ tone: 'ok', message: 'Kondisi dinamis tokoh berhasil diperbarui!' });
+      await refresh();
+    } catch (error) {
+      showToast({ tone: 'error', message: decodeFriendlyError(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleUpdateCharacterBehavior = async (charId: string, behData: any) => {
+    setBusy(true);
+    try {
+      await safeFetchJson(`/api/control/universe/character/${encodeURIComponent(charId)}/behavior`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(behData),
+      });
+      showToast({ tone: 'ok', message: 'Pola perilaku tokoh berhasil disimpan!' });
+      await refresh();
+    } catch (error) {
+      showToast({ tone: 'error', message: decodeFriendlyError(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleUpdateCharacterStyle = async (charId: string, styleData: any) => {
+    setBusy(true);
+    try {
+      await safeFetchJson(`/api/control/universe/character/${encodeURIComponent(charId)}/style`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(styleData),
+      });
+      showToast({ tone: 'ok', message: 'Gaya bahasa tokoh berhasil disimpan!' });
+      await refresh();
+    } catch (error) {
+      showToast({ tone: 'error', message: decodeFriendlyError(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleAddCharacterKnowledge = async (charId: string, knowData: any) => {
+    setBusy(true);
+    try {
+      await safeFetchJson(`/api/control/universe/character/${encodeURIComponent(charId)}/knowledge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(knowData),
+      });
+      showToast({ tone: 'ok', message: 'Pengetahuan baru berhasil dicatat!' });
       await refresh();
     } catch (error) {
       showToast({ tone: 'error', message: decodeFriendlyError(error) });
@@ -529,6 +614,12 @@ export const App: React.FC = () => {
               onSelectCharacter={(id) => setSelectedCharacterId(id)}
               allCharacters={universe?.characters || []}
               fetchCharacterWorkspace={fetchCharacterWorkspace}
+              onEditCharacter={handleEditCharacter}
+              onUpdateState={handleUpdateCharacterState}
+              onUpdateBehavior={handleUpdateCharacterBehavior}
+              onUpdateStyle={handleUpdateCharacterStyle}
+              onAddKnowledge={handleAddCharacterKnowledge}
+              onAiAssist={handleAiAssist}
             />
           )}
 

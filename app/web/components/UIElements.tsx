@@ -70,6 +70,7 @@ export function Button({
   size = 'md',
   className = '',
   id,
+  type = 'button',
 }: {
   children: React.ReactNode;
   onClick?: () => void;
@@ -78,6 +79,7 @@ export function Button({
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   id?: string;
+  type?: 'button' | 'submit' | 'reset';
 }) {
   const sizeClasses = {
     sm: 'px-3 py-1.5 text-xs rounded-xl font-medium',
@@ -98,7 +100,7 @@ export function Button({
   return (
     <button
       id={id}
-      type="button"
+      type={type}
       onClick={onClick}
       disabled={disabled}
       className={`inline-flex items-center justify-center gap-2 cursor-pointer transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none ${sizeClasses} ${kindClasses} ${className}`}

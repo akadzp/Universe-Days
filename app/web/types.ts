@@ -266,7 +266,7 @@ export interface CharacterWorkspaceData {
     clothingStyle?: string;
   };
   personality: {
-    personalityType: string;
+    personalityType?: string;
     traits: string[];
     flaws: string[];
     habits?: string[];
@@ -274,7 +274,7 @@ export interface CharacterWorkspaceData {
     values?: string[];
   };
   life: {
-    occupation: string;
+    occupation?: string;
     hobbies: string[];
     interests: string[];
     skills: string[];
@@ -296,16 +296,48 @@ export interface CharacterWorkspaceData {
     group?: string;
     gender?: string;
     entityType: string;
+    source?: string;
   };
   currentState: {
     vitality: string;
-    mood: string;
+    mood?: string;
+    activity?: string;
+    condition?: string;
+    goal?: string;
     status: string;
+    transitionCount?: number;
+    stateId?: string;
   };
+  behavior?: {
+    behaviorPattern: string;
+    behaviorContext?: string;
+    behaviorFrequency?: string;
+    triggers?: string[];
+    typicalResponse?: string;
+    alternativeResponse?: string;
+    responseIntensity?: string;
+    changes?: any[];
+  } | null;
+  style?: {
+    languageStyle?: string;
+    wordChoice?: string;
+    formalityLevel?: string;
+    sentencePattern?: string;
+    speechRhythm?: string;
+    emotionalExpression?: string;
+    humorStyle?: string;
+    reactionStyle?: string;
+    verbalSignature?: string;
+    commonExpressions?: string[];
+    dialogueTendency?: string;
+    communicationHabits?: string[];
+  } | null;
   location: {
     id: string;
     displayName: string;
     locationType: string;
+    description?: string;
+    accessibilityStatus?: string;
   } | null;
   relationships: Array<{
     id: string;
@@ -322,8 +354,10 @@ export interface CharacterWorkspaceData {
     id: string;
     statement: string;
     subject?: string;
-    certainty: number;
+    certainty: string | number;
     acquisitionSource?: string;
+    acquiredDate?: string;
+    isUniverseFactConfirmed?: boolean;
   }>;
   possessions: Array<{
     id: string;
@@ -331,6 +365,8 @@ export interface CharacterWorkspaceData {
     objectType: string;
     isOwner: boolean;
     isHolder: boolean;
+    isUser?: boolean;
+    isWearer?: boolean;
     condition: string;
     possessionStatus: string;
   }>;
@@ -338,6 +374,7 @@ export interface CharacterWorkspaceData {
     status: string;
     lastCheckedDate: string;
     invariantsPassed: boolean;
+    conflictsCount?: number;
   };
   timeline: Array<{
     date: string;
