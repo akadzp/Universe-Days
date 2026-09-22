@@ -20,11 +20,12 @@ import { ProductionRunner } from '../production/runner.ts';
 import { DailyProductionBridge } from '../production/daily-bridge.ts';
 import { FileProductionStore } from '../persistence/file.ts';
 import { FileScheduledJobStore } from '../persistence/scheduled-jobs.ts';
+import { FileUniverseSnapshotStore } from '../persistence/universe.ts';
 import { PageProductionScheduler } from '../scheduler/scheduler.ts';
 import { ScheduledProductionDispatcher } from '../scheduler/dispatcher.ts';
 import { CostController } from '../cost/controller.ts';
 import { ProviderRegistry, createOpenAICompatibleAdapterFromEnv } from '../providers/index.ts';
-import { UniverseAuthorityStore } from '../universe/index.ts';
+import { UniverseAuthorityStore, UniverseInstanceManager } from '../universe/index.ts';
 
 export interface ProductionRuntime {
   readonly pageCatalog: PageCatalog;
@@ -48,10 +49,12 @@ export interface ProductionRuntime {
   readonly scheduler: PageProductionScheduler;
   readonly scheduledJobStore: FileScheduledJobStore;
   readonly schedulerDispatcher: ScheduledProductionDispatcher;
+  readonly universeAuthority: UniverseAuthorityStore;
+  readonly universeStore: FileUniverseSnapshotStore;
+  readonly universeInstances: UniverseInstanceManager;
   readonly costController: CostController;
   readonly providerRegistry: ProviderRegistry;
   readonly hardening: HardenedRuntimeBoundary;
-  readonly universeAuthority: UniverseAuthorityStore;
 }
 
 export interface ProductionRuntimeOptions {
@@ -61,6 +64,8 @@ export interface ProductionRuntimeOptions {
   readonly loadEnvironmentProviders?: boolean;
   readonly dataDir?: string;
   readonly scheduledDataDir?: string;
+  readonly universeDataDir?: string;
+  readonly autoLoadPersistedUniverse?: boolean;
   readonly costBudget?: ConstructorParameters<typeof CostController>[0];
 }
 
@@ -86,6 +91,7 @@ export function createProductionRuntime(options?: ProductionRuntimeOptions): Pro
   const contextCompiler = new ProductionContextCompiler();
   const outputValidator = new ProductionOutputValidator();
   const productionStore = new FileProductionStore({ rootDir: options?.dataDir });
+  const universeStore = new FileUniverseSnapshotStore({ rootDir: options?.universeDataDir });
   const costController = new CostController(options?.costBudget);
   const semanticCache = new SemanticCache<any>();
   const productionRunner = new ProductionRunner(
@@ -97,6 +103,7 @@ export function createProductionRuntime(options?: ProductionRuntimeOptions): Pro
   );
   const scheduler = new PageProductionScheduler(pageCatalog);
   const universeAuthority = new UniverseAuthorityStore();
+  const universeInstances = new UniverseInstanceManager(universeAuthority, universeStore);
   const dailyBridge = new DailyProductionBridge({
     productionRunner,
     pageBatchExecutor,
@@ -111,6 +118,16 @@ export function createProductionRuntime(options?: ProductionRuntimeOptions): Pro
     executor: pageBatchExecutor as BoundedPageBatchExecutor<any, any>,
     jobStore: scheduledJobStore
   });
+
+  if (options?.autoLoadPersistedUniverse !== false) {
+    try {
+      universeInstances.loadCurrent();
+    } catch (error) {
+      // Persistent corruption must not be silently repaired or replaced.
+      // Keep the runtime unmounted so Control Center can surface the failure.
+      console.error(`[UniverseInstanceManager] Auto-load blocked: ${String(error)}`);
+    }
+  }
 
   return Object.freeze({
     pageCatalog,
@@ -134,9 +151,11 @@ export function createProductionRuntime(options?: ProductionRuntimeOptions): Pro
     scheduler,
     scheduledJobStore,
     schedulerDispatcher,
+    universeAuthority,
+    universeStore,
+    universeInstances,
     costController,
     providerRegistry,
-    hardening,
-    universeAuthority
+    hardening
   });
 }
