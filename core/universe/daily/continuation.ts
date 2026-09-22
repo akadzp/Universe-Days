@@ -312,15 +312,16 @@ export class DailyUniverseContinuation {
 
     for (const [id, entity] of Object.entries(universe.unresolvedConditions ?? {})) {
       if (suppliedUnresIds.has(id)) continue;
-      if (entity.currentStatus !== 'RESOLVED' && entity.currentStatus !== 'ABANDONED') {
+      const status = entity.currentStatus ?? (entity as any).lifecycleStatus;
+      if (status !== 'RESOLVED' && status !== 'ABANDONED') {
         inheritedUnresolved.push({
-          unresolvedId: entity.conditionId,
-          sourceReference: entity.ownerDomain,
-          temporalReference: entity.temporalScope.effectiveFrom,
-          reason: entity.description,
-          ownerReference: entity.targetEntityRef,
-          priority: 'MEDIUM',
-          lifecycleStatus: entity.currentStatus === 'CARRYOVER' ? UnresolvedStatus.ACTIVE : UnresolvedStatus.UNRESOLVED,
+          unresolvedId: entity.conditionId ?? (entity as any).unresolvedId ?? id,
+          sourceReference: entity.ownerDomain ?? (entity as any).sourceReference ?? 'UNRESOLVED_DOMAIN',
+          temporalReference: entity.temporalScope?.effectiveFrom ?? (entity as any).temporalReference ?? startTime.toCanonical(),
+          reason: entity.description ?? (entity as any).reason ?? 'Unresolved condition',
+          ownerReference: entity.targetEntityRef ?? (entity as any).ownerReference,
+          priority: (entity as any).priority ?? 'MEDIUM',
+          lifecycleStatus: status === 'CARRYOVER' ? UnresolvedStatus.ACTIVE : UnresolvedStatus.UNRESOLVED,
           traceability: {
             requestId: makeRequestID('REQ_UNRES_CARRYOVER'),
             sourceSystem: entity.sourceSystem ?? this.DAILY_UNIVERSE_SYSTEM_ACTOR,

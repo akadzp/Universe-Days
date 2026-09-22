@@ -68,11 +68,11 @@ export class StoryCoreValidator {
     // 1. Trigger Validation
     const triggerEval = StoryTriggerEvaluator.evaluateTrigger(trigger, universeContext);
     checked.trigger = true;
-    if (!triggerEval.success) {
+    if (!triggerEval.success || !triggerEval.data) {
       issues.push({
         severity: 'ERROR',
-        code: triggerEval.error?.code ?? EngineErrorCode.INVALID_STORY_TRIGGER,
-        message: triggerEval.error?.message ?? 'Trigger evaluation failed',
+        code: ((triggerEval.error as any)?.code || triggerEval.error) ?? EngineErrorCode.INVALID_STORY_TRIGGER,
+        message: triggerEval.message ?? 'Trigger evaluation failed',
         field: 'trigger'
       });
     } else if (!triggerEval.data.valid) {
@@ -114,8 +114,8 @@ export class StoryCoreValidator {
     if (!dateVal.success) {
       issues.push({
         severity: 'ERROR',
-        code: dateVal.error?.code ?? EngineErrorCode.INVALID_STORY_DATE,
-        message: dateVal.error?.message ?? 'Date validation failed',
+        code: ((dateVal.error as any)?.code || dateVal.error) ?? EngineErrorCode.INVALID_STORY_DATE,
+        message: dateVal.message ?? 'Date validation failed',
         field: 'storyDate'
       });
     }
@@ -126,8 +126,8 @@ export class StoryCoreValidator {
     if (!idVal.success) {
       issues.push({
         severity: 'ERROR',
-        code: idVal.error?.code ?? EngineErrorCode.INVALID_STORY_ID,
-        message: idVal.error?.message ?? 'Story ID validation failed',
+        code: ((idVal.error as any)?.code || idVal.error) ?? EngineErrorCode.INVALID_STORY_ID,
+        message: idVal.message ?? 'Story ID validation failed',
         field: 'storyId'
       });
     }

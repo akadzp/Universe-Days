@@ -26,6 +26,21 @@ export class DailyPageValidator {
     if (!input.sourceSelection) errors.push('sourceSelection is required.');
     if (!TemporalStatusManager.isValidStatus(input.temporalStatus)) errors.push('temporalStatus is invalid.');
 
+    if (input.universeContext?.period?.universeScope && input.universeContext.period.universeScope !== input.universeScope) {
+      errors.push(`Universe scope mismatch: context has "${input.universeContext.period.universeScope}", input has "${input.universeScope}".`);
+    }
+
+    if (input.storyPackage) {
+      if (input.storyPackage.trigger?.universeScope && input.storyPackage.trigger.universeScope !== input.universeScope) {
+        errors.push(`Scope mismatch between Story package ("${input.storyPackage.trigger.universeScope}") and Page input ("${input.universeScope}").`);
+      }
+      if (input.storyPackage.handoff?.temporalContext?.periodId && input.universeContext?.period?.periodId) {
+        if (input.storyPackage.handoff.temporalContext.periodId !== input.universeContext.period.periodId) {
+          errors.push(`Period mismatch between Story package ("${input.storyPackage.handoff.temporalContext.periodId}") and Page context ("${input.universeContext.period.periodId}").`);
+        }
+      }
+    }
+
     return { valid: errors.length === 0, errors: Object.freeze(errors) };
   }
 

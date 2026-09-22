@@ -10,6 +10,7 @@ import { EngineErrorCode } from '../../types/errors.ts';
 import { UniversePeriodContext } from '../../universe/daily/initialization.ts';
 import { UniverseEventStatus } from '../../universe/daily/event.ts';
 import { UniverseProcessStatus } from '../../universe/daily/process.ts';
+import { UniverseConsequenceStatus } from '../../universe/daily/consequence.ts';
 import { UnresolvedStatus } from '../../universe/daily/unresolved.ts';
 import { ContinuityStatus } from '../../universe/continuity/continuity-model.ts';
 
@@ -123,7 +124,7 @@ export class StoryTriggerEvaluator {
         if (!cnsq) {
           triggerStatus = 'INVALID';
           reasons.push(`Source consequence "${trigger.sourceReference}" not found in context`);
-        } else if (cnsq.status === 'BLOCKED' || cnsq.status === 'CANCELLED') {
+        } else if (cnsq.status === UniverseConsequenceStatus.CANCELLED || cnsq.status === UniverseConsequenceStatus.FAILED) {
           triggerStatus = 'BLOCKED';
           reasons.push(`Source consequence "${trigger.sourceReference}" is ${cnsq.status}`);
         } else {

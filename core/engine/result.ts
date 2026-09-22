@@ -30,10 +30,10 @@ export interface ExecutionResult<TOutputs = Record<string, unknown>> {
   success: boolean;
   outputs: TOutputs;
   validationSummary: ValidationSummary;
-  conflicts: ConflictRecord[];
+  conflicts: readonly ConflictRecord[];
   trace: ReadonlyArray<ExecutionTraceEntry>;
-  changedEntityRefs: string[];
-  unresolvedConditions: string[];
+  changedEntityRefs: readonly string[];
+  unresolvedConditions: readonly string[];
   error?: {
     code: string;
     message: string;

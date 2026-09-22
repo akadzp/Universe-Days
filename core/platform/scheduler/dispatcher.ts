@@ -89,15 +89,16 @@ export class ScheduledProductionDispatcher {
       candidates.push(job);
     }
 
-    const pageJobs = buildPageJobs(
+    const candidateMap = new Map(candidates.map(c => [c.pageDefinitionId, c]));
+    const pageJobs = buildPageJobs<ScheduledJob>(
       candidates,
-      job => job,
+      pageDefinitionId => candidateMap.get(pageDefinitionId)!,
       deterministicKey('SCHED_BATCH', mounted.universe.universeId, mounted.universeScope, input.universeDate)
     );
 
     const batch: PageBatchResult<ScheduledDispatchResult> = await this.deps.executor.run(
       pageJobs,
-      { execute: job => this.executeOne(job, input, mounted.universe.temporalContext.currentUniverseTime) },
+      { execute: job => this.executeOne(job.input, input, mounted.universe.temporalContext.currentUniverseTime) },
       { stopOnFatalError: false }
     );
 

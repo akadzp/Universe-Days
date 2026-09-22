@@ -270,7 +270,7 @@ export class DailyProductionBridge {
             item.userInstruction
           ].filter(Boolean).join(' ');
 
-          return this.dependencies.productionRunner.run({
+          const runResult = await this.dependencies.productionRunner.run({
             universe: item.universe,
             universeId: item.universe.universeId,
             universeScope: item.universeScope,
@@ -284,6 +284,12 @@ export class DailyProductionBridge {
             routing: item.options.routing,
             bypassCache: item.options.bypassCache
           });
+
+          if (runResult.status === 'FAILED' || runResult.status === 'BLOCKED') {
+            throw new Error(runResult.reason ?? `Page production failed with status ${runResult.status}`);
+          }
+
+          return runResult;
         }
       },
       { stopOnFatalError: false }
@@ -294,7 +300,13 @@ export class DailyProductionBridge {
     );
 
     const failedPages = pageProduction.failed + pageProduction.blocked;
-    const status = failedPages > 0 ? 'PARTIAL' : 'COMPLETED';
+    const storyFailed = storyProduction ? (storyProduction.status === 'FAILED' || storyProduction.status === 'BLOCKED') : false;
+    let status: DailyProductionBridgeResult['status'] = 'COMPLETED';
+    if (storyFailed && (jobs.length === 0 || failedPages === jobs.length)) {
+      status = 'FAILED';
+    } else if (storyFailed || failedPages > 0) {
+      status = 'PARTIAL';
+    }
 
     return Object.freeze({
       status,

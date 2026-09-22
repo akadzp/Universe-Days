@@ -54,7 +54,19 @@ export class ProductionRunner {
       return result;
     }
 
-    const runId = deterministicKey('RUN', universeId, universeScope, universe.temporalContext.currentUniverseDate, universe.temporalContext.currentUniverseTime, purpose, userInstruction, hash32(stableSerialize(universe)));
+    const runId = deterministicKey(
+      'RUN',
+      universeId,
+      universeScope,
+      universe.temporalContext.currentUniverseDate,
+      universe.temporalContext.currentUniverseTime,
+      purpose,
+      input.dailyContext?.period?.periodId ?? 'NO_PERIOD',
+      input.storyPackage?.storyId ?? 'NO_STORY',
+      input.pagePackage?.pageId ? String(input.pagePackage.pageId) : 'NO_PAGE',
+      userInstruction,
+      hash32(stableSerialize(universe))
+    );
     const timestamp = universe.temporalContext.currentUniverseTime;
 
     if (!this.ai.hasProvider()) {

@@ -21,3 +21,4 @@ export * from './engine/index.ts';
 export * from './rules/index.ts';
 export * from './temporal/index.ts';
 export * from './universe/index.ts';
+export type { KnowledgeChangeRequest } from './domains/index.ts';

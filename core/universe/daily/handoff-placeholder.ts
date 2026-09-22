@@ -46,7 +46,7 @@ export class DomainHandoffRouter {
       sourceSystem: makeSystemID('DAILY_UNIVERSE_CORE'),
       targetSystem: makeSystemID(request.targetDomain),
       requestId,
-      messageType: MessageType.DATA_MUTATION,
+      messageType: MessageType.REQUEST,
       temporalContextRef: request.sourcePeriodId,
       entityReferences: request.entityReferences as any,
       requestedChange: request.requestedChange,
@@ -66,7 +66,7 @@ export class DomainHandoffRouter {
 
     const val = validateHandoff<T>(contract);
     if (!val.success) {
-      return failure(`Handoff validation failed: ${val.error.message}`);
+      return failure(`Handoff validation failed: ${val.message ?? (val.error as any)?.message ?? 'validation error'}`);
     }
 
     const handler = this.handlers.get(request.targetDomain);

@@ -334,5 +334,27 @@ export class ProductionContextCompiler {
     if (request.purpose === 'DAILY_PAGE' && !request.pagePackage && !request.dailyContext) {
       throw new Error('DAILY_PAGE context requires dailyContext or pagePackage.');
     }
+    if (request.dailyContext && request.dailyContext.period.universeScope !== request.universeScope) {
+      throw new Error(`Universe scope mismatch: dailyContext has "${request.dailyContext.period.universeScope}", request has "${request.universeScope}".`);
+    }
+    if (request.storyPackage) {
+      if (request.storyPackage.trigger?.universeScope && request.storyPackage.trigger.universeScope !== request.universeScope) {
+        throw new Error(`Universe scope mismatch: storyPackage has "${request.storyPackage.trigger.universeScope}", request has "${request.universeScope}".`);
+      }
+      if (request.dailyContext && request.storyPackage.handoff?.temporalContext?.periodId && request.storyPackage.handoff.temporalContext.periodId !== request.dailyContext.period.periodId) {
+        throw new Error(`Period mismatch: storyPackage has period "${request.storyPackage.handoff.temporalContext.periodId}", dailyContext has "${request.dailyContext.period.periodId}".`);
+      }
+    }
+    if (request.pagePackage) {
+      if (request.pagePackage.universeId !== request.universe.universeId) {
+        throw new Error(`Universe ID mismatch: pagePackage has "${request.pagePackage.universeId}", universe has "${request.universe.universeId}".`);
+      }
+      if (request.pagePackage.universeScope !== request.universeScope) {
+        throw new Error(`Universe scope mismatch: pagePackage has "${request.pagePackage.universeScope}", request has "${request.universeScope}".`);
+      }
+      if (request.dailyContext && request.pagePackage.pageDate !== request.dailyContext.period.startTime.toCanonical().slice(0, 10)) {
+        throw new Error(`Date mismatch: pagePackage has "${request.pagePackage.pageDate}", dailyContext period has "${request.dailyContext.period.startTime.toCanonical().slice(0, 10)}".`);
+      }
+    }
   }
 }

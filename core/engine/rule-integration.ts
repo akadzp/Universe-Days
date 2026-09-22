@@ -94,8 +94,13 @@ export class EngineRuleIntegration {
       // Empty rules pass by default
       gateRes = {
         gateId: effectiveGate.gateId,
+        mode: effectiveGate.mode,
         passed: true,
-        evaluatedRuleResults: {},
+        totalRules: 0,
+        passedCount: 0,
+        failedCount: 0,
+        blockedCount: 0,
+        ruleResults: {},
         summary: 'No active rules required for execution; gate automatically passed.'
       };
     } else {

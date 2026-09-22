@@ -174,7 +174,7 @@ export class CarryoverManager {
       }
 
       // Apply transition to get updated item
-      const resultingStatus = validation.resultingStatus ?? item.status;
+      const resultingStatus = (validation.resultingStatus as ContinuityStatus) ?? item.status;
       const updatedItem: ContinuityItem = {
         ...item,
         status: resultingStatus,

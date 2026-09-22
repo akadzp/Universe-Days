@@ -428,7 +428,7 @@ export class CharacterContinuityLifecycle {
 
     const conflicts: CharacterContinuityConflict[] = report.issues.map((finding, index) => Object.freeze({
       conflictId: `CONFLICT_${characterId}_${String(index + 1).padStart(4, '0')}`,
-      conflictType: finding.type as ContinuityConflictType,
+      conflictType: finding.type as unknown as ContinuityConflictType,
       conflictDescription: finding.message,
       affectedData: Object.freeze([characterId, ...finding.evidenceReferences]),
       resolutionStatus: ContinuityResolutionStatus.UNRESOLVED,

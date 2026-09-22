@@ -60,9 +60,9 @@ export class DailyStoryOrchestrator {
 
     // Evaluate trigger validity
     const triggerEval = StoryTriggerEvaluator.evaluateTrigger(trigger, universeContext);
-    if (!triggerEval.success) {
-      lifecycle.transition(StoryLifecycleEvent.FAIL, { reason: triggerEval.error?.message });
-      return failure(triggerEval.error!);
+    if (!triggerEval.success || !triggerEval.data) {
+      lifecycle.transition(StoryLifecycleEvent.FAIL, { reason: triggerEval.message ?? 'Trigger evaluation failed' });
+      return failure(triggerEval.error ?? EngineErrorCode.INVALID_STORY_TRIGGER, triggerEval.message ?? 'Trigger evaluation failed');
     }
     if (!triggerEval.data.valid) {
       if (triggerEval.data.triggerStatus === 'BLOCKED') {
@@ -89,9 +89,9 @@ export class DailyStoryOrchestrator {
         additionalActors: options?.additionalActors,
         additionalDomains: options?.additionalDomains
       });
-      if (!scopeRes.success) {
-        lifecycle.transition(StoryLifecycleEvent.FAIL, { reason: scopeRes.error?.message });
-        return failure(scopeRes.error!);
+      if (!scopeRes.success || !scopeRes.data) {
+        lifecycle.transition(StoryLifecycleEvent.FAIL, { reason: scopeRes.message ?? 'Scope builder failed' });
+        return failure(scopeRes.error ?? EngineErrorCode.INVALID_STORY_SCOPE, scopeRes.message ?? 'Scope builder failed');
       }
       scope = scopeRes.data;
     }
@@ -103,9 +103,9 @@ export class DailyStoryOrchestrator {
 
     // 3. Date: Resolve authoritative Story Date
     const dateRes = StoryDateResolver.resolveDate(universeContext, trigger);
-    if (!dateRes.success) {
-      lifecycle.transition(StoryLifecycleEvent.FAIL, { reason: dateRes.error?.message });
-      return failure(dateRes.error!);
+    if (!dateRes.success || !dateRes.data) {
+      lifecycle.transition(StoryLifecycleEvent.FAIL, { reason: dateRes.message ?? 'Date resolver failed' });
+      return failure(dateRes.error ?? EngineErrorCode.INVALID_STORY_DATE, dateRes.message ?? 'Date resolver failed');
     }
     const storyDate = dateRes.data;
 

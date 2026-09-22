@@ -19,7 +19,8 @@ export enum EntityType {
   PROCESS = 'PROCESS',
   UNRESOLVED_CONDITION = 'UNRESOLVED_CONDITION',
   BEHAVIOR = 'BEHAVIOR',
-  STYLE = 'STYLE'
+  STYLE = 'STYLE',
+  CONTINUITY = 'CONTINUITY'
 }
 
 export enum EntityLifecycleStatus {

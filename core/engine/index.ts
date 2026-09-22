@@ -29,5 +29,5 @@ export * from './gate-engine.ts';
 export * from './state-machine.ts';
 export * from './dependency-graph.ts';
 export * from './conditions.ts';
-export * from './context-builder.ts';
+export { ContextBuilder, type ValidationState } from './context-builder.ts';
 export * from './task-resolver.ts';

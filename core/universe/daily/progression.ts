@@ -11,7 +11,7 @@ import { UniverseEventStatus } from './event.ts';
 import { UniverseProcessStatus } from './process.ts';
 import { ContinuityValidator } from '../continuity/validator.ts';
 import { Transition } from '../continuity/transition.ts';
-import { ContinuityItem } from '../continuity/continuity-model.ts';
+import { ContinuityItem, ContinuityStatus } from '../continuity/continuity-model.ts';
 import { Duration } from '../../temporal/duration.ts';
 import { TimePoint } from '../../temporal/time-point.ts';
 import { Result, success, failure } from '../../types/result.ts';
@@ -133,11 +133,11 @@ export class ProgressionEngine {
           const val = ContinuityValidator.validateTransition({ item, transition: t });
           const updatedItem: ContinuityItem = {
             ...item,
-            status: val.resultingStatus,
+            status: (val.resultingStatus as ContinuityStatus) ?? item.status,
             currentConditionRef: t.currentConditionRef ?? item.currentConditionRef,
             identity: {
               ...item.identity,
-              version: item.identity.version + 1
+              version: typeof item.identity.version === 'number' ? item.identity.version + 1 : `${item.identity.version}.1`
             }
           };
           ctx.continuityItems[itemIndex] = updatedItem;

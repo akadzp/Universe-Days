@@ -68,7 +68,9 @@ export class DomainRouter {
 
     return DomainGateway.query<TFilter, TData>(actor, domain, {
       requestId: requestId as any,
-      queryType: query.queryType,
+      sourceSystem: actor as any,
+      targetDomain: domain as any,
+      operation: query.queryType,
       filter: query.filter
     });
   }
@@ -83,10 +85,11 @@ export class DomainRouter {
       return failure(ownerRes.error, ownerRes.message);
     }
 
-    const canReq = canPerformAction(actor, domain, ArchitectureAction.REQUEST);
-    const canWrite = canPerformAction(actor, domain, ArchitectureAction.WRITE);
+    const canReq = canPerformAction(actor, domain, ArchitectureAction.REQUEST_CHANGE);
+    const canWrite = canPerformAction(actor, domain, ArchitectureAction.APPLY_CHANGE);
 
-    if (!canReq && !canWrite) {
+    const allowed = (canReq.success && canReq.data?.allowed) || (canWrite.success && canWrite.data?.allowed);
+    if (!allowed) {
       return blocked(
         EngineErrorCode.UNAUTHORIZED_DOMAIN_ACCESS,
         `Actor "${actor}" is not authorized to request modifications in domain "${domain}".`

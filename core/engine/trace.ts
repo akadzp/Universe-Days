@@ -17,9 +17,9 @@ export interface ExecutionTraceEntry {
   domain?: DomainID | string;
   inputRef?: string;
   resultStatus: string;
-  ruleRefs?: string[];
-  validationRefs?: string[];
-  details?: Record<string, unknown>;
+  ruleRefs?: readonly string[];
+  validationRefs?: readonly string[];
+  details?: Readonly<Record<string, unknown>>;
 }
 
 export class ExecutionTracer {

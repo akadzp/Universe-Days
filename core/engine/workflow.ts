@@ -114,9 +114,10 @@ export class WorkflowEngine {
     for (const id of stepMap.keys()) {
       if (visited.get(id) === 'UNVISITED') {
         if (dfsCycle(id)) {
+          const cycleStr = (detectedCycle as string[] | null)?.join(' -> ') ?? 'cycle';
           return blocked(
             EngineErrorCode.WORKFLOW_CYCLE_DETECTED,
-            `Workflow dependency cycle detected: ${detectedCycle?.join(' -> ')}.`
+            `Workflow dependency cycle detected: ${cycleStr}.`
           );
         }
       }

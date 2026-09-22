@@ -22,7 +22,13 @@ const DEFAULT_FORBIDDEN_KEYS = new Set([
   'commitState',
   'assignIdentity',
   'writeStorage',
-  'systemOverride'
+  'systemOverride',
+  'createLocation',
+  'createCharacter',
+  'rewriteTimeline',
+  'setPeriodPredecessor',
+  'overrideAuthority',
+  'canonState'
 ]);
 
 function inspectForbiddenKeys(value: unknown, forbidden: Set<string>, path = '$'): ValidationViolation[] {

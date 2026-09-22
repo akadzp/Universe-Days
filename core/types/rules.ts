@@ -84,11 +84,11 @@ export interface RuntimeRule {
   type: RuleType;
   enabled: boolean;
   priority?: number;
-  dependencies?: (RuleID | string)[];
-  preconditions?: Condition[];
-  conditions?: Condition[];
-  actions?: RuleAction[];
-  forbiddenConditions?: Condition[];
+  dependencies?: readonly (RuleID | string)[];
+  preconditions?: readonly Condition[];
+  conditions?: readonly Condition[];
+  actions?: readonly RuleAction[];
+  forbiddenConditions?: readonly Condition[];
   severity?: RuleSeverity;
   metadata?: Record<string, unknown>;
   description?: string;
