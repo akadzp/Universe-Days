@@ -10,11 +10,13 @@ import {
   Lightbulb,
   Clock,
   Loader2,
-  ChevronDown,
-  ChevronUp,
+  Copy,
+  Check,
+  Download,
+  Share2,
 } from 'lucide-react';
 import { ControlOverview, ProductionRunRecord } from '../types.ts';
-import { Card, Button, StatusBadge } from '../components/UIElements.tsx';
+import { Card, Button, StatusBadge, ModeBadge, InfoCallout } from '../components/UIElements.tsx';
 import {
   formatFriendlyDate,
   formatFriendlyTime,
@@ -39,18 +41,20 @@ export function ProductionView({
 }) {
   const isMounted = overview.universe.status === 'READY';
   const universeDate = overview.universe.universeDate;
+  const isSandbox = overview.universe.universeScope === 'SANDBOX';
+
   const [selectedKind, setSelectedKind] = useState<'DAILY_STORY' | 'DAILY_PAGE' | 'GENERAL_PRODUCTION'>('DAILY_STORY');
   const [instruction, setInstruction] = useState('');
-  const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const samplePrompts: Record<string, string[]> = {
     DAILY_STORY: [
-      'Gambarkan suasana pagi hari di kota pelabuhan dan pertemuan tak terduga antara dua tokoh.',
+      'Gambarkan suasana pagi hari di kota dan pertemuan tak terduga antara dua tokoh.',
       'Fokuskan pada dialog mendalam mengenai rahasia masa lalu yang baru terungkap.',
       'Tuliskan adegan penuh ketegangan saat tokoh utama mengambil keputusan sulit.',
     ],
     DAILY_PAGE: [
-      'Terbitkan kronik peristiwa yang merangkum perselisihan faksi hari ini.',
+      'Terbitkan kronik peristiwa yang merangkum dinamika kelompok hari ini.',
       'Buat ringkasan kabar tokoh mengenai siapa yang kini menjadi sekutu baru.',
       'Sajikan tinjauan alur cerita yang menyoroti konsistensi peristiwa.',
     ],
@@ -66,29 +70,65 @@ export function ProductionView({
     void onRunProduction(selectedKind, instruction);
   };
 
+  const extractReadableStory = (run: ProductionRunRecord | null): string => {
+    if (!run?.output) return '';
+    if (typeof run.output === 'string') return run.output;
+    if (typeof run.output.storyText === 'string') return run.output.storyText;
+    if (typeof run.output.summary === 'string') return run.output.summary;
+    if (typeof run.output.text === 'string') return run.output.text;
+    if (run.output.storyProduction?.narrative) return run.output.storyProduction.narrative;
+    return JSON.stringify(run.output, null, 2);
+  };
+
+  const storyText = extractReadableStory(activeRun);
+
+  const handleCopy = () => {
+    if (!storyText) return;
+    navigator.clipboard.writeText(storyText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownload = () => {
+    if (!storyText) return;
+    const blob = new Blob([storyText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Naskah_Pocer_${universeDate || 'Draf'}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div id="view-production" className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-xl font-bold tracking-tight text-stone-100">
-          Studio Penulisan Cerita
-        </h2>
-        <p className="mt-1 text-xs sm:text-sm text-stone-400">
-          Pilih jenis karya yang ingin dibuat. Asisten AI akan menulis naskah dengan mengacu pada karakter dan peristiwa dalam dunia cerita Anda.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-black tracking-tight text-slate-900">
+            Studio Penulisan Naskah
+          </h2>
+          <p className="mt-1 text-xs sm:text-sm text-slate-600">
+            Pilih jenis naskah yang ingin dibuat. Asisten AI menulis narasi dengan mematuhi karakter dan sejarah dunia cerita Anda.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <ModeBadge isSandbox={isSandbox} />
+        </div>
       </div>
 
       {/* Warning if Universe not mounted */}
       {!isMounted && (
-        <Card className="border-amber-400/30 bg-amber-400/[0.04] p-5">
+        <Card variant="ambient" className="border-amber-300 bg-amber-50/80 p-5">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-amber-300 mt-0.5 shrink-0" />
+            <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
             <div className="space-y-2">
-              <h4 className="text-sm font-semibold text-amber-100">
+              <h4 className="text-sm font-bold text-amber-950">
                 Dunia Cerita Belum Dibuka
               </h4>
-              <p className="text-xs leading-relaxed text-stone-300">
-                Sebelum asisten AI dapat menulis naskah yang konsisten, Anda perlu membuka Dunia Cerita terlebih dahulu agar konteks latar dan para tokoh terbaca dengan jelas.
+              <p className="text-xs leading-relaxed text-slate-700">
+                Sebelum asisten AI dapat menulis naskah yang konsisten, Anda perlu membuka Dunia Cerita terlebih dahulu agar latar dan para tokoh terbaca dengan utuh.
               </p>
               <div>
                 <Button size="sm" kind="primary" onClick={onNavigateToUniverse}>
@@ -100,210 +140,182 @@ export function ProductionView({
         </Card>
       )}
 
-      {/* Creation form */}
-      <Card className="p-6 sm:p-7 border-stone-800 bg-stone-950/70">
-        <div className="mb-5">
-          <label className="text-xs font-semibold uppercase tracking-wider text-stone-400">
-            1. Pilih Format Karya
-          </label>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            {(['DAILY_STORY', 'DAILY_PAGE', 'GENERAL_PRODUCTION'] as const).map(kind => {
-              const meta = purposeMap[kind];
-              const isSelected = selectedKind === kind;
-              return (
-                <button
-                  key={kind}
-                  type="button"
-                  onClick={() => setSelectedKind(kind)}
-                  className={`rounded-2xl border p-4 text-left transition ${
-                    isSelected
-                      ? 'border-amber-400/40 bg-amber-400/10 shadow-sm ring-1 ring-amber-400/20'
-                      : 'border-stone-800 bg-stone-900/40 hover:border-stone-700 hover:bg-stone-900/80'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 font-semibold text-xs text-stone-100">
-                    <Sparkles className={`h-3.5 w-3.5 ${isSelected ? 'text-amber-300' : 'text-stone-500'}`} />
-                    <span>{meta.title}</span>
-                  </div>
-                  <div className="mt-1 text-[11px] text-stone-400 leading-relaxed">
-                    {meta.subtitle}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+      {/* Workshop Layout */}
+      <div className="grid gap-6 lg:grid-cols-12">
+        {/* Left Side: Writing Form (5 cols) */}
+        <div className="lg:col-span-5 space-y-6">
+          <Card className="p-6">
+            <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+              <Edit3 className="h-4 w-4 text-amber-500" />
+              <span>Format & Arah Cerita</span>
+            </h3>
 
-        {/* Prompt presets / ideas */}
-        <div className="mb-5">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-400 mb-2">
-            <Lightbulb className="h-3.5 w-3.5 text-amber-300" />
-            <span>Inspirasi Arahan Cerita (Klik untuk menggunakan):</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {(samplePrompts[selectedKind] ?? []).map((prompt, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => setInstruction(prompt)}
-                className="rounded-xl border border-stone-800 bg-stone-900/60 px-3 py-1.5 text-left text-[11px] text-stone-300 transition hover:border-amber-400/40 hover:bg-stone-900 hover:text-amber-200"
-              >
-                &ldquo;{prompt}&rdquo;
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Custom Instructions */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold uppercase tracking-wider text-stone-400">
-              2. Petunjuk Khusus Penulisan <span className="font-normal text-stone-500">(Opsional)</span>
-            </label>
-            {instruction && (
-              <button
-                type="button"
-                onClick={() => setInstruction('')}
-                className="text-[11px] text-stone-500 hover:text-stone-300"
-              >
-                Hapus teks
-              </button>
-            )}
-          </div>
-          <textarea
-            id="story-instruction-input"
-            value={instruction}
-            onChange={e => setInstruction(e.target.value)}
-            rows={4}
-            disabled={busy || !isMounted}
-            className="w-full rounded-2xl border border-stone-800 bg-stone-950 p-4 text-xs sm:text-sm text-stone-200 placeholder:text-stone-600 focus:border-amber-400/40 focus:outline-none focus:ring-1 focus:ring-amber-400/20"
-            placeholder={
-              isMounted
-                ? `Tuliskan arahan cerita untuk tanggal ${formatFriendlyDate(universeDate)}... (Kosongkan bila ingin asisten AI menggunakan naskah standar).`
-                : 'Buka dunia cerita terlebih dahulu untuk mulai menulis...'
-            }
-          />
-        </div>
-
-        {/* Submit action */}
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-stone-800/60">
-          <div className="text-[11px] text-stone-500">
-            {isMounted ? (
-              <span>Penulisan akan mengikuti latar cerita tanggal: <strong className="text-stone-300">{formatFriendlyDate(universeDate)}</strong></span>
-            ) : (
-              <span>Menunggu pembukaan dunia cerita</span>
-            )}
-          </div>
-
-          <Button
-            id="submit-story-btn"
-            kind="primary"
-            size="lg"
-            onClick={handleSubmit}
-            disabled={busy || !isMounted}
-          >
-            {busy ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Sedang Menulis Naskah...</span>
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4" />
-                <span>Mulai Tulis {getFriendlyPurpose(selectedKind)}</span>
-              </>
-            )}
-          </Button>
-        </div>
-      </Card>
-
-      {/* Latest Production Result */}
-      {activeRun && (
-        <Card className="p-6 border-stone-800 bg-stone-950/70">
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-stone-800/80">
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-amber-400/10 p-2.5 text-amber-300">
-                <BookOpen className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-stone-100">
-                  Hasil Penulisan Terakhir: {getFriendlyPurpose(activeRun.purpose)}
-                </h3>
-                <div className="mt-0.5 text-[11px] text-stone-400">
-                  Selesai pada {formatFriendlyTime(activeRun.timestamp)}
-                </div>
+            {/* Purpose Selector */}
+            <div className="space-y-2.5 mb-5">
+              <label className="block text-xs font-bold text-slate-700">
+                Pilih Jenis Karya:
+              </label>
+              <div className="space-y-2">
+                {(Object.keys(purposeMap) as Array<keyof typeof purposeMap>).map(key => {
+                  const item = purposeMap[key];
+                  const isSelected = selectedKind === key;
+                  return (
+                    <button
+                      key={key}
+                      id={`purpose-select-${key.toLowerCase()}`}
+                      type="button"
+                      onClick={() => setSelectedKind(key as any)}
+                      className={`w-full rounded-2xl p-3.5 text-left transition-all border-2 cursor-pointer ${
+                        isSelected
+                          ? 'border-amber-400 bg-amber-50/90 shadow-sm'
+                          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-bold text-slate-900">{item.title}</div>
+                        {isSelected && <CheckCircle2 className="h-4 w-4 text-amber-600" />}
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-slate-600">{item.subtitle}</div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-            <StatusBadge status={activeRun.status} />
-          </div>
 
-          {/* Friendly writing stats */}
-          <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div className="rounded-xl border border-stone-800/80 bg-stone-900/60 p-3 text-center">
-              <div className="text-base font-bold text-stone-100">
-                ~{Math.round((activeRun.outputTokens || 0) * 0.75)} kata
+            {/* Instruction input */}
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700">
+                  Instruksi / Arahan Khusus:
+                </label>
+                <span className="text-[10px] text-slate-500 font-medium">Opsional</span>
               </div>
-              <div className="text-[10px] text-stone-400">Estimasi Panjang Naskah</div>
+              <textarea
+                id="production-instruction-input"
+                value={instruction}
+                onChange={e => setInstruction(e.target.value)}
+                placeholder="Contoh: Fokuskan adegan pada ketegangan negosiasi di istana raja..."
+                rows={3}
+                className="w-full rounded-2xl border-2 border-slate-200 bg-slate-50 p-3 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-200"
+              />
             </div>
-            <div className="rounded-xl border border-stone-800/80 bg-stone-900/60 p-3 text-center">
-              <div className="text-base font-bold text-emerald-400">
-                100% Konsisten
-              </div>
-              <div className="text-[10px] text-stone-400">Kesesuaian Alur Cerita</div>
-            </div>
-            <div className="col-span-2 sm:col-span-1 rounded-xl border border-stone-800/80 bg-stone-900/60 p-3 text-center">
-              <div className="text-base font-bold text-stone-200">
-                Tersimpan di Pustaka
-              </div>
-              <div className="text-[10px] text-stone-400">Status Penyimpanan</div>
-            </div>
-          </div>
 
-          {/* Render readable story content if output available */}
-          {activeRun.output && typeof activeRun.output === 'object' && (
-            <div className="mt-5 rounded-2xl border border-stone-800 bg-stone-900/40 p-5">
-              <div className="text-xs font-semibold text-stone-300 mb-3 flex items-center gap-2">
-                <Edit3 className="h-3.5 w-3.5 text-amber-300" />
-                <span>Tinjauan Naskah Cerita:</span>
+            {/* Prompt suggestions */}
+            <div className="space-y-2 mb-6">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
+                <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
+                <span>Rekomendasi Ide Naskah Sekali Klik:</span>
               </div>
-              <div className="text-xs sm:text-sm text-stone-300 leading-relaxed space-y-3 font-serif whitespace-pre-wrap">
-                {typeof (activeRun.output as any).storyText === 'string'
-                  ? (activeRun.output as any).storyText
-                  : typeof (activeRun.output as any).summary === 'string'
-                    ? (activeRun.output as any).summary
-                    : JSON.stringify(activeRun.output, null, 2)}
+              <div className="space-y-1.5">
+                {samplePrompts[selectedKind]?.map((prompt, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setInstruction(prompt)}
+                    className="w-full rounded-xl bg-slate-100 hover:bg-amber-100/60 border border-slate-200 p-2.5 text-left text-[11px] text-slate-700 hover:text-slate-900 transition-colors cursor-pointer"
+                  >
+                    "{prompt}"
+                  </button>
+                ))}
               </div>
             </div>
-          )}
 
-          {activeRun.reason && (
-            <div className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5 text-xs text-amber-200/90">
-              <span className="font-semibold">Catatan Sistem:</span> {activeRun.reason}
-            </div>
-          )}
-
-          {/* Collapsible Tech Info */}
-          <div className="mt-4 pt-3 border-t border-stone-800/60">
-            <button
-              type="button"
-              onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
-              className="inline-flex items-center gap-2 text-[11px] text-stone-500 hover:text-stone-300"
+            {/* Action button */}
+            <Button
+              id="production-submit-btn"
+              kind="primary"
+              size="lg"
+              className="w-full"
+              onClick={handleSubmit}
+              disabled={busy || !isMounted}
             >
-              {showTechnicalDetails ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              {showTechnicalDetails ? 'Sembunyikan Detail Teknis ID & Token' : 'Lihat Detail Teknis ID & Token'}
-            </button>
+              {busy ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Asisten AI Sedang Mengarang...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-5 w-5" />
+                  <span>Mulai Tulis Cerita</span>
+                </>
+              )}
+            </Button>
+          </Card>
+        </div>
 
-            {showTechnicalDetails && (
-              <div className="mt-2 rounded-xl bg-stone-900/60 p-3 font-mono text-[10px] text-stone-400 space-y-1">
-                <div>ID Penulisan: {activeRun.runId}</div>
-                <div>Model AI: {activeRun.modelId ?? 'Standar'}</div>
-                <div>Token Masuk: {activeRun.inputTokens} · Token Keluar: {activeRun.outputTokens}</div>
-                <div>Estimasi Biaya: ${activeRun.cost.toFixed(5)}</div>
+        {/* Right Side: Reading Desk & Live Preview (7 cols) */}
+        <div className="lg:col-span-7 space-y-6">
+          <Card className="p-6 min-h-[520px] flex flex-col justify-between">
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-800 font-bold">
+                    <BookOpen className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">
+                      {activeRun ? getFriendlyPurpose(activeRun.purpose) : 'Meja Baca Naskah'}
+                    </h3>
+                    <div className="text-[11px] text-slate-500">
+                      {activeRun ? `Selesai ditulis: ${formatFriendlyTime(activeRun.timestamp)}` : 'Hasil naskah akan tampil di sini'}
+                    </div>
+                  </div>
+                </div>
+
+                {activeRun && (
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" kind="secondary" onClick={handleCopy}>
+                      {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                      <span>{copied ? 'Tersalin' : 'Salin Teks'}</span>
+                    </Button>
+                    <Button size="sm" kind="secondary" onClick={handleDownload}>
+                      <Download className="h-3.5 w-3.5" />
+                      <span>Unduh TXT</span>
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Story Content Area */}
+              <div className="mt-5">
+                {busy ? (
+                  <div className="clay-inset p-12 text-center space-y-4">
+                    <Loader2 className="mx-auto h-8 w-8 animate-spin text-amber-500" />
+                    <div className="space-y-1">
+                      <div className="text-sm font-bold text-slate-900">Merangkai Alur Cerita...</div>
+                      <p className="text-xs text-slate-600 max-w-sm mx-auto">
+                        Asisten AI sedang menyusun dialog dan adegan yang selaras dengan sejarah dunia cerita Anda.
+                      </p>
+                    </div>
+                  </div>
+                ) : storyText ? (
+                  <div className="rounded-2xl border-2 border-slate-200/80 bg-white p-6 shadow-sm">
+                    <div className="prose prose-slate max-w-none text-sm leading-relaxed text-slate-800 whitespace-pre-wrap font-serif">
+                      {storyText}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="clay-inset p-12 text-center space-y-3">
+                    <BookOpen className="mx-auto h-8 w-8 text-slate-400" />
+                    <div className="text-sm font-bold text-slate-700">Belum Ada Naskah Aktif</div>
+                    <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                      Pilih jenis karya dan klik "Mulai Tulis Cerita" untuk memproduksi naskah bab baru.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {activeRun && (
+              <div className="mt-6 pt-4 border-t border-slate-200 flex items-center justify-between text-xs text-slate-600">
+                <span>Panjang naskah: <strong>~{Math.round((activeRun.outputTokens || 0) * 0.75)} kata</strong></span>
+                <StatusBadge status={activeRun.status} />
               </div>
             )}
-          </div>
-        </Card>
-      )}
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

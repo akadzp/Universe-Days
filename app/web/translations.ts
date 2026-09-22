@@ -40,16 +40,16 @@ export function getFriendlyStatus(status: string | null | undefined): string {
 }
 
 export function getStatusTone(status: string): string {
-  if (['READY', 'CONNECTED', 'HEALTHY', 'COMPLETED', 'ENABLED', 'INITIALIZED', 'WIRED'].includes(status)) {
-    return 'text-emerald-300 bg-emerald-400/10 border-emerald-400/20';
+  if (['READY', 'CONNECTED', 'HEALTHY', 'COMPLETED', 'ENABLED', 'INITIALIZED', 'WIRED', 'ALIVE'].includes(status)) {
+    return 'text-emerald-700 bg-emerald-50 border-emerald-300 shadow-sm';
   }
   if (['WAITING_FOR_UNIVERSE', 'WAITING_FOR_DAILY_CONTEXT', 'NO_PROVIDER', 'NO_UNIVERSE', 'DEGRADED', 'CACHED', 'DISPATCHED'].includes(status)) {
-    return 'text-amber-300 bg-amber-400/10 border-amber-400/20';
+    return 'text-amber-800 bg-amber-50 border-amber-300 shadow-sm';
   }
-  if (['BLOCKED', 'FAILED', 'UNAVAILABLE', 'UNREADY'].includes(status)) {
-    return 'text-rose-300 bg-rose-500/10 border-rose-500/20';
+  if (['BLOCKED', 'FAILED', 'UNAVAILABLE', 'UNREADY', 'DECEASED'].includes(status)) {
+    return 'text-rose-700 bg-rose-50 border-rose-300 shadow-sm';
   }
-  return 'text-stone-300 bg-stone-800/70 border-stone-700';
+  return 'text-slate-700 bg-slate-100 border-slate-300 shadow-sm';
 }
 
 export const purposeMap: Record<string, { title: string; subtitle: string; hint: string }> = {

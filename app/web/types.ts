@@ -156,12 +156,76 @@ export interface ToastState {
   message: string;
 }
 
+export interface UniverseCharacter {
+  id: string;
+  displayName: string;
+  status: string;
+  background?: string;
+  traits: string[];
+  role: string;
+  alive: boolean;
+}
+
+export interface UniverseLocation {
+  id: string;
+  displayName: string;
+  locationType: string;
+  accessibilityStatus: string;
+  parentLocationRef?: string | null;
+  containedLocationRefs?: string[];
+}
+
+export interface UniverseObject {
+  id: string;
+  displayName: string;
+  objectType: string;
+  possessionStatus: string;
+  condition: string;
+  currentLocationRef?: string | null;
+  holderActorRef?: string | null;
+  ownerActorRef?: string | null;
+}
+
+export interface UniverseRelationship {
+  id: string;
+  sourceActorRef: string;
+  targetActorRef: string;
+  relationshipType: string;
+  strength?: number;
+}
+
+export interface UniverseUnresolvedCondition {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  severity: string;
+}
+
+export interface UniverseDetails {
+  mounted: boolean;
+  universeId?: string;
+  universeScope?: string;
+  temporal?: {
+    currentUniverseDate: string;
+    currentUniverseTime: string;
+    periodRef?: string;
+    calendarSystem: string;
+  } | null;
+  characters: UniverseCharacter[];
+  locations: UniverseLocation[];
+  objects: UniverseObject[];
+  relationships: UniverseRelationship[];
+  unresolvedConditions: UniverseUnresolvedCondition[];
+}
+
 export type View =
   | 'home'
   | 'universe'
   | 'production'
-  | 'scheduler'
   | 'pages'
+  | 'scheduler'
   | 'history'
+  | 'sandbox'
   | 'ai'
   | 'system';
