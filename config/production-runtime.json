@@ -1,0 +1,5 @@
+{
+  "architecturePhase": 34,
+  "production": { "concurrency": 4, "apiBodyLimit": "2mb", "persistence": { "dataDir": "./data/runtime/production-runs" } },
+  "cost": { "inputPerThousand": 0, "outputPerThousand": 0 }
+}
