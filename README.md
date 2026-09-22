@@ -1,36 +1,21 @@
-# Aktor / Karakter System
+Character Core / Sims System
 
-Implementasi pertama dari semantic Actor/Character System.
+This package adds the Character Profile layer to the Actor/Character system.
+It does not alter the UI and does not redefine State, Behavior, Knowledge,
+Style, Relationship, or Location ownership.
 
-## Yang diterapkan
+Repository paths are mirrored directly. No version/phase suffixes are used in
+source filenames.
 
-- Gender `ACTOR / ACTRESS / UNKNOWN` untuk Actor.
-- Level `CORE / MAJOR / IMPACT / PERIPHERAL / ENTITY`.
-- Group dengan aturan per Level.
-- Group transfer untuk Level 2 dan Level 5.
-- Proteksi Group Level 1.
-- Entity Type untuk Level 5.
-- Sumber data `USER_DEFINED / STORY_DERIVED / AI_PROPOSAL / UNKNOWN`.
-- Actor creation manual.
-- Actor emergence dari Story.
-- Actor transient tanpa pengaruh naratif tidak dipersistenkan.
-- Validasi classification terintegrasi ke `UniverseModelValidator`.
-- Contract Character Domain diperluas untuk profile/group/level information.
-- Role tetap berupa reference tanpa membuat taxonomy Role baru.
+Files:
+- core/universe/model/character-profile.ts
+- core/universe/model/character.ts
+- core/universe/model/index.ts
+- core/universe/model/validation.ts
+- tests/unit/universe-model/character-profile.test.ts
+- docs/character-system.md
 
-## Konvensi nama
-
-Tidak ada nama file yang memakai nomor versi, fase, atau suffix pembaruan.
-
-## Penerapan
-
-Paket ini adalah overlay langsung terhadap repository. Salin isi ZIP ke root repository dan izinkan file yang sudah ada untuk ditimpa pada path yang sama.
-
-Setelah itu jalankan:
-
-```bash
-npm run lint
-npm run test
-```
-
-Validasi lokal yang dilakukan pada workspace ini hanya pemeriksaan sintaks/transpile karena checkout repository lengkap tidak tersedia di workspace.
+Apply:
+  node apply.mjs
+  npm run lint
+  npm run test

@@ -4,30 +4,27 @@ import { fileURLToPath } from 'node:url';
 
 const root = process.cwd();
 const packageDir = path.dirname(fileURLToPath(import.meta.url));
-const source = path.join(packageDir, 'app/web/App.tsx');
-const target = path.join(root, 'app/web/App.tsx');
 
-if (!fs.existsSync(target)) {
-  throw new Error(`Target not found: ${target}`);
+const files = [
+  'core/universe/model/character-profile.ts',
+  'core/universe/model/character.ts',
+  'core/universe/model/index.ts',
+  'tests/unit/universe-model/character-profile.test.ts',
+  'docs/character-system.md',
+];
+
+for (const relativePath of files) {
+  const source = path.join(packageDir, relativePath);
+  const target = path.join(root, relativePath);
+
+  if (!fs.existsSync(source)) throw new Error(`Source not found: ${relativePath}`);
+  if (!fs.existsSync(path.dirname(target))) fs.mkdirSync(path.dirname(target), { recursive: true });
+
+  if (fs.existsSync(target)) {
+    const backup = `${target}.bak`;
+    if (!fs.existsSync(backup)) fs.copyFileSync(target, backup);
+  }
+
+  fs.copyFileSync(source, target);
+  console.log(`Applied ${relativePath}`);
 }
-
-if (!fs.existsSync(source)) {
-  throw new Error(`Source not found: ${source}`);
-}
-
-const current = fs.readFileSync(target, 'utf8');
-const next = fs.readFileSync(source, 'utf8');
-
-if (current === next) {
-  console.log('UI already matches the supplied App.tsx.');
-  process.exit(0);
-}
-
-const backup = path.join(root, 'app/web/App.tsx.bak');
-if (!fs.existsSync(backup)) {
-  fs.copyFileSync(target, backup);
-}
-
-fs.copyFileSync(source, target);
-console.log('Applied supplied App.tsx → app/web/App.tsx');
-console.log(`Backup: ${path.relative(root, backup)}`);
