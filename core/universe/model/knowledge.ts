@@ -13,13 +13,16 @@ import { makeDomainID, makeSystemID } from '../../types/identifiers.ts';
 import { ActorDataSource } from './actor.ts';
 export { ActorDataSource };
 
-export type EpistemicCertainty =
-  | 'FACT'
-  | 'BELIEF'
-  | 'SUSPICION'
-  | 'RUMOR'
-  | 'MISCONCEPTION'
-  | 'FORGOTTEN';
+export const EpistemicCertainty = {
+  FACT: 'FACT',
+  BELIEF: 'BELIEF',
+  SUSPICION: 'SUSPICION',
+  RUMOR: 'RUMOR',
+  MISCONCEPTION: 'MISCONCEPTION',
+  FORGOTTEN: 'FORGOTTEN'
+} as const;
+
+export type EpistemicCertainty = (typeof EpistemicCertainty)[keyof typeof EpistemicCertainty];
 
 export interface KnowledgeChangeRecord {
   readonly knowledgeChange: string;

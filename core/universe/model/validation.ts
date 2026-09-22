@@ -16,8 +16,9 @@ import { validateCharacterProfile } from './character-profile.ts';
 import { validateBehavior } from './behavior.ts';
 import { CharacterStateEntity, validateCharacterState } from './character-state.ts';
 import { CharacterStyleEntity, validateCharacterStyle } from './character-style.ts';
-import { AuthorityLevel } from './types.ts';
+import { AuthorityLevel, EntityType } from './types.ts';
 import { ObjectDataSource, ObjectRelationEntity } from './object.ts';
+import { LocationDataSource, LocationEntity } from './location.ts';
 
 export interface ValidationIssue {
   readonly code: string;
@@ -128,6 +129,15 @@ export class UniverseModelValidator {
         }
       }
 
+      if (char.locationReference && char.locationReference !== 'UNKNOWN' && (!universe.locations || !universe.locations[char.locationReference])) {
+        issues.push({
+          code: 'DANGLING_LOCATION_REFERENCE',
+          path: `characters.${id}.locationReference`,
+          message: `Character location '${char.locationReference}' not found in locations`,
+          severity: 'ERROR'
+        });
+      }
+
       if (char.stateReference && (!universe.states || !universe.states[char.stateReference])) {
         issues.push({
           code: 'DANGLING_STATE_REFERENCE',
@@ -167,7 +177,18 @@ export class UniverseModelValidator {
       }
 
       if (state.stateType === 'CHARACTER') {
-        const stateValidation = validateCharacterState(state as CharacterStateEntity);
+        const charState = state as CharacterStateEntity;
+        const charLoc = charState.currentValue?.currentLocationReference;
+        if (charLoc && charLoc !== 'UNKNOWN' && (!universe.locations || !universe.locations[charLoc])) {
+          issues.push({
+            code: 'DANGLING_LOCATION_REFERENCE',
+            path: `states.${id}.currentValue.currentLocationReference`,
+            message: `Character state location '${charLoc}' not found in locations`,
+            severity: 'ERROR'
+          });
+        }
+
+        const stateValidation = validateCharacterState(charState);
         for (const issue of stateValidation.issues) {
           issues.push({
             code: issue.code,
@@ -475,22 +496,224 @@ export class UniverseModelValidator {
       }
     }
 
+    const validAccessStatuses: readonly string[] = ['OPEN', 'RESTRICTED', 'SEALED', 'DESTROYED'];
+
     for (const [locId, loc] of Object.entries(universe.locations || {})) {
-      let currentParent = loc.parentLocationRef;
-      const visited = new Set<string>([locId]);
-      while (currentParent) {
-        if (visited.has(currentParent)) {
+      // 1. ID validation
+      if (!EntityIdentityFactory.isValidId(loc.identity.id)) {
+        issues.push({
+          code: 'INVALID_LOCATION_ID',
+          path: `locations.${locId}.identity.id`,
+          message: `Location ID '${loc.identity.id}' is invalid`,
+          severity: 'ERROR'
+        });
+      }
+
+      if (loc.identity.entityType !== EntityType.LOCATION) {
+        issues.push({
+          code: 'INVALID_ENTITY_TYPE',
+          path: `locations.${locId}.identity.entityType`,
+          message: `Location '${locId}' has invalid entityType '${loc.identity.entityType}'`,
+          severity: 'ERROR'
+        });
+      }
+
+      // 2. Type validation
+      if (!loc.locationType || typeof loc.locationType !== 'string' || loc.locationType.trim() === '') {
+        issues.push({
+          code: 'INVALID_LOCATION_TYPE',
+          path: `locations.${locId}.locationType`,
+          message: `Location '${locId}' must specify a valid locationType`,
+          severity: 'ERROR'
+        });
+      }
+
+      // 3. Parent Location validation
+      if (loc.parentLocationRef !== null && loc.parentLocationRef !== undefined) {
+        if (loc.parentLocationRef === locId) {
           issues.push({
-            code: 'CIRCULAR_LOCATION_HIERARCHY',
+            code: 'SELF_PARENT_LOCATION',
             path: `locations.${locId}.parentLocationRef`,
-            message: `Circular parent hierarchy detected involving location '${currentParent}'`,
+            message: `Location '${locId}' cannot be its own parent`,
             severity: 'ERROR'
           });
-          break;
+        } else if (!universe.locations[loc.parentLocationRef]) {
+          issues.push({
+            code: 'DANGLING_PARENT_LOCATION_REFERENCE',
+            path: `locations.${locId}.parentLocationRef`,
+            message: `Parent location '${loc.parentLocationRef}' not found in locations`,
+            severity: 'ERROR'
+          });
+        } else {
+          // Circular hierarchy detection
+          let currentParent: string | null = loc.parentLocationRef;
+          const visited = new Set<string>([locId]);
+          while (currentParent) {
+            if (visited.has(currentParent)) {
+              issues.push({
+                code: 'CIRCULAR_LOCATION_HIERARCHY',
+                path: `locations.${locId}.parentLocationRef`,
+                message: `Circular parent hierarchy detected involving location '${currentParent}'`,
+                severity: 'ERROR'
+              });
+              break;
+            }
+            visited.add(currentParent);
+            const parentLoc: LocationEntity | undefined = universe.locations[currentParent];
+            currentParent = parentLoc ? parentLoc.parentLocationRef : null;
+          }
         }
-        visited.add(currentParent);
-        const parentLoc = universe.locations[currentParent];
-        currentParent = parentLoc ? parentLoc.parentLocationRef : null;
+      }
+
+      // 4. Contained Locations (Children) validation
+      for (const childRef of loc.containedLocationRefs ?? []) {
+        if (childRef === locId) {
+          issues.push({
+            code: 'SELF_CONTAINED_LOCATION',
+            path: `locations.${locId}.containedLocationRefs`,
+            message: `Location '${locId}' cannot contain itself`,
+            severity: 'ERROR'
+          });
+        } else if (!universe.locations[childRef]) {
+          issues.push({
+            code: 'DANGLING_CHILD_LOCATION_REFERENCE',
+            path: `locations.${locId}.containedLocationRefs`,
+            message: `Contained child location '${childRef}' not found in locations`,
+            severity: 'ERROR'
+          });
+        } else {
+          const childLoc = universe.locations[childRef];
+          if (childLoc.parentLocationRef !== locId) {
+            issues.push({
+              code: 'LOCATION_CONTAINMENT_MISMATCH',
+              path: `locations.${locId}.containedLocationRefs.${childRef}`,
+              message: `Location '${locId}' lists '${childRef}' in containedLocationRefs, but '${childRef}' has parentLocationRef '${childLoc.parentLocationRef}'`,
+              severity: 'ERROR'
+            });
+          }
+        }
+      }
+
+      // 5. Adjacency validation
+      for (const adjRef of loc.adjacentLocationRefs ?? []) {
+        if (adjRef === locId) {
+          issues.push({
+            code: 'SELF_ADJACENT_LOCATION',
+            path: `locations.${locId}.adjacentLocationRefs`,
+            message: `Location '${locId}' cannot be adjacent to itself`,
+            severity: 'ERROR'
+          });
+        } else if (!universe.locations[adjRef]) {
+          issues.push({
+            code: 'DANGLING_ADJACENT_LOCATION_REFERENCE',
+            path: `locations.${locId}.adjacentLocationRefs`,
+            message: `Adjacent location '${adjRef}' not found in locations`,
+            severity: 'ERROR'
+          });
+        } else {
+          // Symmetric adjacency check
+          const adjLoc = universe.locations[adjRef];
+          if (adjLoc && (!adjLoc.adjacentLocationRefs || !adjLoc.adjacentLocationRefs.includes(locId))) {
+            issues.push({
+              code: 'ASYMMETRIC_LOCATION_ADJACENCY',
+              path: `locations.${locId}.adjacentLocationRefs.${adjRef}`,
+              message: `Asymmetric adjacency detected: location '${locId}' connects to '${adjRef}', but '${adjRef}' does not connect back to '${locId}'`,
+              severity: 'ERROR'
+            });
+          }
+        }
+      }
+
+      // 6. Accessibility Status validation
+      if (!validAccessStatuses.includes(loc.accessibilityStatus)) {
+        issues.push({
+          code: 'INVALID_ACCESSIBILITY_STATUS',
+          path: `locations.${locId}.accessibilityStatus`,
+          message: `Location '${locId}' has invalid accessibilityStatus '${loc.accessibilityStatus}'`,
+          severity: 'ERROR'
+        });
+      }
+
+      // 7. Coordinates validation
+      if (loc.coordinates) {
+        const { x, y, z } = loc.coordinates;
+        if (x !== undefined && (typeof x !== 'number' || isNaN(x))) {
+          issues.push({
+            code: 'INVALID_LOCATION_COORDINATES',
+            path: `locations.${locId}.coordinates.x`,
+            message: `Coordinate x on location '${locId}' must be a valid number`,
+            severity: 'ERROR'
+          });
+        }
+        if (y !== undefined && (typeof y !== 'number' || isNaN(y))) {
+          issues.push({
+            code: 'INVALID_LOCATION_COORDINATES',
+            path: `locations.${locId}.coordinates.y`,
+            message: `Coordinate y on location '${locId}' must be a valid number`,
+            severity: 'ERROR'
+          });
+        }
+        if (z !== undefined && (typeof z !== 'number' || isNaN(z))) {
+          issues.push({
+            code: 'INVALID_LOCATION_COORDINATES',
+            path: `locations.${locId}.coordinates.z`,
+            message: `Coordinate z on location '${locId}' must be a valid number`,
+            severity: 'ERROR'
+          });
+        }
+      }
+
+      // 8. Temporal Validity validation
+      if (loc.temporalValidity) {
+        const fromTime = Date.parse(loc.temporalValidity.effectiveFrom);
+        if (isNaN(fromTime)) {
+          issues.push({
+            code: 'INVALID_TEMPORAL_DATE',
+            path: `locations.${locId}.temporalValidity.effectiveFrom`,
+            message: `effectiveFrom date '${loc.temporalValidity.effectiveFrom}' on location '${locId}' is invalid`,
+            severity: 'ERROR'
+          });
+        }
+        if (loc.temporalValidity.effectiveTo) {
+          const toTime = Date.parse(loc.temporalValidity.effectiveTo);
+          if (isNaN(toTime) || toTime < fromTime) {
+            issues.push({
+              code: 'INVALID_TEMPORAL_RANGE',
+              path: `locations.${locId}.temporalValidity.effectiveTo`,
+              message: `effectiveTo date '${loc.temporalValidity.effectiveTo}' cannot precede effectiveFrom on location '${locId}'`,
+              severity: 'ERROR'
+            });
+          }
+        }
+      }
+
+      // 9. Source Authority validation
+      if (
+        (loc.source === LocationDataSource.AI_PROPOSAL || loc.source === LocationDataSource.UNKNOWN) &&
+        loc.provenance?.authorityLevel === AuthorityLevel.AUTHORITATIVE
+      ) {
+        issues.push({
+          code: 'INVALID_SOURCE_AUTHORITY',
+          path: `locations.${locId}.provenance.authorityLevel`,
+          message: `Location '${locId}' derived from source '${loc.source}' cannot have AUTHORITATIVE status`,
+          severity: 'ERROR'
+        });
+      }
+
+      // 10. Revision History Monotonicity
+      if (loc.history?.revisions && Array.isArray(loc.history.revisions)) {
+        for (let i = 1; i < loc.history.revisions.length; i++) {
+          const prevTime = Date.parse(loc.history.revisions[i - 1].effectiveTime);
+          const currTime = Date.parse(loc.history.revisions[i].effectiveTime);
+          if (isNaN(currTime) || isNaN(prevTime) || currTime < prevTime) {
+            issues.push({
+              code: 'CORRUPT_REVISION_HISTORY',
+              path: `locations.${locId}.history.revisions[${i}]`,
+              message: `Location '${locId}' history contains non-chronological revision at index ${i}`,
+              severity: 'ERROR'
+            });
+          }
+        }
       }
     }
 

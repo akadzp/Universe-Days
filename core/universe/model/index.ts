@@ -19,6 +19,7 @@ export * from './object-reference.ts';
 export * from './knowledge.ts';
 export * from './state.ts';
 export * from './location.ts';
+export * from './location-reference.ts';
 export * from './event.ts';
 export * from './process.ts';
 export * from './unresolved.ts';

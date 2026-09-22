@@ -1,5 +1,12 @@
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 import { CharacterStateDataSource, CharacterStateLifecycle, validateCharacterState } from '../../../core/universe/model/character-state.ts';
 import { TemporalStatus } from '../../../core/universe/model/types.ts';
+
+const expect = (actual: unknown) => ({
+  toBe: (expected: unknown) => assert.equal(actual, expected),
+  toBeUndefined: () => assert.equal(actual, undefined)
+});
 
 describe('Character State System', () => {
   const base = {

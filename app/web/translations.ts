@@ -349,3 +349,49 @@ export function getFriendlyObjectAccess(access: string | null | undefined): stri
   return objectAccessMap[access] ?? access.replaceAll('_', ' ');
 }
 
+export const locationTypeMap: Record<string, string> = {
+  PLANET: 'Planet / Dunia',
+  REGION: 'Wilayah / Daerah',
+  SETTLEMENT: 'Pemukiman / Kota',
+  DISTRICT: 'Distrik / Kawasan',
+  BUILDING: 'Bangunan / Struktur',
+  ROOM: 'Ruangan / Ruang Khusus',
+  LANDMARK: 'Tengara / Titik Penting',
+  ROUTE: 'Jalur / Rute Perjalanan',
+  TERRAIN: 'Medan Alam / Lanskap',
+  CELESTIAL: 'Ruang Angkasa / Langit',
+  VIRTUAL: 'Ruang Maya / Dimensi Virtual',
+  UNKNOWN: 'Belum Terkategori'
+};
+
+export function getFriendlyLocationType(type: string | null | undefined): string {
+  if (!type) return 'Lokasi Cerita';
+  return locationTypeMap[type] ?? type.replaceAll('_', ' ');
+}
+
+export const locationAccessibilityMap: Record<string, string> = {
+  OPEN: 'Terbuka & Dapat Dikunjungi',
+  RESTRICTED: 'Akses Terbatas / Khusus',
+  SEALED: 'Terkunci Rapat / Tersegel',
+  DESTROYED: 'Musnah / Hancur Total'
+};
+
+export function getFriendlyLocationAccessibility(status: string | null | undefined): string {
+  if (!status) return 'Status Tidak Diketahui';
+  return locationAccessibilityMap[status] ?? status.replaceAll('_', ' ');
+}
+
+export const locationSourceMap: Record<string, string> = {
+  CANON_SEED: 'Sumber Resmi Dunia Cerita',
+  AUTHOR_DIRECT: 'Dibuat Langsung oleh Penulis',
+  STORY_EMERGENCE: 'Muncul dari Perkembangan Kisah',
+  SYSTEM_IMPORT: 'Impor Data Sistem',
+  AI_PROPOSAL: 'Usulan Draf Asisten (Perlu Disetujui)',
+  UNKNOWN: 'Sumber Belum Terdata'
+};
+
+export function getFriendlyLocationSource(source: string | null | undefined): string {
+  if (!source) return 'Sumber Tidak Diketahui';
+  return locationSourceMap[source] ?? source.replaceAll('_', ' ');
+}
+
