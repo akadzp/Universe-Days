@@ -15,6 +15,7 @@ export * from './character-style.ts';
 export * from './character.ts';
 export * from './relationship.ts';
 export * from './object.ts';
+export * from './object-reference.ts';
 export * from './knowledge.ts';
 export * from './state.ts';
 export * from './location.ts';

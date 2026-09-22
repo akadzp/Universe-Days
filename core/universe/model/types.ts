@@ -48,4 +48,4 @@ export enum ModelValidationStatus {
   REQUIRES_REVALIDATION = 'REQUIRES_REVALIDATION'
 }
 
-export { TemporalStatus as TemporalAssertionCategory };
+export { TemporalStatus as TemporalAssertionCategory, TemporalStatus };

@@ -16,6 +16,8 @@ import { validateCharacterProfile } from './character-profile.ts';
 import { validateBehavior } from './behavior.ts';
 import { CharacterStateEntity, validateCharacterState } from './character-state.ts';
 import { CharacterStyleEntity, validateCharacterStyle } from './character-style.ts';
+import { AuthorityLevel } from './types.ts';
+import { ObjectDataSource, ObjectRelationEntity } from './object.ts';
 
 export interface ValidationIssue {
   readonly code: string;
@@ -258,27 +260,216 @@ export class UniverseModelValidator {
     }
 
     for (const [objId, obj] of Object.entries(universe.objects || {})) {
+      // Validate Object ID
+      if (!EntityIdentityFactory.isValidId(obj.identity.id)) {
+        issues.push({
+          code: 'INVALID_OBJECT_ID',
+          path: `objects.${objId}.identity.id`,
+          message: `Object ID '${obj.identity.id}' is invalid`,
+          severity: 'ERROR'
+        });
+      }
+
+      // Validate Object Type
+      if (!obj.objectType || typeof obj.objectType !== 'string' || obj.objectType.trim() === '') {
+        issues.push({
+          code: 'INVALID_OBJECT_TYPE',
+          path: `objects.${objId}.objectType`,
+          message: `Object '${objId}' must specify a valid objectType`,
+          severity: 'ERROR'
+        });
+      }
+
+      // Validate Category Path
+      if (obj.categoryPath !== undefined && !Array.isArray(obj.categoryPath)) {
+        issues.push({
+          code: 'INVALID_CATEGORY_PATH',
+          path: `objects.${objId}.categoryPath`,
+          message: `Object '${objId}' categoryPath must be an array of strings`,
+          severity: 'ERROR'
+        });
+      }
+
+      // Validate Actor References (Owner, Possessor, User, Wearer) - strict ERROR on dangling reference
       if (obj.ownershipRef && !knownEntityIds.has(obj.ownershipRef)) {
         issues.push({
-          code: 'DANGLING_REFERENCE',
+          code: 'DANGLING_ACTOR_REFERENCE',
           path: `objects.${objId}.ownershipRef`,
           message: `Object owner '${obj.ownershipRef}' not found in known entities`,
-          severity: 'WARNING'
+          severity: 'ERROR'
         });
       }
       if (obj.possessionRef && !knownEntityIds.has(obj.possessionRef)) {
         issues.push({
-          code: 'DANGLING_REFERENCE',
+          code: 'DANGLING_ACTOR_REFERENCE',
           path: `objects.${objId}.possessionRef`,
           message: `Object possessor '${obj.possessionRef}' not found in known entities`,
-          severity: 'WARNING'
+          severity: 'ERROR'
         });
       }
-      if (obj.locationRef && !locationIds.has(obj.locationRef)) {
+      if (obj.currentUserRef && !knownEntityIds.has(obj.currentUserRef)) {
         issues.push({
-          code: 'DANGLING_REFERENCE',
+          code: 'DANGLING_ACTOR_REFERENCE',
+          path: `objects.${objId}.currentUserRef`,
+          message: `Object user '${obj.currentUserRef}' not found in known entities`,
+          severity: 'ERROR'
+        });
+      }
+      if (obj.currentWearerRef && !knownEntityIds.has(obj.currentWearerRef)) {
+        issues.push({
+          code: 'DANGLING_ACTOR_REFERENCE',
+          path: `objects.${objId}.currentWearerRef`,
+          message: `Object wearer '${obj.currentWearerRef}' not found in known entities`,
+          severity: 'ERROR'
+        });
+      }
+
+      // Validate Location
+      if (obj.locationRef && obj.locationRef !== 'UNKNOWN' && !locationIds.has(obj.locationRef)) {
+        issues.push({
+          code: 'DANGLING_LOCATION_REFERENCE',
           path: `objects.${objId}.locationRef`,
           message: `Object location '${obj.locationRef}' not found in locations`,
+          severity: 'ERROR'
+        });
+      }
+
+      // Validate Container Reference
+      if (obj.containedWithinObjectRef !== undefined && obj.containedWithinObjectRef !== null) {
+        if (obj.containedWithinObjectRef === objId) {
+          issues.push({
+            code: 'ILLEGAL_SELF_CONTAINMENT',
+            path: `objects.${objId}.containedWithinObjectRef`,
+            message: `Object '${objId}' cannot contain itself`,
+            severity: 'ERROR'
+          });
+        } else if (!universe.objects?.[obj.containedWithinObjectRef]) {
+          issues.push({
+            code: 'DANGLING_CONTAINER_REFERENCE',
+            path: `objects.${objId}.containedWithinObjectRef`,
+            message: `Container object '${obj.containedWithinObjectRef}' not found in universe objects`,
+            severity: 'ERROR'
+          });
+        }
+      }
+
+      // Validate Source Authority
+      if (
+        (obj.source === ObjectDataSource.AI_PROPOSAL || obj.source === ObjectDataSource.UNKNOWN) &&
+        obj.provenance?.authorityLevel === AuthorityLevel.AUTHORITATIVE
+      ) {
+        issues.push({
+          code: 'INVALID_SOURCE_AUTHORITY',
+          path: `objects.${objId}.provenance.authorityLevel`,
+          message: `Object '${objId}' derived from source '${obj.source}' cannot have AUTHORITATIVE status`,
+          severity: 'ERROR'
+        });
+      }
+
+      // Validate Temporal Validity
+      if (obj.temporalValidity) {
+        const fromTime = Date.parse(obj.temporalValidity.effectiveFrom);
+        if (isNaN(fromTime)) {
+          issues.push({
+            code: 'INVALID_TEMPORAL_DATE',
+            path: `objects.${objId}.temporalValidity.effectiveFrom`,
+            message: `effectiveFrom date '${obj.temporalValidity.effectiveFrom}' is invalid`,
+            severity: 'ERROR'
+          });
+        }
+        if (obj.temporalValidity.effectiveTo) {
+          const toTime = Date.parse(obj.temporalValidity.effectiveTo);
+          if (isNaN(toTime) || toTime < fromTime) {
+            issues.push({
+              code: 'INVALID_TEMPORAL_RANGE',
+              path: `objects.${objId}.temporalValidity.effectiveTo`,
+              message: `effectiveTo date '${obj.temporalValidity.effectiveTo}' cannot precede effectiveFrom`,
+              severity: 'ERROR'
+            });
+          }
+        }
+      }
+
+      // Validate Revision History Monotonicity
+      if (obj.history?.revisions && Array.isArray(obj.history.revisions)) {
+        for (let i = 1; i < obj.history.revisions.length; i++) {
+          const prevTime = Date.parse(obj.history.revisions[i - 1].effectiveTime);
+          const currTime = Date.parse(obj.history.revisions[i].effectiveTime);
+          if (isNaN(currTime) || isNaN(prevTime) || currTime < prevTime) {
+            issues.push({
+              code: 'CORRUPT_REVISION_HISTORY',
+              path: `objects.${objId}.history.revisions[${i}]`,
+              message: `Revision history contains non-chronological revision at index ${i}`,
+              severity: 'ERROR'
+            });
+          }
+        }
+      }
+
+      // Validate State Conflict / Inconsistency
+      if (obj.status === 'DESTROYED' && (obj.condition === 'INTACT' || obj.accessStatus === 'ACCESSIBLE')) {
+        issues.push({
+          code: 'CONTRADICTORY_OBJECT_STATE',
+          path: `objects.${objId}`,
+          message: `Object '${objId}' is marked DESTROYED but has condition '${obj.condition}' and access '${obj.accessStatus}'`,
+          severity: 'CONFLICT'
+        });
+      }
+
+      // Validate Attached Object Relations
+      if (obj.relations) {
+        for (const rel of obj.relations) {
+          if (!rel.relationId || !EntityIdentityFactory.isValidId(rel.relationId)) {
+            issues.push({
+              code: 'INVALID_RELATION_ID',
+              path: `objects.${objId}.relations.${rel.relationId}`,
+              message: `Relation ID '${rel.relationId}' is invalid`,
+              severity: 'ERROR'
+            });
+          }
+          if (rel.subjectRef === rel.targetRef) {
+            issues.push({
+              code: 'ILLEGAL_SELF_RELATION',
+              path: `objects.${objId}.relations.${rel.relationId}`,
+              message: `Illegal self-relation on object '${rel.subjectRef}'`,
+              severity: 'ERROR'
+            });
+          }
+          if (rel.targetRef && !universe.objects?.[rel.targetRef]) {
+            issues.push({
+              code: 'DANGLING_OBJECT_RELATION_TARGET',
+              path: `objects.${objId}.relations.${rel.relationId}.targetRef`,
+              message: `Relation target object '${rel.targetRef}' not found in objects`,
+              severity: 'ERROR'
+            });
+          }
+        }
+      }
+    }
+
+    // Validate Root Object Relations (UniverseModel.objectRelations)
+    for (const [relId, rel] of Object.entries(universe.objectRelations || {})) {
+      if (rel.subjectRef === rel.targetRef) {
+        issues.push({
+          code: 'ILLEGAL_SELF_RELATION',
+          path: `objectRelations.${relId}`,
+          message: `Illegal self-relation on object '${rel.subjectRef}'`,
+          severity: 'ERROR'
+        });
+      }
+      if (!universe.objects?.[rel.subjectRef]) {
+        issues.push({
+          code: 'DANGLING_OBJECT_RELATION_SUBJECT',
+          path: `objectRelations.${relId}.subjectRef`,
+          message: `Relation subject object '${rel.subjectRef}' not found in objects`,
+          severity: 'ERROR'
+        });
+      }
+      if (!universe.objects?.[rel.targetRef]) {
+        issues.push({
+          code: 'DANGLING_OBJECT_RELATION_TARGET',
+          path: `objectRelations.${relId}.targetRef`,
+          message: `Relation target object '${rel.targetRef}' not found in objects`,
           severity: 'ERROR'
         });
       }
@@ -336,14 +527,14 @@ export class UniverseModelValidator {
       }
     }
 
-    const hasErrors = issues.some(i => i.severity === 'ERROR');
+    const hasErrors = issues.some(i => i.severity === 'ERROR' || i.severity === 'CONFLICT');
     return { isValid: !hasErrors, issues: Object.freeze(issues) };
   }
 
   public static validateAsResult(universe: UniverseModel): Result<UniverseModel> {
     const report = this.validate(universe);
     if (!report.isValid) {
-      const firstErr = report.issues.find(i => i.severity === 'ERROR');
+      const firstErr = report.issues.find(i => i.severity === 'ERROR' || i.severity === 'CONFLICT');
       return failure(
         EngineErrorCode.UNIVERSE_VALIDATION_FAILED,
         `Universe validation failed: ${firstErr ? firstErr.message : 'Unknown validation errors'}`

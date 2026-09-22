@@ -11,8 +11,17 @@ import { EntityIdentityFactory } from './identity.ts';
 import { RevisionHistoryManager } from './history.ts';
 import { createProvenanceMetadata } from './provenance.ts';
 import { CharacterEntity } from './character.ts';
+import { ActorDataSource } from './actor.ts';
 import { RelationshipEntity } from './relationship.ts';
-import { ObjectEntity } from './object.ts';
+import {
+  ObjectEntity,
+  ObjectType,
+  ObjectIdentityStatus,
+  ObjectPossessionStatus,
+  ObjectCondition,
+  ObjectStatus,
+  ObjectDataSource
+} from './object.ts';
 import { KnowledgeEntity } from './knowledge.ts';
 import { StateEntity } from './state.ts';
 import { LocationEntity } from './location.ts';
@@ -164,11 +173,29 @@ export function createGenericSeedUniverse(): UniverseModel {
       displayName: 'Generic Artifact A',
       status: EntityLifecycleStatus.ACTIVE
     }),
+    objectName: 'Generic Artifact A',
+    aliases: ['Artifact A', 'Ancient Relic'],
+    objectType: ObjectType.PHYSICAL,
     category: 'ARTIFACT',
+    categoryPath: ['ARTIFACT', 'RELIC'],
     ownershipRef: makeEntityID('CHAR_GENERIC_A'),
     possessionRef: makeEntityID('CHAR_GENERIC_A'),
+    possessionStatus: ObjectPossessionStatus.HELD,
+    currentUserRef: null,
+    currentWearerRef: null,
     locationRef: 'LOC_GENERIC_A',
+    containedWithinObjectRef: null,
     accessStatus: 'ACCESSIBLE',
+    condition: ObjectCondition.INTACT,
+    status: ObjectStatus.ACTIVE,
+    identityStatus: ObjectIdentityStatus.CONFIRMED,
+    source: ObjectDataSource.USER_DEFINED,
+    fieldSources: {
+      identity: ObjectDataSource.USER_DEFINED,
+      objectName: ObjectDataSource.USER_DEFINED,
+      ownershipRef: ObjectDataSource.USER_DEFINED,
+      possessionRef: ObjectDataSource.USER_DEFINED
+    },
     quantity: 1,
     temporalValidity: {
       effectiveFrom: seedTime,
@@ -185,8 +212,11 @@ export function createGenericSeedUniverse(): UniverseModel {
     referencedSubject: 'OBJ_GENERIC_A',
     statement: 'Character Alpha knows Artifact A is located at Location Alpha.',
     acquisitionSource: 'OBSERVATION',
+    knowledgeStatus: 'ACTIVE',
     certainty: 'FACT',
     isUniverseFactConfirmed: true,
+    changes: [],
+    source: ActorDataSource.USER_DEFINED,
     temporalValidity: {
       effectiveFrom: seedTime,
       temporalCategory: TemporalStatus.ACTUAL

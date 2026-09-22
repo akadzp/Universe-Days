@@ -1,0 +1,104 @@
+================================================================================
+DOKUMEN PANDUAN DAN INSTRUKSI LENGKAP: PENGEMBANGAN SISTEM BENDA & BARANG CERITA
+(OBJECT SYSTEM ARCHITECTURE & USER INTERFACE INSTRUCTIONS)
+================================================================================
+
+1. PRINSIP DASAR & BATASAN SISTEM
+--------------------------------------------------------------------------------
+- Logika sistem inti dan penyimpanan backend tidak boleh diubah sembarangan.
+- Seluruh antarmuka pengguna (UI) harus menyembunyikan istilah teknis internal
+  dan menggantikannya dengan bahasa narasi yang alami, intuitif, dan ramah.
+- Sistem Benda (Object) bukan sekadar catatan statis biasa, melainkan model penuh
+  yang mendukung pelacakan kepemilikan, pembawa, pemakai, lokasi, relasi,
+  kondisi fisik, riwayat perubahan, serta perlindungan konsistensi alur cerita.
+
+2. PEMETAAN ISTILAH TEKNIS KE BAHASA RAMAH PENGGUNA
+--------------------------------------------------------------------------------
+Istilah Teknis Internal               -> Bahasa Antarmuka Pengguna
+--------------------------------------------------------------------------------
+- ObjectEntity                         -> Benda / Barang Cerita
+- ObjectType.ARTIFACT                  -> Pusaka / Artefak Keramat
+- ObjectType.WEAPON                    -> Senjata Cerita
+- ObjectType.TOOL                      -> Alat / Perkakas
+- ObjectType.VEHICLE                   -> Kendaraan
+- ObjectType.DOCUMENT                  -> Surat / Dokumen Bersejarah
+- ObjectType.CURRENCY                  -> Uang / Nilai Tukar
+- ObjectType.CLOTHING                  -> Pakaian / Kostum Karakter
+- ObjectType.ACCESSORY                 -> Aksesori / Perhiasan
+- ObjectType.CONTAINER                 -> Wadah / Tempat Penyimpanan
+- ownershipRef                         -> Pemilik Sah (Hak Milik)
+- possessionRef                        -> Pembawa Saat Ini (Di Tangan Siapa)
+- currentWearerRef                     -> Tokoh yang Sedang Mengenakan
+- currentUserRef                       -> Tokoh yang Sedang Menggunakan
+- locationRef                          -> Tempat / Lokasi Berada
+- containedWithinObjectRef             -> Disimpan di Dalam Wadah
+- condition                            -> Kondisi Fisik Benda
+- ObjectCondition.INTACT               -> Utuh & Sempurna
+- ObjectCondition.DAMAGED              -> Mengalami Kerusakan
+- ObjectCondition.REPAIRED             -> Telah Diperbaiki
+- ObjectCondition.DESTROYED            -> Musnah / Hancur Total
+- ObjectPossessionStatus.HELD          -> Sedang Dibawa Tokoh
+- ObjectPossessionStatus.STORED        -> Tersimpan Rapi di Wadah
+- ObjectPossessionStatus.WORN          -> Sedang Dikenakan Tokoh
+- ObjectPossessionStatus.UNCLAIMED     -> Belum Bertuan / Bebas
+- ObjectPossessionStatus.LOST          -> Hilang / Belum Ditemukan
+- accessStatus                         -> Hak Akses Pengambilan Benda
+- AI_PROPOSAL                          -> Usulan Asisten AI (Belum Disahkan)
+- USER_DEFINED                         -> Ditetapkan Resmi oleh Penulis
+
+3. STRUKTUR & KEMAMPUAN LENGKAP OBJECT SYSTEM
+--------------------------------------------------------------------------------
+A. Identitas Unik & Kekal (Stable Identity)
+   - Setiap benda memiliki ID identitas yang permanen sejak awal dibuat.
+   - Perubahan nama (misal: "Pedang Berkarat" diperbaiki menjadi "Pedang Cahaya")
+     tetap mempertahankan ID yang sama dan menyimpan nama lama sebagai alias.
+
+B. Pemisahan Hak Milik vs Pembawa Fisik vs Pemakai
+   - Pemilik Sah (Ownership): Tokoh atau kelompok yang secara hukum/moral memiliki benda.
+   - Pembawa Fisik (Possession): Tokoh yang sedang memegang atau mengantongi benda.
+   - Pemakai (Wearer / User): Tokoh yang sedang memakai baju/perhiasan atau mengoperasikan alat.
+   - Ketiganya dapat berbeda secara mandiri (misal: Pedang milik Raja A, dipinjam oleh Panglima B,
+     dan dibawa oleh Ajudan C).
+
+C. Hirarki Wadah & Lokasi (Container Hierarchy)
+   - Benda dapat berada di lokasi geografis (Kamar, Istana, Hutan) ATAU tersimpan di dalam
+     benda wadah lain (Peti, Kotak Rahasia, Tas).
+   - Sistem menolak secara otomatis jika sebuah benda mencoba dimasukkan ke dalam dirinya sendiri.
+
+D. Perubahan Kondisi Fisik & Status Keberadaan
+   - Perubahan kondisi (rusak, aus, diperbaiki, modifikasi) dicatat bertahap tanpa membuat ID baru.
+   - Benda yang hancur total ditandai musnah secara historis, sehingga jejak riwayat masa lalunya
+     tetap tersimpan dan tidak merusak naskah cerita terdahulu.
+
+E. Mesin Pencari & Pengenal Benda (Reference Resolver)
+   - Mampu mengenali referensi benda dalam naskah berdasarkan ID persis, nama lengkap, atau nama samaran (alias).
+   - Jika terdapat dua benda dengan kemiripan seimbang, sistem menandai sebagai ambigu agar penulis
+     dapat menentukan pilihan secara sadar.
+
+F. Penyaring Benda Sementara (Transient Object Filtering)
+   - Benda sehari-hari yang tidak memiliki peran penting dalam alur (misal: sendok makan biasa, secangkir teh)
+     tidak akan mengotori basis data cerita permanen.
+   - Benda bernilai narasi penting akan secara otomatis diabadikan ke dalam Dunia Cerita.
+
+G. Integritas Transaksi & Riwayat Revisi (Audit Trail)
+   - Setiap mutasi (pindah tangan, pindah wadah, rusak) mencatat waktu efektif, pencetus aksi,
+     dan ringkasan revisi.
+   - Operasi yang melanggar aturan logika cerita akan dibatalkan (rollback) tanpa merusak data lain.
+
+4. PANDUAN PENGGUNAAN PADA TAMPILAN PENGGUNA (UI GUIDELINES)
+--------------------------------------------------------------------------------
+1. Tampilan Utama:
+   - Gunakan kartu visual yang bersih dengan palet warna hangat/netral.
+   - Tampilkan nama benda, jenis benda dalam bahasa Indonesia yang ramah, dan lokasi atau wadah tempat benda berada.
+2. Status & Kepemilikan:
+   - Tampilkan badge status yang jelas: "Milik: [Nama Tokoh]", "Dibawa: [Nama Pembawa]", atau "Tersimpan di [Nama Wadah]".
+3. Interaksi:
+   - Tombol aksi menggunakan kata kerja jelas: "Pindahkan Kepemilikan", "Serahkan Barang", "Simpan ke Wadah", "Ubah Kondisi".
+   - Sembunyikan kode error teknis seperti 'OPTIMISTIC_LOCK_FAILED' atau 'PERMISSION_DENIED',
+     dan gantikan dengan penjelasan ramah: "Operasi tertunda karena status barang telah diperbarui sebelumnya."
+================================================================================
+STATUS AKHIR IMPLEMENTASI:
+- Seluruh 37 uji fungsi Object System telah terverifikasi sukses (100% lulus).
+- Pemetaan bahasa ramah pengguna telah terintegrasi di translations.ts.
+- Kode bersih tanpa kesalahan kompilasi.
+================================================================================

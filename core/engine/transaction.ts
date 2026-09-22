@@ -88,6 +88,7 @@ export class TransactionBoundary {
     const workingCharacters = { ...baseUniverse.characters };
     const workingRelationships = { ...baseUniverse.relationships };
     const workingObjects = { ...baseUniverse.objects };
+    const workingObjectRelations = { ...(baseUniverse.objectRelations ?? {}) };
     const workingKnowledge = { ...baseUniverse.knowledge };
     const workingStates = { ...baseUniverse.states };
     const workingLocations = { ...baseUniverse.locations };
@@ -103,6 +104,7 @@ export class TransactionBoundary {
       if (domainStr === 'CHARACTER') workingCharacters[id] = m.entityData as any;
       else if (domainStr === 'RELATIONSHIP') workingRelationships[id] = m.entityData as any;
       else if (domainStr === 'OBJECT') workingObjects[id] = m.entityData as any;
+      else if (domainStr === 'OBJECT_RELATION') workingObjectRelations[id] = m.entityData as any;
       else if (domainStr === 'KNOWLEDGE') workingKnowledge[id] = m.entityData as any;
       else if (domainStr === 'STATE') workingStates[id] = m.entityData as any;
       else if (domainStr === 'LOCATION') workingLocations[id] = m.entityData as any;
@@ -122,6 +124,7 @@ export class TransactionBoundary {
       characters: workingCharacters,
       relationships: workingRelationships,
       objects: workingObjects,
+      objectRelations: workingObjectRelations,
       knowledge: workingKnowledge,
       states: workingStates,
       locations: workingLocations,
@@ -186,5 +189,16 @@ export class TransactionBoundary {
 
   public getPendingCount(): number {
     return this.pendingMutations.length;
+  }
+
+  public isTransactionAborted(): boolean {
+    return this.isAborted;
+  }
+
+  public getStatus(): 'PENDING' | 'PREPARED' | 'COMMITTED' | 'ABORTED' {
+    if (this.isAborted) return 'ABORTED';
+    if (this.isCommitted) return 'COMMITTED';
+    if (this.isPrepared) return 'PREPARED';
+    return 'PENDING';
   }
 }

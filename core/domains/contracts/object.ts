@@ -24,7 +24,13 @@ export enum ObjectOperation {
   GET_OBJECT = 'GET_OBJECT',
   GET_POSSESSION_REF = 'GET_POSSESSION_REF',
   GET_LOCATION_REF = 'GET_LOCATION_REF',
-  REQUEST_TRANSITION = 'REQUEST_TRANSITION'
+  GET_OWNER = 'GET_OWNER',
+  GET_USER = 'GET_USER',
+  GET_WEARER = 'GET_WEARER',
+  GET_OBJECT_RELATIONS = 'GET_OBJECT_RELATIONS',
+  RESOLVE_OBJECT_REFERENCE = 'RESOLVE_OBJECT_REFERENCE',
+  REQUEST_TRANSITION = 'REQUEST_TRANSITION',
+  REQUEST_OWNERSHIP_TRANSFER = 'REQUEST_OWNERSHIP_TRANSFER'
 }
 
 export interface ObjectRef {
@@ -37,10 +43,16 @@ export interface ObjectDetailsRef {
   objectId: string;
   name: string;
   category: string;
-  status: 'INTACT' | 'DEPLETED' | 'DAMAGED' | 'DESTROYED' | 'UNKNOWN';
+  status: 'INTACT' | 'DEPLETED' | 'DAMAGED' | 'DESTROYED' | 'UNKNOWN' | string;
   ownerEntityRef?: string;
   holderEntityRef?: string;
+  userEntityRef?: string;
+  wearerEntityRef?: string;
   locationRef?: string;
+  containedWithinObjectRef?: string;
+  aliases?: readonly string[];
+  objectType?: string;
+  categoryPath?: readonly string[];
   lastUpdated: string;
 }
 

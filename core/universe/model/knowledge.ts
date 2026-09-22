@@ -11,6 +11,7 @@ import { AuthorityLevel, ModelValidationStatus } from './types.ts';
 import { TemporalStatus } from '../../types/temporal.ts';
 import { makeDomainID, makeSystemID } from '../../types/identifiers.ts';
 import { ActorDataSource } from './actor.ts';
+export { ActorDataSource };
 
 export type EpistemicCertainty =
   | 'FACT'

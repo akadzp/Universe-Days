@@ -98,6 +98,61 @@ export class MockObjectDomainAdapter implements DomainPort {
         });
       }
 
+      case ObjectOperation.GET_OWNER: {
+        return success({
+          requestId: request.requestId,
+          domain: this.domainId,
+          owner: this.ownerId,
+          version: versionMeta,
+          data: { objectId: objId, ownerRef: objData?.ownerEntityRef ?? null },
+          status: DomainResultType.ACCEPTED
+        });
+      }
+
+      case ObjectOperation.GET_USER: {
+        return success({
+          requestId: request.requestId,
+          domain: this.domainId,
+          owner: this.ownerId,
+          version: versionMeta,
+          data: { objectId: objId, userRef: objData?.userEntityRef ?? null },
+          status: DomainResultType.ACCEPTED
+        });
+      }
+
+      case ObjectOperation.GET_WEARER: {
+        return success({
+          requestId: request.requestId,
+          domain: this.domainId,
+          owner: this.ownerId,
+          version: versionMeta,
+          data: { objectId: objId, wearerRef: objData?.wearerEntityRef ?? null },
+          status: DomainResultType.ACCEPTED
+        });
+      }
+
+      case ObjectOperation.GET_OBJECT_RELATIONS: {
+        return success({
+          requestId: request.requestId,
+          domain: this.domainId,
+          owner: this.ownerId,
+          version: versionMeta,
+          data: [],
+          status: DomainResultType.ACCEPTED
+        });
+      }
+
+      case ObjectOperation.RESOLVE_OBJECT_REFERENCE: {
+        return success({
+          requestId: request.requestId,
+          domain: this.domainId,
+          owner: this.ownerId,
+          version: versionMeta,
+          data: { status: 'RESOLVED', matchedObjectId: objId },
+          status: DomainResultType.ACCEPTED
+        });
+      }
+
       default: {
         const details: ObjectDetailsRef = objData || {
           objectId: objId,

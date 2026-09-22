@@ -11,7 +11,7 @@
 import { DomainID, SystemID, makeSystemID, makeDomainID } from '../../types/identifiers.ts';
 import { CharacterEntity } from './character.ts';
 import { RelationshipEntity } from './relationship.ts';
-import { ObjectEntity } from './object.ts';
+import { ObjectEntity, ObjectRelationEntity } from './object.ts';
 import { KnowledgeEntity } from './knowledge.ts';
 import { StateEntity } from './state.ts';
 import { LocationEntity } from './location.ts';
@@ -49,6 +49,7 @@ export interface UniverseModel {
   readonly characters: Readonly<Record<string, CharacterEntity>>;
   readonly relationships: Readonly<Record<string, RelationshipEntity>>;
   readonly objects: Readonly<Record<string, ObjectEntity>>;
+  readonly objectRelations?: Readonly<Record<string, ObjectRelationEntity>>;
   readonly knowledge: Readonly<Record<string, KnowledgeEntity>>;
   readonly states: Readonly<Record<string, StateEntity>>;
   readonly locations: Readonly<Record<string, LocationEntity>>;
@@ -73,6 +74,7 @@ export interface CreateUniverseModelParams {
   characters?: Record<string, CharacterEntity>;
   relationships?: Record<string, RelationshipEntity>;
   objects?: Record<string, ObjectEntity>;
+  objectRelations?: Record<string, ObjectRelationEntity>;
   knowledge?: Record<string, KnowledgeEntity>;
   states?: Record<string, StateEntity>;
   locations?: Record<string, LocationEntity>;
@@ -131,6 +133,7 @@ export class UniverseModelFactory {
       characters: freezeMap(params.characters),
       relationships: freezeMap(params.relationships),
       objects: freezeMap(params.objects),
+      objectRelations: freezeMap(params.objectRelations),
       knowledge: freezeMap(params.knowledge),
       states: freezeMap(params.states),
       locations: freezeMap(params.locations),

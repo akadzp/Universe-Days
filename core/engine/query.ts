@@ -14,6 +14,7 @@ import { Result, success, failure } from '../types/result.ts';
 import { EngineErrorCode } from '../types/errors.ts';
 import { UniverseModel } from '../universe/model/universe.ts';
 import { UniverseRepository } from '../universe/model/repository.ts';
+import { ObjectReferenceResolver } from '../universe/model/object-reference.ts';
 
 export type QueryTargetType =
   | 'ENTITY'
@@ -23,7 +24,15 @@ export type QueryTargetType =
   | 'CONTINUITY'
   | 'UNRESOLVED'
   | 'STORY_REFERENCE'
-  | 'SNAPSHOT';
+  | 'SNAPSHOT'
+  | 'OBJECT'
+  | 'OBJECT_POSSESSION'
+  | 'OBJECT_LOCATION'
+  | 'OBJECT_OWNER'
+  | 'OBJECT_USER'
+  | 'OBJECT_WEARER'
+  | 'OBJECT_RELATIONS'
+  | 'OBJECT_REFERENCE_RESOLUTION';
 
 export interface UniverseQuery<TFilter = Record<string, unknown>> {
   queryId: string;
@@ -133,6 +142,75 @@ export class QueryProcessor {
 
       case 'STORY_REFERENCE':
         data = universe.continuityContext.activeChainRefs;
+        break;
+
+      case 'OBJECT': {
+        const op = query.parameters?.operation;
+        const targetObj = query.targetEntityId ? universe.objects[query.targetEntityId] : null;
+
+        if (op === 'GET_POSSESSION_REF') {
+          data = targetObj ? targetObj.possessionRef : null;
+        } else if (op === 'GET_LOCATION_REF') {
+          data = targetObj ? targetObj.locationRef : null;
+        } else if (op === 'GET_OWNER') {
+          data = targetObj ? targetObj.ownershipRef : null;
+        } else if (op === 'GET_USER') {
+          data = targetObj ? targetObj.currentUserRef : null;
+        } else if (op === 'GET_WEARER') {
+          data = targetObj ? targetObj.currentWearerRef : null;
+        } else if (op === 'GET_OBJECT_RELATIONS') {
+          const rootRels = Object.values(universe.objectRelations ?? {}).filter(
+            r => r.subjectRef === query.targetEntityId || r.targetRef === query.targetEntityId
+          );
+          const attachedRels = targetObj?.relations ?? [];
+          data = [...attachedRels, ...rootRels];
+        } else if (op === 'RESOLVE_OBJECT_REFERENCE') {
+          data = ObjectReferenceResolver.resolve({
+            ...(query.parameters as any),
+            knownObjects: universe.objects
+          });
+        } else {
+          // Default GET_OBJECT
+          data = query.targetEntityId ? universe.objects[query.targetEntityId] : universe.objects;
+        }
+        break;
+      }
+
+      case 'OBJECT_POSSESSION':
+        data = query.targetEntityId ? (universe.objects[query.targetEntityId]?.possessionRef ?? null) : null;
+        break;
+
+      case 'OBJECT_LOCATION':
+        data = query.targetEntityId ? (universe.objects[query.targetEntityId]?.locationRef ?? null) : null;
+        break;
+
+      case 'OBJECT_OWNER':
+        data = query.targetEntityId ? (universe.objects[query.targetEntityId]?.ownershipRef ?? null) : null;
+        break;
+
+      case 'OBJECT_USER':
+        data = query.targetEntityId ? (universe.objects[query.targetEntityId]?.currentUserRef ?? null) : null;
+        break;
+
+      case 'OBJECT_WEARER':
+        data = query.targetEntityId ? (universe.objects[query.targetEntityId]?.currentWearerRef ?? null) : null;
+        break;
+
+      case 'OBJECT_RELATIONS': {
+        const id = query.targetEntityId;
+        const rootRels = Object.values(universe.objectRelations ?? {}).filter(
+          r => !id || r.subjectRef === id || r.targetRef === id
+        );
+        const attachedRels = id ? (universe.objects[id]?.relations ?? []) : [];
+        data = [...attachedRels, ...rootRels];
+        break;
+      }
+
+      case 'OBJECT_REFERENCE_RESOLUTION':
+        data = ObjectReferenceResolver.resolve({
+          ...(query.parameters as any),
+          knownObjects: universe.objects
+        });
         break;
 
       default:
