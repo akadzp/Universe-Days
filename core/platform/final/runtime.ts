@@ -14,6 +14,7 @@ import { ModelAdapter, ModelRouter } from '../model/index.ts';
 import { createGeminiAdapterFromEnv, AIProductionService } from '../ai/index.ts';
 import { HardenedRuntimeBoundary } from '../hardening/index.ts';
 import { DefaultProductionPageService } from './service.ts';
+import { ProductionContextCompiler } from '../context/compiler.ts';
 
 export interface ProductionRuntime {
   readonly pageCatalog: PageCatalog;
@@ -29,6 +30,7 @@ export interface ProductionRuntime {
   readonly versions: VersionRegistry;
   readonly models: ModelRouter;
   readonly ai: AIProductionService;
+  readonly contextCompiler: ProductionContextCompiler;
   readonly hardening: HardenedRuntimeBoundary;
 }
 
@@ -64,6 +66,7 @@ export function createProductionRuntime(options?: ProductionRuntimeOptions): Pro
     versions: new VersionRegistry(),
     models,
     ai: new AIProductionService(models),
+    contextCompiler: new ProductionContextCompiler(),
     hardening
   });
 }
