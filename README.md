@@ -1,42 +1,54 @@
-# Control Center UI Update
+# Pembaruan UI Pusat Kendali Pocer Universe
 
-This package updates the presentation/control layer at the existing repository path:
+Pembaruan ini memperbaiki struktur informasi dan penggunaan aplikasi pada lapisan UI/control layer.
 
-- `app/web/App.tsx`
+## Konvensi nama file
 
-No `core/` logic is changed by this package.
+Nama file mengikuti nama yang sudah ada di repository dan tidak berubah karena versi atau pembaruan.
 
-## Naming convention
+- Target UI: `app/web/App.tsx`
+- Installer: `apply.mjs`
+- Informasi perubahan: `README.md`
 
-Repository filenames remain the canonical filenames. Version numbers and update labels are documented here rather than inserted into source filenames.
+Tidak ada nama file seperti `AppV2.tsx`, `AppV3.tsx`, `phase2.mjs`, atau variasi versi lainnya.
 
-The package intentionally uses the stable installer filename:
+## Struktur aplikasi
 
-- `apply.mjs`
+### Menu utama
 
-The target application filename remains:
+1. **Beranda** — ringkasan kondisi aplikasi dan langkah yang perlu dilakukan berikutnya.
+2. **Universe** — mengaktifkan Universe tersimpan, melihat penyimpanan, dan mode Sandbox.
+3. **Produksi** — menjalankan cerita harian, produksi halaman, atau produksi khusus.
+4. **Jadwal** — melihat dan menjalankan pekerjaan produksi terjadwal.
+5. **Halaman** — melihat serta mengaktifkan/nonaktifkan Page.
 
-- `app/web/App.tsx`
+### Administrasi
 
-## What this update changes
+6. **Riwayat** — melihat hasil produksi sebelumnya dan penggunaan token/biaya.
+7. **AI & Model** — melihat provider dan model yang tersedia.
+8. **Sistem** — pemeriksaan kesiapan dan detail internal engine.
 
-The Control Center is aligned with the current frozen runtime architecture and exposes:
+Administrasi dipisahkan dari menu utama supaya fitur teknis tidak bercampur dengan alur produksi sehari-hari.
 
-- Home
-- Universe
-- Production
-- Scheduler
-- Pages
-- AI
-- System
+## Perbaikan UI utama
 
-The UI uses the current control and production APIs, including persisted current Universe loading, sandbox access, scheduler execution, production runs, readiness, provider status, and usage.
+- Seluruh teks antarmuka utama menggunakan Bahasa Indonesia.
+- Navigasi tetap tersedia pada perangkat mobile; sidebar desktop sebelumnya tersembunyi di mobile sehingga pengguna kehilangan navigasi.
+- Istilah status internal seperti `READY`, `BLOCKED`, dan `WAITING_FOR_UNIVERSE` ditampilkan dengan label Bahasa Indonesia.
+- ID dan istilah internal tetap tersedia hanya ketika memang berguna sebagai detail teknis.
+- Alur utama dimulai dari Beranda dan selalu memberikan tindakan berikutnya yang relevan.
+- Sandbox dipisahkan secara visual dari Universe Canonical agar tidak dianggap sebagai sumber data resmi.
+- Riwayat produksi dipisahkan dari produksi aktif agar hasil lama tidak bercampur dengan tindakan baru.
+- Fitur administrasi teknis dipisahkan dari menu utama.
+- Tombol dan istilah teknis yang sebelumnya berbahasa Inggris diganti dengan istilah yang mudah dipahami pengguna.
 
-The old synthetic Universe mounting flow is removed from the interface.
+## API yang digunakan
+
+UI tetap menggunakan endpoint yang sudah tersedia pada runtime saat ini. Paket ini tidak mengubah `core/` dan tidak mengubah aturan otoritas Universe.
 
 ## Apply
 
-Run from the repository root:
+Jalankan dari root repository:
 
 ```bash
 node apply.mjs
@@ -44,11 +56,15 @@ npm run lint
 npm run build
 ```
 
-The installer creates `app/web/App.tsx.bak` before replacing the target file.
+Installer membuat backup stabil:
 
-## Verification performed on the package
+```text
+app/web/App.tsx.bak
+```
+
+## Verifikasi paket
 
 - `node --check apply.mjs`
-- TypeScript transpile check for `app/web/App.tsx`
+- TypeScript transpile check pada `app/web/App.tsx`
 
-Full repository lint/build was not run here because the complete repository checkout is not available in this package workspace.
+Lint/build penuh repository tidak dijalankan di workspace ini karena checkout repository lengkap tidak tersedia.
