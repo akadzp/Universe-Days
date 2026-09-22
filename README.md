@@ -1,32 +1,26 @@
-# Phase 03 — Persistent Universe Runtime
+# Phase 04 — Final Production Hardening
 
-This overlay adds durable Universe snapshot storage and a persistent instance boundary.
+This overlay hardens the existing production runtime without adding a new business subsystem.
 
-## Runtime behavior
+## Changes
 
-- `FileUniverseSnapshotStore` persists validated `UniverseModel` snapshots as atomic JSON under `POCER_UNIVERSE_DATA_DIR`.
-- `UniverseInstanceManager` is the instance-management boundary between storage and `UniverseAuthorityStore`.
-- Storage does not become Canon authority; mounting still occurs through `UniverseAuthorityStore`.
-- Canonical Universe instances are loaded from persisted snapshots. Direct raw canonical mounts through the Control API are rejected.
-- `GENERIC_SEED` remains an explicit `SANDBOX` development path and is not promoted to the persistent current-Universe pointer.
-- Runtime startup automatically loads the persisted current Universe pointer when one exists. Corrupt persistence blocks auto-mount instead of repairing or replacing data.
-- `POST /api/control/universe/persist` persists the currently mounted Universe through `INSTANCE_MANAGEMENT_SYSTEM` authority.
-- `POST /api/control/universe/load` loads a named persisted snapshot.
-- `POST /api/control/universe/load-current` loads the persisted current snapshot.
-- `GET /api/control/universe/storage` exposes storage and instance state.
-- Docker now places Universe snapshots and scheduler job state inside the shared runtime volume.
+- External production HTTP input is now allowlisted and typed; owner-produced Daily Context, Story packages, progression state, and Page packages cannot be injected through the Control API.
+- Canonical Universe mounting requires the Instance Management authority actor; direct HTTP mounting remains SANDBOX-only.
+- Persistence failures are fail-fast instead of silently degrading to in-memory state.
+- Production Run, Scheduler Job, and Universe Snapshot stores reject malformed/corrupt records instead of ignoring them.
+- Startup auto-load failures are surfaced as `UNREADY` rather than hidden behind an unmounted runtime.
+- Cached production results are persisted for an auditable run record.
+- Runtime concurrency and production generation parameters are bounded.
+- Production and scheduler API failures now distinguish persistence outages from ordinary request errors.
+- Atomic file writes remain deterministic and do not use wall-clock IDs.
 
 ## Apply
 
-From the repository root:
+From repository root:
 
 ```bash
-node apply-phase03.mjs
+node apply-phase04.mjs
 npm run lint
 ```
 
-No dedicated test phase is added. The overlay should at minimum be syntax/transpile-checked before commit.
-
-## Repository layout
-
-The ZIP intentionally places repository files at their actual paths (`core/...`, `app/...`, etc.). There is no redundant `patch/` source directory.
+No new test phase is introduced.
