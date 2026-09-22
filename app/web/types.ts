@@ -195,18 +195,22 @@ export interface UniverseObject {
   id: string;
   displayName: string;
   objectType: string;
+  description?: string;
   category?: string;
   possessionStatus: string;
   condition: string;
   currentLocationRef?: string | null;
   holderActorRef?: string | null;
   ownerActorRef?: string | null;
+  currentOwnerCharacterId?: string | null;
 }
 
 export interface UniverseRelationship {
   id: string;
-  sourceActorRef: string;
-  targetActorRef: string;
+  sourceActorRef?: string;
+  targetActorRef?: string;
+  characterIdA?: string;
+  characterIdB?: string;
   relationshipType: string;
   direction?: string;
   strength?: number;
@@ -216,16 +220,20 @@ export interface UniverseRelationship {
 
 export interface UniverseUnresolvedCondition {
   id: string;
-  title: string;
+  title?: string;
   description: string;
-  status: string;
-  severity: string;
+  status?: string;
+  severity?: string;
+  conditionType?: string;
+  significance?: string;
+  resolutionStatus?: string;
 }
 
 export interface UniverseDetails {
   mounted: boolean;
   universeId?: string;
   universeScope?: string;
+  mode?: string;
   storyMetadata?: {
     title?: string;
     premise?: string;

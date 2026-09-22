@@ -73,7 +73,6 @@ export function StoryView({
     setIsProducing(true);
     try {
       await onProduceStory({ purpose: 'DAILY_STORY' });
-      // refresh contexts
       fetchDailyContext().then(setDailyContext);
       fetchDevelopment().then(setDevelopment);
       fetchTimeline().then(setTimeline);
@@ -90,21 +89,21 @@ export function StoryView({
 
   if (!universe || !universe.mounted) {
     return (
-      <div className="space-y-6 animate-fade-in max-w-4xl mx-auto py-8">
-        <Card className="p-8 text-center space-y-4 bg-gradient-to-b from-amber-50/40 via-white to-amber-50/20 border-2 border-amber-200">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-400 text-slate-950 shadow-md">
-            <BookOpen className="h-8 w-8" />
+      <div className="space-y-6 animate-fade-in max-w-2xl mx-auto py-12 px-4">
+        <Card className="p-8 text-center space-y-4 bg-gradient-to-b from-amber-50/40 via-white to-amber-50/20 border border-amber-200 shadow-sm">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-400 text-slate-950 shadow-xs">
+            <BookOpen className="h-7 w-7" />
           </div>
-          <div className="max-w-md mx-auto">
-            <h3 className="text-xl font-black text-slate-900">Belum Ada Cerita Aktif</h3>
-            <p className="text-xs text-slate-500 font-medium mt-1">
-              Buka kisah baru untuk mulai menjelajah alur cerita, mengelola karakter, dan menerbitkan naskah harian.
+          <div className="max-w-md mx-auto space-y-1">
+            <h3 className="text-lg font-black text-slate-900">Belum Ada Cerita Aktif</h3>
+            <p className="text-xs text-slate-500 font-medium leading-relaxed">
+              Mulai sebuah dunia cerita untuk membangun tokoh, lokasi, benda pusaka, dan alur naskah harian.
             </p>
           </div>
-          <div className="pt-2">
-            <Button kind="clay" size="lg" onClick={onOpenCreateStory}>
-              <Sparkles className="h-5 w-5" />
-              <span>+ Buat Kisah Cerita Baru</span>
+          <div className="pt-3">
+            <Button kind="clay" size="md" onClick={onOpenCreateStory}>
+              <Sparkles className="h-4 w-4" />
+              <span>Buat Cerita</span>
             </Button>
           </div>
         </Card>
@@ -112,31 +111,27 @@ export function StoryView({
     );
   }
 
-  const meta = universe.storyMetadata || {
-    title: 'Kisah Semesta Pocer',
-    premise: 'Petualangan luar biasa di dunia yang sarat intrik dan pusaka kuno.',
-    synopsis: 'Para tokoh berjuang membimbing takdir wilayah menuju kedamaian sejati.',
-    genre: 'Fantasi / Petualangan',
-    theme: 'Keberanian & Penemuan Kebenaran',
-  };
+  const meta = universe.storyMetadata || {};
 
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Story Banner Header */}
-      <Card className="p-6 bg-gradient-to-r from-amber-50/70 via-white to-amber-50/40 border-2 border-amber-200 shadow-md">
+      <Card className="p-6 bg-gradient-to-r from-amber-50/70 via-white to-amber-50/40 border border-amber-200 shadow-sm">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-3 flex-wrap">
-              <span className="px-3 py-1 rounded-xl bg-amber-200/80 text-amber-950 text-xs font-black uppercase tracking-wider">
-                {meta.genre || 'Fantasi / Petualangan'}
-              </span>
+              {meta.genre && (
+                <span className="px-3 py-1 rounded-xl bg-amber-200/80 text-amber-950 text-xs font-black uppercase tracking-wider">
+                  {meta.genre}
+                </span>
+              )}
               <ModeBadge isSandbox={isSandbox} />
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              {meta.title}
+              {meta.title || 'Cerita Tanpa Judul'}
             </h2>
             <p className="text-xs text-slate-600 font-medium line-clamp-2 max-w-2xl">
-              {meta.premise}
+              {meta.premise || meta.synopsis || 'Belum ada ringkasan premis yang dicatat.'}
             </p>
           </div>
 
@@ -146,10 +141,10 @@ export function StoryView({
               size="md"
               onClick={handleRunProduction}
               disabled={isProducing}
-              className="flex items-center justify-center gap-2 shadow-md"
+              className="flex items-center justify-center gap-2 shadow-xs"
             >
               <Sparkles className={`h-4 w-4 ${isProducing ? 'animate-spin' : ''}`} />
-              <span>{isProducing ? 'Menulis Naskah...' : '⚡ Jalankan Hari & Tulis Naskah'}</span>
+              <span>{isProducing ? 'Menulis Naskah...' : '⚡ Lanjutkan Kisah'}</span>
             </Button>
           </div>
         </div>
@@ -159,7 +154,7 @@ export function StoryView({
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto no-scrollbar">
         {[
           { id: 'overview', label: 'Ringkasan Cerita', icon: BookOpen },
-          { id: 'daily', label: 'Lanjutkan Kisah (Harian)', icon: Play },
+          { id: 'daily', label: 'Lanjutkan Kisah', icon: Play },
           { id: 'development', label: 'Perkembangan Alur', icon: TrendingUp },
           { id: 'timeline', label: 'Garis Waktu Cerita', icon: Clock },
           { id: 'reader', label: `Meja Baca (${latestRuns.length})`, icon: FileText },
@@ -172,7 +167,7 @@ export function StoryView({
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 ${
                 isActive
-                  ? 'bg-amber-400 text-slate-950 shadow-sm border border-amber-300'
+                  ? 'bg-amber-400 text-slate-950 shadow-xs border border-amber-300'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -193,7 +188,7 @@ export function StoryView({
                 <span>Sinopsis & Premis Cerita</span>
               </h3>
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-800 leading-relaxed font-medium">
-                {meta.synopsis || meta.premise}
+                {meta.synopsis || meta.premise || 'Sinopsis dan premis cerita belum dicatat.'}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -201,13 +196,13 @@ export function StoryView({
                   <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
                     Tema Utama
                   </span>
-                  <p className="text-xs font-bold text-amber-950 mt-1">{meta.theme || 'Perjuangan & Takdir'}</p>
+                  <p className="text-xs font-bold text-amber-950 mt-1">{meta.theme || 'Belum diisi'}</p>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     ID Semesta
                   </span>
-                  <p className="text-xs font-bold text-slate-800 mt-1 font-mono">{universe.universeId}</p>
+                  <p className="text-xs font-bold text-slate-800 mt-1 font-mono">{universe.universeId || 'Belum tercatat'}</p>
                 </div>
               </div>
             </Card>
@@ -239,18 +234,26 @@ export function StoryView({
           </div>
 
           <div className="space-y-6">
-            <Card className="p-5 space-y-4 bg-gradient-to-b from-amber-50/50 to-white border-2 border-amber-200">
+            <Card className="p-5 space-y-4 bg-gradient-to-b from-amber-50/50 to-white border border-amber-200">
               <h4 className="text-xs font-black uppercase tracking-wider text-amber-900">
                 Waktu Cerita Berjalan
               </h4>
               <div className="p-3 bg-white rounded-2xl border border-amber-200 text-center shadow-xs">
                 <span className="text-[10px] font-bold text-slate-400 uppercase">Tanggal Semesta</span>
                 <p className="text-lg font-black text-slate-900 mt-0.5">
-                  {universe.temporal?.currentUniverseDate || '2024-01-01'}
+                  {universe.temporal?.currentUniverseDate || 'Belum tercatat'}
                 </p>
-                <p className="text-[11px] font-bold text-amber-800 mt-1">
-                  Periode: {universe.temporal?.periodRef || 'PERIOD_001'}
-                </p>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl">
+                  <span className="text-slate-500 font-medium">Kalender:</span>
+                  <span className="font-bold text-slate-800">{universe.temporal?.calendarSystem || 'GREGORIAN'}</span>
+                </div>
+                <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl">
+                  <span className="text-slate-500 font-medium">Siklus Periode:</span>
+                  <span className="font-mono text-[11px] font-bold text-slate-800">{universe.temporal?.periodRef || 'Belum disetel'}</span>
+                </div>
               </div>
 
               <Button
@@ -258,31 +261,28 @@ export function StoryView({
                 size="md"
                 onClick={handleRunProduction}
                 disabled={isProducing}
-                className="w-full"
+                className="w-full flex items-center justify-center gap-2 text-xs font-bold py-3 mt-2 shadow-xs"
               >
-                <Play className="h-4 w-4" />
-                <span>{isProducing ? 'Menulis Naskah...' : 'Lanjutkan Hari Ini'}</span>
+                <Sparkles className="h-4 w-4" />
+                <span>{isProducing ? 'Menulis Bab...' : 'Lanjutkan Kisah'}</span>
               </Button>
             </Card>
-
-            <InfoCallout title="Prinsip Kedaulatan Cerita" tone="amber">
-              Dunia cerita dikelola secara kanonik. AI bertindak sebagai asisten penulis naskah, sementara seluruh fakta tokoh, relasi, dan benda tetap patuh pada hukum kebenaran semesta.
-            </InfoCallout>
           </div>
         </div>
       )}
 
-      {/* Tab: Daily Continuation */}
+      {/* Tab: Daily Story Engine */}
       {activeTab === 'daily' && (
         <div className="space-y-6 animate-fade-in">
-          <Card className="p-6 space-y-6">
-            <div className="flex items-center justify-between flex-wrap gap-3 pb-4 border-b border-slate-100">
+          <Card className="p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100">
               <div>
-                <h3 className="text-lg font-black text-slate-900">
-                  Persiapan Cerita Hari Ini ({universe.temporal?.currentUniverseDate})
+                <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                  <Play className="h-4 w-4 text-amber-600" />
+                  <span>Konteks Hari Ini & Peluang Narasi</span>
                 </h3>
-                <p className="text-xs text-slate-500 font-medium">
-                  Kondisi awal semesta sebelum babak peristiwa hari ini digulirkan.
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  Kondisi terkini semesta sebelum babak baru dituliskan.
                 </p>
               </div>
 
@@ -291,44 +291,76 @@ export function StoryView({
                 size="md"
                 onClick={handleRunProduction}
                 disabled={isProducing}
+                className="flex items-center gap-2 shadow-xs"
               >
                 <Sparkles className="h-4 w-4" />
-                <span>{isProducing ? 'Menjalankan...' : 'Jalankan & Tulis Bab Hari Ini'}</span>
+                <span>{isProducing ? 'Menulis Naskah...' : '⚡ Lanjutkan Kisah Hari Ini'}</span>
               </Button>
             </div>
 
-            {/* Initial Conditions */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Kondisi Awal yang Terdata
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {dailyContext?.initialConditions.map((cond, idx) => (
-                  <div key={idx} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-700 flex items-start gap-2.5">
-                    <span className="h-2 w-2 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                    <span>{cond}</span>
+            {dailyContext ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Kondisi Awal Hari
+                  </span>
+                  <div className="text-xs text-slate-800 font-medium space-y-1 mt-1">
+                    {dailyContext.initialConditions.length > 0 ? (
+                      dailyContext.initialConditions.map((cond, idx) => (
+                        <div key={idx} className="flex items-start gap-1.5">
+                          <span className="text-amber-600 font-bold">•</span>
+                          <span>{cond}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-slate-400 italic">Belum ada kondisi khusus tercatat.</span>
+                    )}
                   </div>
-                )) || (
-                  <div className="text-xs text-slate-400 p-4">Memuat kondisi harian...</div>
-                )}
-              </div>
-            </div>
+                </div>
 
-            {/* Narrative Hooks */}
-            <div className="p-5 bg-amber-50/60 rounded-2xl border border-amber-200/80 space-y-3">
-              <h4 className="text-xs font-black uppercase tracking-wider text-amber-900 flex items-center gap-2">
-                <Wand2 className="h-4 w-4 text-amber-600" />
-                <span>Peluang Alur & Rekomendasi Narasi</span>
-              </h4>
-              <div className="space-y-2">
-                {dailyContext?.availableDevelopments.map((dev, idx) => (
-                  <div key={idx} className="p-2.5 bg-white/90 rounded-xl border border-amber-200 text-xs text-amber-950 font-medium flex items-center gap-2">
-                    <ChevronRight className="h-4 w-4 text-amber-600 shrink-0" />
-                    <span>{dev}</span>
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Entitas Terlibat
+                  </span>
+                  <div className="space-y-1 mt-2 text-xs font-semibold text-slate-700">
+                    <div className="flex justify-between">
+                      <span>Tokoh Aktif:</span>
+                      <span className="text-slate-900">{dailyContext.activeCharactersCount}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Wilayah Terjangkau:</span>
+                      <span className="text-slate-900">{dailyContext.activeLocationsCount}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Pusaka & Objek:</span>
+                      <span className="text-slate-900">{dailyContext.activeObjectsCount}</span>
+                    </div>
                   </div>
-                ))}
+                </div>
+
+                <div className="p-4 bg-amber-50/40 rounded-2xl border border-amber-200/80 space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
+                    Peluang Alur
+                  </span>
+                  <div className="space-y-1 mt-1 text-xs text-amber-950 font-medium">
+                    {dailyContext.availableDevelopments.length > 0 ? (
+                      dailyContext.availableDevelopments.map((dev, idx) => (
+                        <div key={idx} className="flex items-start gap-1.5">
+                          <span className="text-amber-600 font-bold">→</span>
+                          <span>{dev}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-slate-400 italic">Alur berjalan mengikuti dinamika dunia.</span>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-8 text-center text-xs text-slate-500">
+                Memuat konteks harian...
+              </div>
+            )}
           </Card>
         </div>
       )}
@@ -336,90 +368,110 @@ export function StoryView({
       {/* Tab: Development */}
       {activeTab === 'development' && (
         <div className="space-y-6 animate-fade-in">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="p-6 space-y-4">
-              <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                <Users className="h-4 w-4 text-amber-600" />
-                <span>Perkembangan Tokoh</span>
-              </h3>
-              <div className="space-y-3">
-                {development?.characterDevelopments.map((cd) => (
-                  <div key={cd.characterId} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 text-xs space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-900">{cd.name}</span>
-                      <span className="text-[10px] font-bold text-amber-800 px-2 py-0.5 bg-amber-100 rounded-lg">{cd.role}</span>
-                    </div>
-                    <p className="text-slate-600 text-[11px]">Tujuan Aktif: {cd.currentGoal}</p>
-                  </div>
-                )) || <div className="text-xs text-slate-400">Belum ada catatan tokoh.</div>}
-              </div>
-            </Card>
+          <Card className="p-6 space-y-4">
+            <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-amber-600" />
+              <span>Perkembangan Dinamika Cerita</span>
+            </h3>
+            <p className="text-xs text-slate-500 font-medium">
+              Evolusi karakter, relasi antartokoh, dan kondisi dunia seiring berjalannya alur.
+            </p>
 
-            <Card className="p-6 space-y-4">
-              <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                <Flame className="h-4 w-4 text-rose-600" />
-                <span>Dinamika Hubungan & Misteri</span>
-              </h3>
-              <div className="space-y-3">
-                {development?.relationshipDevelopments.map((rd) => (
-                  <div key={rd.id} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 text-xs space-y-1">
-                    <div className="flex items-center justify-between font-bold text-slate-900">
-                      <span>{rd.pair}</span>
-                      <span className="text-amber-800 text-[10px] font-bold">{rd.status}</span>
+            {development ? (
+              <div className="space-y-4 pt-2">
+                {development.characterDevelopments.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      Perubahan Tokoh
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {development.characterDevelopments.map((cd) => (
+                        <div key={cd.characterId} className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-900">{cd.name}</span>
+                            <span className="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 font-semibold">{cd.role || 'Belum ditentukan'}</span>
+                          </div>
+                          <p className="text-slate-600 mt-1">
+                            <strong className="text-slate-700">Tujuan: </strong>
+                            {cd.currentGoal || 'Belum tercatat'}
+                          </p>
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-slate-500 text-[11px]">{rd.dynamic}</p>
                   </div>
-                ))}
+                )}
 
-                {development?.mysteryDevelopments.map((md) => (
-                  <div key={md.id} className="p-3.5 bg-rose-50/50 rounded-2xl border border-rose-200 text-xs space-y-1">
-                    <div className="flex items-center justify-between font-bold text-rose-900">
-                      <span>{md.type}</span>
-                      <span className="text-[10px] font-bold text-rose-700">{md.status}</span>
+                {development.relationshipDevelopments.length > 0 && (
+                  <div className="pt-2">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      Dinamika Relasi
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {development.relationshipDevelopments.map((rd) => (
+                        <div key={rd.id} className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-900">{rd.pair}</span>
+                            <span className="text-[10px] text-slate-500 font-bold">{rd.status}</span>
+                          </div>
+                          <p className="text-slate-600 mt-1">{rd.dynamic || 'Dinamika belum tercatat.'}</p>
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-rose-800 text-[11px]">{md.description}</p>
                   </div>
-                ))}
+                )}
               </div>
-            </Card>
-          </div>
+            ) : (
+              <div className="p-8 text-center text-xs text-slate-500">
+                Belum ada catatan perkembangan khusus.
+              </div>
+            )}
+          </Card>
         </div>
       )}
 
       {/* Tab: Timeline */}
       {activeTab === 'timeline' && (
-        <Card className="p-6 space-y-6 animate-fade-in">
-          <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-            <Clock className="h-5 w-5 text-amber-600" />
-            <span>Garis Waktu Perjalanan Kisah</span>
-          </h3>
-          <div className="space-y-6 relative pl-6 border-l-2 border-amber-300">
-            {timeline?.items.map((item, idx) => (
-              <div key={idx} className="relative space-y-1.5">
-                <div className="absolute -left-[31px] top-1 h-4 w-4 rounded-full bg-amber-500 border-2 border-white shadow-xs" />
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-lg text-[10px] font-black uppercase">
-                    {item.date}
-                  </span>
-                  <span className="text-xs font-bold text-slate-900">{item.title}</span>
-                </div>
-                <p className="text-xs text-slate-600 leading-relaxed bg-slate-50/80 p-3 rounded-2xl border border-slate-100">
-                  {item.description}
-                </p>
+        <div className="space-y-6 animate-fade-in">
+          <Card className="p-6 space-y-4">
+            <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+              <Clock className="h-4 w-4 text-amber-600" />
+              <span>Garis Waktu Kronologis Peristiwa</span>
+            </h3>
+
+            {timeline && timeline.items.length > 0 ? (
+              <div className="relative pl-6 border-l-2 border-amber-300 space-y-6 pt-2">
+                {timeline.items.map((item, idx) => (
+                  <div key={idx} className="relative group">
+                    <div className="absolute -left-[31px] top-1.5 h-3.5 w-3.5 rounded-full bg-amber-500 border-2 border-white shadow-xs" />
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-amber-300 transition">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                          {item.date}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">
+                          {item.category}
+                        </span>
+                      </div>
+                      <h4 className="text-xs font-bold text-slate-900 mt-1.5">{item.title}</h4>
+                      <p className="text-xs text-slate-600 mt-1">{item.description}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            )) || <div className="text-xs text-slate-400">Memuat garis waktu...</div>}
-          </div>
-        </Card>
+            ) : (
+              <div className="p-8 text-center text-xs text-slate-500">
+                Garis waktu akan tercatat saat alur cerita dijalankan.
+              </div>
+            )}
+          </Card>
+        </div>
       )}
 
-      {/* Tab: Reader (Meja Baca) */}
+      {/* Tab: Reader Room */}
       {activeTab === 'reader' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
-          {/* Chapter / Run Selector */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Daftar Naskah & Bab
-            </h4>
+            <h4 className="text-xs font-bold text-slate-400 uppercase">Daftar Bab Terbit</h4>
             <div className="space-y-2 max-h-[600px] overflow-y-auto">
               {latestRuns.map((r) => (
                 <div
@@ -427,69 +479,65 @@ export function StoryView({
                   onClick={() => setSelectedRun(r)}
                   className={`p-3.5 rounded-2xl border cursor-pointer transition ${
                     selectedRun?.runId === r.runId
-                      ? 'bg-amber-100/70 border-amber-400 shadow-sm'
+                      ? 'bg-amber-100/70 border-amber-400 shadow-xs'
                       : 'bg-white border-slate-200 hover:border-slate-300'
                   }`}
                 >
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-900">
-                    <span className="truncate">{r.purpose}</span>
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-bold text-slate-900 truncate max-w-[150px]">
+                      {r.purpose}
+                    </h5>
                     <StatusBadge status={r.status} />
                   </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2">
-                    <span>{r.timestamp?.slice(0, 10) || '2024-01-01'}</span>
-                    <span>{r.outputTokens || 0} Kata / Token</span>
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1.5 font-medium">
+                    <span>📅 {r.timestamp?.slice(0, 10) || 'Belum tercatat'}</span>
+                    <span>{r.outputTokens || 0} Tok</span>
                   </div>
                 </div>
               ))}
+
               {latestRuns.length === 0 && (
-                <div className="p-6 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-100">
-                  Belum ada naskah yang diterbitkan. Klik 'Jalankan Hari & Tulis Naskah' untuk menerbitkan bab pertama!
+                <div className="p-8 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl">
+                  Belum ada naskah yang diterbitkan.
                 </div>
               )}
             </div>
           </div>
 
-          {/* Reader Body */}
           <div className="md:col-span-2">
-            <Card className="p-8 space-y-6 bg-amber-50/20 border-2 border-amber-200 shadow-sm min-h-[500px]">
-              {selectedRun ? (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between pb-4 border-b border-amber-200/80">
-                    <div>
-                      <h3 className="text-xl font-black text-slate-900">
-                        {selectedRun.purpose}
-                      </h3>
-                      <p className="text-xs text-slate-500 font-medium mt-0.5">
-                        Diterbitkan pada {selectedRun.timestamp} • Status: {selectedRun.status}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        kind="secondary"
-                        size="sm"
-                        onClick={() => handleCopyText(typeof selectedRun.output === 'string' ? selectedRun.output : JSON.stringify(selectedRun.output, null, 2))}
-                      >
-                        {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-                        <span>{copied ? 'Tersalin' : 'Salin Naskah'}</span>
-                      </Button>
+            {selectedRun ? (
+              <Card className="p-6 space-y-4 bg-white border border-slate-200 shadow-xs min-h-[500px]">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900">{selectedRun.purpose}</h4>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                      <span>Waktu: {selectedRun.timestamp}</span>
+                      <span>•</span>
+                      <span>Token: {selectedRun.outputTokens}</span>
                     </div>
                   </div>
 
-                  {/* Story Text with Elegant Typography */}
-                  <div className="prose prose-slate max-w-none text-sm text-slate-800 font-serif leading-relaxed whitespace-pre-wrap">
-                    {typeof selectedRun.output === 'string'
-                      ? selectedRun.output
-                      : typeof selectedRun.output?.storyContent === 'string'
-                        ? selectedRun.output.storyContent
-                        : JSON.stringify(selectedRun.output || selectedRun.reason || 'Naskah berhasil diproduksi.', null, 2)}
-                  </div>
+                  <Button
+                    kind="secondary"
+                    size="sm"
+                    onClick={() => handleCopyText(JSON.stringify(selectedRun.output, null, 2))}
+                  >
+                    {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                    <span>{copied ? 'Tersalin' : 'Salin Naskah'}</span>
+                  </Button>
                 </div>
-              ) : (
-                <div className="p-12 text-center text-slate-400 text-xs">
-                  Pilih bab naskah di sebelah kiri untuk mulai membaca.
+
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 font-serif text-xs leading-relaxed text-slate-800 whitespace-pre-wrap max-h-[420px] overflow-y-auto">
+                  {typeof selectedRun.output === 'string'
+                    ? selectedRun.output
+                    : JSON.stringify(selectedRun.output, null, 2)}
                 </div>
-              )}
-            </Card>
+              </Card>
+            ) : (
+              <div className="h-full flex items-center justify-center p-12 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-100">
+                Pilih bab di sebelah kiri untuk membaca naskah.
+              </div>
+            )}
           </div>
         </div>
       )}

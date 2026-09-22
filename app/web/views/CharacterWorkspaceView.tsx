@@ -42,6 +42,7 @@ export function CharacterWorkspaceView({
   onUpdateBehavior,
   onUpdateStyle,
   onAddKnowledge,
+  onAddCharacter,
   onAiAssist,
 }: {
   characterId: string | null;
@@ -54,6 +55,7 @@ export function CharacterWorkspaceView({
   onUpdateBehavior?: (charId: string, data: any) => Promise<void>;
   onUpdateStyle?: (charId: string, data: any) => Promise<void>;
   onAddKnowledge?: (charId: string, data: any) => Promise<void>;
+  onAddCharacter?: (data: any) => Promise<void>;
   onAiAssist?: (capability: string, input: any) => Promise<any>;
 }) {
   const [activeTab, setActiveTab] = useState<
@@ -63,13 +65,22 @@ export function CharacterWorkspaceView({
   const [loading, setLoading] = useState(false);
 
   // Modals
+  const [isCreateCharModalOpen, setIsCreateCharModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isStateModalOpen, setIsStateModalOpen] = useState(false);
   const [isBehaviorModalOpen, setIsBehaviorModalOpen] = useState(false);
   const [isStyleModalOpen, setIsStyleModalOpen] = useState(false);
   const [isKnowledgeModalOpen, setIsKnowledgeModalOpen] = useState(false);
 
-  // Form states
+  // Create Character form
+  const [newCharName, setNewCharName] = useState('');
+  const [newCharRole, setNewCharRole] = useState('');
+  const [newCharPersonality, setNewCharPersonality] = useState('');
+  const [newCharTraits, setNewCharTraits] = useState('');
+  const [newCharOccupation, setNewCharOccupation] = useState('');
+  const [newCharGoal, setNewCharGoal] = useState('');
+
+  // Edit Form states
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editNickname, setEditNickname] = useState('');
   const [editAge, setEditAge] = useState<string>('');
@@ -143,8 +154,8 @@ export function CharacterWorkspaceView({
         setEditDistinctFeatures(res.appearance.distinctFeatures || '');
         setEditClothingStyle(res.appearance.clothingStyle || '');
         setEditPersonalityType(res.personality.personalityType || '');
-        setEditTraits(res.personality.traits.join(', '));
-        setEditFlaws(res.personality.flaws.join(', '));
+        setEditTraits((res.personality.traits || []).join(', '));
+        setEditFlaws((res.personality.flaws || []).join(', '));
         setEditHabits((res.personality.habits || []).join(', '));
         setEditFears((res.personality.fears || []).join(', '));
         setEditValues((res.personality.values || []).join(', '));
@@ -190,72 +201,219 @@ export function CharacterWorkspaceView({
   useEffect(() => {
     if (characterId) {
       void loadData(characterId);
+    } else {
+      setData(null);
     }
   }, [characterId]);
 
-  if (!characterId || (!data && !loading)) {
+  const handleCreateCharacter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCharName.trim() || !onAddCharacter) return;
+    setIsSubmitting(true);
+    try {
+      await onAddCharacter({
+        displayName: newCharName.trim(),
+        role: newCharRole.trim() || undefined,
+        personalityType: newCharPersonality.trim() || undefined,
+        traits: newCharTraits ? newCharTraits.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        occupation: newCharOccupation.trim() || undefined,
+        goal: newCharGoal.trim() || undefined,
+      });
+      setNewCharName('');
+      setNewCharRole('');
+      setNewCharPersonality('');
+      setNewCharTraits('');
+      setNewCharOccupation('');
+      setNewCharGoal('');
+      setIsCreateCharModalOpen(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // If no character is selected, render the clean Character List View directly
+  if (!characterId) {
     return (
       <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center justify-between">
+        {/* Header with direct + Buat Tokoh button */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-black text-slate-900 tracking-tight">
-              Ruang Tokoh & Karakter
+              Tokoh Semesta Cerita
             </h2>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Pilih salah satu tokoh dari daftar untuk melihat proyeksi holistik 13 dimensi.
+              Kelola tokoh, sifat, hubungan, dan kondisi dalam dunia cerita.
             </p>
           </div>
+
+          <Button
+            kind="clay"
+            size="sm"
+            onClick={() => setIsCreateCharModalOpen(true)}
+            className="flex items-center gap-1.5 shadow-xs shrink-0"
+          >
+            <PlusCircle className="h-4 w-4" />
+            <span>+ Buat Tokoh</span>
+          </Button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {allCharacters.map((c) => (
-            <Card
-              key={c.id}
-              className="p-5 cursor-pointer hover:border-amber-400 hover:shadow-md transition group"
-            >
-              <div
-                onClick={() => onSelectCharacter(c.id)}
-                className="space-y-3"
+        {allCharacters.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {allCharacters.map((c) => (
+              <Card
+                key={c.id}
+                className="p-5 cursor-pointer hover:border-amber-400 hover:shadow-md transition group"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 border-2 border-amber-300 text-amber-900 font-black text-lg shadow-inner">
-                      {c.displayName.charAt(0)}
+                <div onClick={() => onSelectCharacter(c.id)} className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 border-2 border-amber-300 text-amber-900 font-black text-base shadow-inner shrink-0">
+                        {c.displayName.charAt(0)}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 group-hover:text-amber-800 transition truncate max-w-[150px]">
+                          {c.displayName}
+                        </h4>
+                        <p className="text-xs text-slate-500 font-medium">
+                          {c.role || 'Belum ditentukan'}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900 group-hover:text-amber-800 transition">
-                        {c.displayName}
-                      </h4>
-                      <p className="text-xs text-slate-500 font-medium">{c.role || 'Tokoh Utama'}</p>
-                    </div>
+                    <StatusBadge status={c.status} />
                   </div>
-                  <StatusBadge status={c.status} />
-                </div>
 
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-600">
-                  <span className="font-bold text-slate-800">Tipe: </span>
-                  {c.personalityType || 'Pemberani & Visioner'}
-                </div>
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-600">
+                    <span className="font-bold text-slate-700">Tipe: </span>
+                    <span>{c.personalityType || 'Belum diisi'}</span>
+                  </div>
 
-                <div className="flex flex-wrap gap-1.5">
-                  {c.traits?.slice(0, 3).map((t, idx) => (
-                    <span
-                      key={idx}
-                      className="px-2 py-0.5 bg-amber-50 text-amber-800 text-[11px] font-semibold rounded-lg border border-amber-200"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
+                  <div className="flex flex-wrap gap-1.5 min-h-[24px]">
+                    {c.traits && c.traits.length > 0 ? (
+                      c.traits.slice(0, 3).map((t, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 bg-amber-50 text-amber-800 text-[11px] font-semibold rounded-lg border border-amber-200"
+                        >
+                          {t}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[11px] text-slate-400 italic">
+                        Belum ada sifat yang tercatat
+                      </span>
+                    )}
+                  </div>
 
-                <div className="pt-2 flex items-center justify-between text-xs font-bold text-amber-700">
-                  <span>Buka Ruang Kerja Tokoh</span>
-                  <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition" />
+                  <div className="pt-2 flex items-center justify-between text-xs font-bold text-amber-700">
+                    <span>Buka Ruang Profil Tokoh</span>
+                    <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition" />
+                  </div>
                 </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card className="p-12 text-center space-y-4 max-w-lg mx-auto border border-slate-200 bg-white shadow-xs">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-900 shadow-xs">
+              <User className="h-7 w-7" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-black text-slate-900">Belum Ada Tokoh</h3>
+              <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                Tokoh yang Anda buat akan menjadi bagian dari dunia cerita aktif.
+              </p>
+            </div>
+            <div className="pt-2">
+              <Button kind="clay" size="md" onClick={() => setIsCreateCharModalOpen(true)}>
+                <PlusCircle className="h-4 w-4" />
+                <span>+ Buat Tokoh</span>
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Modal: Buat Tokoh */}
+        <Modal
+          isOpen={isCreateCharModalOpen}
+          onClose={() => setIsCreateCharModalOpen(false)}
+          title="Buat Tokoh Baru"
+          subtitle="Daftarkan karakter baru ke dalam dunia cerita aktif."
+        >
+          <form onSubmit={handleCreateCharacter} className="space-y-4 text-xs">
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Nama Tokoh *</label>
+              <input
+                type="text"
+                required
+                value={newCharName}
+                onChange={(e) => setNewCharName(e.target.value)}
+                placeholder="Contoh: Kaelen"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-hidden focus:border-amber-400"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Peran Naratif</label>
+                <input
+                  type="text"
+                  value={newCharRole}
+                  onChange={(e) => setNewCharRole(e.target.value)}
+                  placeholder="Contoh: Protagonis / Pendamping"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-hidden focus:border-amber-400"
+                />
               </div>
-            </Card>
-          ))}
-        </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Pekerjaan / Peran</label>
+                <input
+                  type="text"
+                  value={newCharOccupation}
+                  onChange={(e) => setNewCharOccupation(e.target.value)}
+                  placeholder="Contoh: Tabib / Peneliti"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-hidden focus:border-amber-400"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Tipe Kepribadian</label>
+              <input
+                type="text"
+                value={newCharPersonality}
+                onChange={(e) => setNewCharPersonality(e.target.value)}
+                placeholder="Contoh: Tenang & Waspada"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-hidden focus:border-amber-400"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Sifat & Karakter (Pisahkan koma)</label>
+              <input
+                type="text"
+                value={newCharTraits}
+                onChange={(e) => setNewCharTraits(e.target.value)}
+                placeholder="Contoh: Gigih, Cerdas, Setia"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-hidden focus:border-amber-400"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Tujuan Pribadi</label>
+              <input
+                type="text"
+                value={newCharGoal}
+                onChange={(e) => setNewCharGoal(e.target.value)}
+                placeholder="Contoh: Menemukan obat penawar untuk desanya"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-hidden focus:border-amber-400"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <Button type="button" kind="secondary" size="sm" onClick={() => setIsCreateCharModalOpen(false)}>
+                Batal
+              </Button>
+              <Button type="submit" kind="clay" size="sm" disabled={isSubmitting || !newCharName.trim()}>
+                {isSubmitting ? 'Mendaftarkan...' : 'Simpan Tokoh'}
+              </Button>
+            </div>
+          </form>
+        </Modal>
       </div>
     );
   }
@@ -263,7 +421,7 @@ export function CharacterWorkspaceView({
   if (loading || !data) {
     return (
       <div className="p-12 text-center text-slate-500 text-sm font-medium">
-        Memuat data holistik karakter...
+        Memuat profil tokoh...
       </div>
     );
   }
@@ -276,29 +434,29 @@ export function CharacterWorkspaceView({
     try {
       await onEditCharacter(data.id, {
         displayName: editDisplayName.trim(),
-        nickname: editNickname.trim(),
+        nickname: editNickname.trim() || undefined,
         age: editAge ? Number(editAge) : undefined,
-        birthDate: editBirthDate.trim(),
-        zodiac: editZodiac.trim(),
-        shio: editShio.trim(),
-        physicalBuild: editPhysicalBuild.trim(),
-        distinctFeatures: editDistinctFeatures.trim(),
-        clothingStyle: editClothingStyle.trim(),
-        personalityType: editPersonalityType.trim(),
-        traits: editTraits.split(',').map(s => s.trim()).filter(Boolean),
-        flaws: editFlaws.split(',').map(s => s.trim()).filter(Boolean),
-        habits: editHabits.split(',').map(s => s.trim()).filter(Boolean),
-        fears: editFears.split(',').map(s => s.trim()).filter(Boolean),
-        coreValues: editValues.split(',').map(s => s.trim()).filter(Boolean),
-        occupation: editOccupation.trim(),
-        dailyRoutine: editDailyRoutine.trim(),
+        birthDate: editBirthDate.trim() || undefined,
+        zodiac: editZodiac.trim() || undefined,
+        shio: editShio.trim() || undefined,
+        physicalBuild: editPhysicalBuild.trim() || undefined,
+        distinctFeatures: editDistinctFeatures.trim() || undefined,
+        clothingStyle: editClothingStyle.trim() || undefined,
+        personalityType: editPersonalityType.trim() || undefined,
+        traits: editTraits ? editTraits.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        flaws: editFlaws ? editFlaws.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        habits: editHabits ? editHabits.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        fears: editFears ? editFears.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        coreValues: editValues ? editValues.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        occupation: editOccupation.trim() || undefined,
+        dailyRoutine: editDailyRoutine.trim() || undefined,
         socialOrientation: editSocialOrientation,
-        innerWound: editInnerWound.trim(),
-        primaryGoal: editPrimaryGoal.trim(),
-        aspiration: editAspiration.trim(),
-        secretBackstory: editSecretBackstory.trim(),
-        notes: editNotes.trim(),
-        role: editRole
+        innerWound: editInnerWound.trim() || undefined,
+        primaryGoal: editPrimaryGoal.trim() || undefined,
+        aspiration: editAspiration.trim() || undefined,
+        secretBackstory: editSecretBackstory.trim() || undefined,
+        notes: editNotes.trim() || undefined,
+        role: editRole,
       });
       setIsEditModalOpen(false);
       await loadData(data.id);
@@ -314,11 +472,11 @@ export function CharacterWorkspaceView({
     setIsSubmitting(true);
     try {
       await onUpdateState(data.id, {
-        mood: stateMood.trim(),
-        activity: stateActivity.trim(),
-        condition: stateCondition.trim(),
-        goal: stateGoal.trim(),
-        vitality: stateVitality
+        mood: stateMood.trim() || undefined,
+        activity: stateActivity.trim() || undefined,
+        condition: stateCondition.trim() || undefined,
+        goal: stateGoal.trim() || undefined,
+        vitality: stateVitality,
       });
       setIsStateModalOpen(false);
       await loadData(data.id);
@@ -335,11 +493,11 @@ export function CharacterWorkspaceView({
     try {
       await onUpdateBehavior(data.id, {
         behaviorPattern: behPattern.trim(),
-        behaviorContext: behContext.trim(),
+        behaviorContext: behContext.trim() || undefined,
         behaviorFrequency: behFrequency,
-        triggers: behTriggers.split(',').map(s => s.trim()).filter(Boolean),
-        typicalResponse: behTypicalResponse.trim(),
-        responseIntensity: behIntensity
+        triggers: behTriggers ? behTriggers.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        typicalResponse: behTypicalResponse.trim() || undefined,
+        responseIntensity: behIntensity,
       });
       setIsBehaviorModalOpen(false);
       await loadData(data.id);
@@ -355,12 +513,14 @@ export function CharacterWorkspaceView({
     setIsSubmitting(true);
     try {
       await onUpdateStyle(data.id, {
-        languageStyle: styleLanguage.trim(),
-        wordChoice: styleWordChoice.trim(),
-        formalityLevel: styleFormality.trim(),
-        sentencePattern: styleSentencePattern.trim(),
-        verbalSignature: styleVerbalSignature.trim(),
-        commonExpressions: styleCommonExpressions.split(',').map(s => s.trim()).filter(Boolean)
+        languageStyle: styleLanguage.trim() || undefined,
+        wordChoice: styleWordChoice.trim() || undefined,
+        formalityLevel: styleFormality.trim() || undefined,
+        sentencePattern: styleSentencePattern.trim() || undefined,
+        verbalSignature: styleVerbalSignature.trim() || undefined,
+        commonExpressions: styleCommonExpressions
+          ? styleCommonExpressions.split(',').map((s) => s.trim()).filter(Boolean)
+          : [],
       });
       setIsStyleModalOpen(false);
       await loadData(data.id);
@@ -379,7 +539,7 @@ export function CharacterWorkspaceView({
         statement: knowStatement.trim(),
         referencedSubject: knowSubject.trim() || 'Fakta Semesta',
         certainty: knowCertainty,
-        acquisitionSource: knowSource.trim()
+        acquisitionSource: knowSource.trim() || undefined,
       });
       setKnowStatement('');
       setKnowSubject('');
@@ -396,11 +556,11 @@ export function CharacterWorkspaceView({
     try {
       const res = await onAiAssist('CHARACTER_PROFILE', {
         name: editDisplayName || data.identity.displayName,
-        archetype: editRole
+        archetype: editRole,
       });
       if (res?.proposal) {
         const p = res.proposal;
-        if (!editDisplayName) setEditDisplayName(p.displayName);
+        if (!editDisplayName && p.displayName) setEditDisplayName(p.displayName);
         if (p.nickname) setEditNickname(p.nickname);
         if (p.age) setEditAge(String(p.age));
         if (p.birthDate) setEditBirthDate(p.birthDate);
@@ -431,15 +591,15 @@ export function CharacterWorkspaceView({
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Top Breadcrumb / Header */}
-      <div className="flex items-center justify-between">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button kind="secondary" size="sm" onClick={onBack}>
             <ArrowLeft className="h-4 w-4" />
-            <span>Kembali ke Ensiklopedia</span>
+            <span>Semua Tokoh</span>
           </Button>
           <div className="h-4 w-px bg-slate-200" />
-          <span className="text-xs text-slate-500 font-bold">Ruang Kerja Tokoh:</span>
+          <span className="text-xs text-slate-500 font-bold">Profil Tokoh:</span>
           <span className="text-xs text-slate-900 font-black">{data.identity.displayName}</span>
         </div>
 
@@ -449,7 +609,7 @@ export function CharacterWorkspaceView({
           <select
             value={data.id}
             onChange={(e) => onSelectCharacter(e.target.value)}
-            className="clay-input px-3 py-1.5 text-xs text-slate-900 font-bold rounded-xl"
+            className="px-3 py-1.5 text-xs text-slate-900 font-bold rounded-xl border border-slate-200 bg-white"
           >
             {allCharacters.map((c) => (
               <option key={c.id} value={c.id}>
@@ -461,15 +621,15 @@ export function CharacterWorkspaceView({
       </div>
 
       {/* Hero Character Card */}
-      <Card className="p-6 bg-gradient-to-r from-amber-50/50 via-white to-amber-50/30 border-2 border-amber-200/80 shadow-md">
+      <Card className="p-6 bg-gradient-to-r from-amber-50/50 via-white to-amber-50/30 border border-amber-200 shadow-xs">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex items-center gap-5">
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-black text-3xl shadow-[0_8px_20px_rgba(245,158,11,0.35),inset_0_2px_2px_rgba(255,255,255,0.7)] border-2 border-amber-200">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-amber-400 text-slate-950 font-black text-2xl shadow-xs border border-amber-200">
               {data.identity.displayName.charAt(0)}
             </div>
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
-                <h3 className="text-2xl font-black text-slate-900">
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900">
                   {data.identity.displayName}
                 </h3>
                 {data.identity.nickname && (
@@ -481,11 +641,11 @@ export function CharacterWorkspaceView({
               </div>
 
               <p className="text-xs text-slate-600 font-semibold mt-1">
-                {data.actor.role} • {data.life.occupation || 'Penjelajah'} {data.identity.age ? `• ${data.identity.age} Tahun` : ''}
+                {data.actor.role || 'Belum ditentukan'} • {data.life.occupation || 'Belum diisi'} {data.identity.age ? `• ${data.identity.age} Tahun` : ''}
               </p>
 
-              <div className="flex items-center gap-3 mt-3 text-xs text-slate-600 font-medium flex-wrap">
-                <span>📍 <strong className="text-slate-800">{data.location?.displayName || 'Lokasi Terbuka'}</strong></span>
+              <div className="flex items-center gap-3 mt-2.5 text-xs text-slate-600 font-medium flex-wrap">
+                <span>📍 <strong className="text-slate-800">{data.location?.displayName || 'Belum ditentukan'}</strong></span>
                 <span>•</span>
                 <span>✨ Vitalitas: <strong className="text-slate-800">{data.currentState.vitality}</strong></span>
                 <span>•</span>
@@ -496,19 +656,19 @@ export function CharacterWorkspaceView({
 
           <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
             <Button
-              kind="primary"
+              kind="clay"
               size="sm"
               onClick={() => setIsEditModalOpen(true)}
-              className="gap-2"
+              className="gap-1.5"
             >
               <Edit3 className="h-4 w-4" />
-              <span>Edit Profil Lengkap</span>
+              <span>Edit Profil</span>
             </Button>
             <Button
               kind="secondary"
               size="sm"
               onClick={() => setIsStateModalOpen(true)}
-              className="gap-2"
+              className="gap-1.5"
             >
               <Activity className="h-4 w-4 text-amber-600" />
               <span>Perbarui Kondisi</span>
@@ -517,19 +677,19 @@ export function CharacterWorkspaceView({
         </div>
       </Card>
 
-      {/* 12 Tab Navigation */}
-      <div className="flex items-center gap-1.5 border-b border-slate-200/80 pb-2 overflow-x-auto no-scrollbar">
+      {/* Tabs */}
+      <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2 overflow-x-auto no-scrollbar">
         {[
           { id: 'overview', label: 'Ringkasan', icon: Eye },
           { id: 'profile', label: 'Profil & Fisik', icon: User },
-          { id: 'actor', label: 'Pemeran / Aktor', icon: Award },
+          { id: 'actor', label: 'Pemeran', icon: Award },
           { id: 'state', label: 'Kondisi Dinamis', icon: Activity },
           { id: 'behavior', label: 'Pola Perilaku', icon: Zap },
           { id: 'style', label: 'Gaya Bahasa', icon: MessageSquare },
           { id: 'knowledge', label: `Pengetahuan (${data.knowledge.length})`, icon: BookOpen },
           { id: 'relationships', label: `Relasi (${data.relationships.length})`, icon: Heart },
-          { id: 'possessions', label: `Benda Bawaan (${data.possessions.length})`, icon: Package },
-          { id: 'location', label: 'Lokasi & Spasial', icon: Compass },
+          { id: 'possessions', label: `Benda (${data.possessions.length})`, icon: Package },
+          { id: 'location', label: 'Lokasi', icon: Compass },
           { id: 'timeline', label: 'Garis Waktu', icon: Clock },
           { id: 'continuity', label: 'Kontinuitas', icon: Shield },
         ].map((tab) => {
@@ -541,7 +701,7 @@ export function CharacterWorkspaceView({
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 ${
                 isActive
-                  ? 'bg-amber-400 text-slate-950 shadow-sm border border-amber-300 scale-100'
+                  ? 'bg-amber-400 text-slate-950 shadow-xs border border-amber-300'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -552,7 +712,7 @@ export function CharacterWorkspaceView({
         })}
       </div>
 
-      {/* Tab 1: Ringkasan (Overview) */}
+      {/* Tab 1: Ringkasan */}
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
           <Card className="p-5 space-y-4">
@@ -563,15 +723,15 @@ export function CharacterWorkspaceView({
             <div className="space-y-2 text-xs">
               <div className="flex justify-between py-1.5 border-b border-slate-100">
                 <span className="text-slate-500 font-medium">Tipe Kepribadian</span>
-                <span className="font-bold text-slate-800">{data.personality.personalityType || 'Belum tercatat'}</span>
+                <span className="font-bold text-slate-800">{data.personality.personalityType || 'Belum diisi'}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-100">
                 <span className="text-slate-500 font-medium">Orientasi Sosial</span>
-                <span className="font-bold text-slate-800">{data.social.socialOrientation}</span>
+                <span className="font-bold text-slate-800">{data.social.socialOrientation || 'AMBIVERT'}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-100">
                 <span className="text-slate-500 font-medium">Pekerjaan / Peran</span>
-                <span className="font-bold text-slate-800">{data.life.occupation || 'Penjelajah'}</span>
+                <span className="font-bold text-slate-800">{data.life.occupation || 'Belum diisi'}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-100">
                 <span className="text-slate-500 font-medium">Tujuan Utama</span>
@@ -582,7 +742,7 @@ export function CharacterWorkspaceView({
             <div>
               <div className="text-[11px] font-bold text-slate-500 mb-2">Sifat & Karakter Utama:</div>
               <div className="flex flex-wrap gap-1.5">
-                {data.personality.traits.length > 0 ? (
+                {data.personality.traits && data.personality.traits.length > 0 ? (
                   data.personality.traits.map((trait, idx) => (
                     <span
                       key={idx}
@@ -592,7 +752,7 @@ export function CharacterWorkspaceView({
                     </span>
                   ))
                 ) : (
-                  <span className="text-xs text-slate-400">Belum ada sifat tercatat</span>
+                  <span className="text-xs text-slate-400 italic">Belum ada sifat yang tercatat</span>
                 )}
               </div>
             </div>
@@ -610,21 +770,21 @@ export function CharacterWorkspaceView({
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Suasana Hati (Mood):</span>
-                <span className="font-bold text-amber-900">{data.currentState.mood || 'Tenang'}</span>
+                <span className="font-bold text-slate-800">{data.currentState.mood || 'Belum dicatat'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Aktivitas Saat Ini:</span>
-                <span className="font-bold text-slate-800">{data.currentState.activity || 'Siap berpetualang'}</span>
+                <span className="font-bold text-slate-800">{data.currentState.activity || 'Belum dicatat'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Lokasi Keberadaan:</span>
-                <span className="font-bold text-slate-800">{data.location?.displayName || 'Lokasi Terbuka'}</span>
+                <span className="font-bold text-slate-800">{data.location?.displayName || 'Belum ditentukan'}</span>
               </div>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200 text-xs text-amber-900 space-y-1">
               <div className="font-bold">Luka Batin / Motif Terdalam:</div>
-              <div className="italic">{data.narrative.innerWound || 'Tidak ada luka batin yang tercatat.'}</div>
+              <div className="italic">{data.narrative.innerWound || 'Belum ada luka batin yang tercatat.'}</div>
             </div>
           </Card>
         </div>
@@ -666,15 +826,15 @@ export function CharacterWorkspaceView({
             <div className="space-y-3 text-xs">
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                 <span className="text-slate-500 font-bold block mb-1">Ciri Khas / Fitur Khusus:</span>
-                <span className="text-slate-800">{data.appearance.distinctFeatures || 'Tidak ada ciri khusus yang dicatat.'}</span>
+                <span className="text-slate-800">{data.appearance.distinctFeatures || 'Belum ada ciri khusus yang dicatat.'}</span>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                 <span className="text-slate-500 font-bold block mb-1">Bentuk Fisik & Postur:</span>
-                <span className="text-slate-800">{data.appearance.physicalBuild || 'Standar / Atletis'}</span>
+                <span className="text-slate-800">{data.appearance.physicalBuild || 'Belum tercatat'}</span>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                 <span className="text-slate-500 font-bold block mb-1">Gaya Busana & Pakaian:</span>
-                <span className="text-slate-800">{data.appearance.clothingStyle || 'Busana praktis untuk petualangan'}</span>
+                <span className="text-slate-800">{data.appearance.clothingStyle || 'Belum tercatat'}</span>
               </div>
             </div>
           </Card>
@@ -687,7 +847,7 @@ export function CharacterWorkspaceView({
           <div className="flex items-center justify-between">
             <div>
               <h4 className="text-sm font-black text-slate-900">Klasifikasi Aktor & Struktur Penokohan</h4>
-              <p className="text-xs text-slate-500">Posisi dan klasifikasi tokoh dalam hierarki narasi.</p>
+              <p className="text-xs text-slate-500">Posisi tokoh dalam hierarki narasi.</p>
             </div>
             <Award className="h-6 w-6 text-amber-600" />
           </div>
@@ -695,15 +855,15 @@ export function CharacterWorkspaceView({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
             <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200">
               <div className="text-[10px] uppercase font-bold text-amber-700">Peran Aktor (Role)</div>
-              <div className="text-sm font-black text-amber-950 mt-1">{data.actor.role}</div>
+              <div className="text-sm font-black text-amber-950 mt-1">{data.actor.role || 'Belum ditentukan'}</div>
             </div>
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
               <div className="text-[10px] uppercase font-bold text-slate-500">Tingkat Pengalaman (Level)</div>
-              <div className="text-sm font-black text-slate-900 mt-1">{data.actor.level || 'Tokoh Utama'}</div>
+              <div className="text-sm font-black text-slate-900 mt-1">{data.actor.level || 'Belum ditentukan'}</div>
             </div>
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
               <div className="text-[10px] uppercase font-bold text-slate-500">Afiliasi / Kelompok</div>
-              <div className="text-sm font-black text-slate-900 mt-1">{data.actor.group || 'Independen'}</div>
+              <div className="text-sm font-black text-slate-900 mt-1">{data.actor.group || 'Belum ditentukan'}</div>
             </div>
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
               <div className="text-[10px] uppercase font-bold text-slate-500">Sumber Data</div>
@@ -713,15 +873,15 @@ export function CharacterWorkspaceView({
         </Card>
       )}
 
-      {/* Tab 4: Kondisi Dinamis (State) */}
+      {/* Tab 4: Kondisi Dinamis */}
       {activeTab === 'state' && (
         <div className="space-y-6 animate-fade-in">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-sm font-black text-slate-900">Keadaan Dinamis Tokoh (Dynamic State)</h4>
+              <h4 className="text-sm font-black text-slate-900">Keadaan Dinamis Tokoh</h4>
               <p className="text-xs text-slate-500">Kondisi fisik, emosional, dan aktivitas saat ini.</p>
             </div>
-            <Button kind="primary" size="sm" onClick={() => setIsStateModalOpen(true)} className="gap-2">
+            <Button kind="clay" size="sm" onClick={() => setIsStateModalOpen(true)} className="gap-1.5">
               <Activity className="h-4 w-4" />
               <span>Perbarui Kondisi</span>
             </Button>
@@ -729,29 +889,29 @@ export function CharacterWorkspaceView({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
             <Card className="p-4 space-y-1">
-              <span className="text-[10px] uppercase font-bold text-slate-400">Vitalitas / Kondisi Fisik</span>
+              <span className="text-[10px] uppercase font-bold text-slate-400">Vitalitas</span>
               <div className="text-base font-black text-emerald-700">{data.currentState.vitality}</div>
             </Card>
             <Card className="p-4 space-y-1">
               <span className="text-[10px] uppercase font-bold text-slate-400">Suasana Hati (Mood)</span>
-              <div className="text-base font-black text-amber-800">{data.currentState.mood || 'Fokus'}</div>
+              <div className="text-base font-black text-slate-800">{data.currentState.mood || 'Belum dicatat'}</div>
             </Card>
             <Card className="p-4 space-y-1">
               <span className="text-[10px] uppercase font-bold text-slate-400">Aktivitas Terkini</span>
-              <div className="text-base font-black text-slate-900">{data.currentState.activity || 'Menjelajah'}</div>
+              <div className="text-base font-black text-slate-800">{data.currentState.activity || 'Belum dicatat'}</div>
             </Card>
           </div>
 
           <Card className="p-5 space-y-3">
             <h5 className="text-xs font-bold text-slate-700">Tujuan Langsung (Immediate Goal)</h5>
             <p className="text-xs text-slate-800 bg-slate-50 p-3 rounded-xl border border-slate-200">
-              {data.currentState.goal || data.narrative.primaryGoal || 'Menyelesaikan perjalanan hari ini dengan selamat.'}
+              {data.currentState.goal || data.narrative.primaryGoal || 'Belum dicatat.'}
             </p>
           </Card>
         </div>
       )}
 
-      {/* Tab 5: Pola Perilaku (Behavior) */}
+      {/* Tab 5: Pola Perilaku */}
       {activeTab === 'behavior' && (
         <div className="space-y-6 animate-fade-in">
           <div className="flex items-center justify-between">
@@ -759,7 +919,7 @@ export function CharacterWorkspaceView({
               <h4 className="text-sm font-black text-slate-900">Pola Perilaku & Tindakan Khas</h4>
               <p className="text-xs text-slate-500">Kebiasaan aksi, reaksi terhadap pemicu, dan intensitas respons.</p>
             </div>
-            <Button kind="primary" size="sm" onClick={() => setIsBehaviorModalOpen(true)} className="gap-2">
+            <Button kind="clay" size="sm" onClick={() => setIsBehaviorModalOpen(true)} className="gap-1.5">
               <Zap className="h-4 w-4" />
               <span>{data.behavior ? 'Perbarui Perilaku' : 'Tambah Perilaku'}</span>
             </Button>
@@ -774,13 +934,13 @@ export function CharacterWorkspaceView({
                 </div>
                 {data.behavior.behaviorContext && (
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                    <span className="text-slate-500 font-bold block mb-1">Konteks Munculnya Perilaku:</span>
+                    <span className="text-slate-500 font-bold block mb-1">Konteks Munculnya:</span>
                     <span className="text-slate-800">{data.behavior.behaviorContext}</span>
                   </div>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                    <span className="text-slate-500 font-bold block mb-1">Frekuensi Muncul:</span>
+                    <span className="text-slate-500 font-bold block mb-1">Frekuensi:</span>
                     <span className="font-bold text-slate-900">{data.behavior.behaviorFrequency || 'FREQUENT'}</span>
                   </div>
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
@@ -810,13 +970,13 @@ export function CharacterWorkspaceView({
             </Card>
           ) : (
             <Card className="p-8 text-center text-xs text-slate-500">
-              Belum ada pola perilaku terstruktur yang dicatat untuk tokoh ini. Klik tombol di atas untuk menambahkan.
+              Belum ada pola perilaku terstruktur yang dicatat untuk tokoh ini.
             </Card>
           )}
         </div>
       )}
 
-      {/* Tab 6: Gaya Bahasa & Komunikasi (Style) */}
+      {/* Tab 6: Gaya Bahasa */}
       {activeTab === 'style' && (
         <div className="space-y-6 animate-fade-in">
           <div className="flex items-center justify-between">
@@ -824,7 +984,7 @@ export function CharacterWorkspaceView({
               <h4 className="text-sm font-black text-slate-900">Gaya Bahasa & Komunikasi Khas</h4>
               <p className="text-xs text-slate-500">Pilihan diksi, formalitas, ciri bicara, dan ekspresi khas.</p>
             </div>
-            <Button kind="primary" size="sm" onClick={() => setIsStyleModalOpen(true)} className="gap-2">
+            <Button kind="clay" size="sm" onClick={() => setIsStyleModalOpen(true)} className="gap-1.5">
               <MessageSquare className="h-4 w-4" />
               <span>{data.style ? 'Perbarui Gaya Bahasa' : 'Atur Gaya Bahasa'}</span>
             </Button>
@@ -835,19 +995,19 @@ export function CharacterWorkspaceView({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <span className="text-slate-500 font-bold block mb-1">Gaya Tutur Bahasa:</span>
-                  <span className="font-bold text-slate-900">{data.style.languageStyle || 'Santai & Lugas'}</span>
+                  <span className="font-bold text-slate-900">{data.style.languageStyle || 'Belum tercatat'}</span>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <span className="text-slate-500 font-bold block mb-1">Pilihan Diksi:</span>
-                  <span className="font-bold text-slate-900">{data.style.wordChoice || 'Kosakata sehari-hari'}</span>
+                  <span className="font-bold text-slate-900">{data.style.wordChoice || 'Belum tercatat'}</span>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <span className="text-slate-500 font-bold block mb-1">Tingkat Formalitas:</span>
-                  <span className="font-bold text-slate-900">{data.style.formalityLevel || 'SEMI_FORMAL'}</span>
+                  <span className="font-bold text-slate-900">{data.style.formalityLevel || 'Belum diisi'}</span>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <span className="text-slate-500 font-bold block mb-1">Pola Kalimat:</span>
-                  <span className="font-bold text-slate-900">{data.style.sentencePattern || 'Singkat & Langsung ke Pokok'}</span>
+                  <span className="font-bold text-slate-900">{data.style.sentencePattern || 'Belum tercatat'}</span>
                 </div>
               </div>
 
@@ -879,15 +1039,15 @@ export function CharacterWorkspaceView({
         </div>
       )}
 
-      {/* Tab 7: Pengetahuan (Knowledge) */}
+      {/* Tab 7: Pengetahuan */}
       {activeTab === 'knowledge' && (
         <div className="space-y-6 animate-fade-in">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-sm font-black text-slate-900">Kumpulan Pengetahuan & Epistemic Tokoh</h4>
+              <h4 className="text-sm font-black text-slate-900">Kumpulan Pengetahuan & Fakta Tokoh</h4>
               <p className="text-xs text-slate-500">Fakta, keyakinan, dan rahasia yang diketahui oleh tokoh ini.</p>
             </div>
-            <Button kind="primary" size="sm" onClick={() => setIsKnowledgeModalOpen(true)} className="gap-2">
+            <Button kind="clay" size="sm" onClick={() => setIsKnowledgeModalOpen(true)} className="gap-1.5">
               <PlusCircle className="h-4 w-4" />
               <span>Tambah Pengetahuan</span>
             </Button>
@@ -917,7 +1077,7 @@ export function CharacterWorkspaceView({
         </div>
       )}
 
-      {/* Tab 8: Relasi (Relationships) */}
+      {/* Tab 8: Relasi */}
       {activeTab === 'relationships' && (
         <div className="space-y-4 animate-fade-in">
           <h4 className="text-sm font-black text-slate-900">Jejaring Relasi Antartokoh</h4>
@@ -934,8 +1094,10 @@ export function CharacterWorkspaceView({
                   </span>
                 </div>
                 <div className="p-2.5 bg-slate-50 rounded-xl text-slate-700">
-                  <div className="font-semibold text-slate-800">{rel.dynamic}</div>
-                  <div className="text-slate-500 text-[11px] mt-0.5">{rel.narrativeBasis}</div>
+                  <div className="font-semibold text-slate-800">{rel.dynamic || 'Dinamika belum tercatat.'}</div>
+                  {rel.narrativeBasis && (
+                    <div className="text-slate-500 text-[11px] mt-0.5">{rel.narrativeBasis}</div>
+                  )}
                 </div>
               </Card>
             ))}
@@ -948,10 +1110,10 @@ export function CharacterWorkspaceView({
         </div>
       )}
 
-      {/* Tab 9: Benda Bawaan (Possessions) */}
+      {/* Tab 9: Benda Bawaan */}
       {activeTab === 'possessions' && (
         <div className="space-y-4 animate-fade-in">
-          <h4 className="text-sm font-black text-slate-900">Inventaris & Pusaka yang Dimiliki</h4>
+          <h4 className="text-sm font-black text-slate-900">Benda & Pusaka yang Dimiliki</h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {data.possessions.map((item) => (
               <Card key={item.id} className="p-4 space-y-2 text-xs border border-slate-200">
@@ -975,7 +1137,7 @@ export function CharacterWorkspaceView({
         </div>
       )}
 
-      {/* Tab 10: Lokasi (Location) */}
+      {/* Tab 10: Lokasi */}
       {activeTab === 'location' && (
         <Card className="p-6 space-y-4 animate-fade-in">
           <h4 className="text-sm font-black text-slate-900">Lokasi & Konteks Spasial Saat Ini</h4>
@@ -996,44 +1158,50 @@ export function CharacterWorkspaceView({
             </div>
           ) : (
             <div className="p-6 text-center text-xs text-slate-500">
-              Tokoh berada di wilayah umum atau belum ditetapkan lokasi spesifik.
+              Lokasi tokoh belum ditentukan.
             </div>
           )}
         </Card>
       )}
 
-      {/* Tab 11: Garis Waktu (Timeline) */}
+      {/* Tab 11: Garis Waktu */}
       {activeTab === 'timeline' && (
         <Card className="p-6 space-y-4 animate-fade-in">
-          <h4 className="text-sm font-black text-slate-900">Linimasa & Peristiwa Tokoh</h4>
-          <div className="space-y-3 relative before:absolute before:inset-0 before:left-3 before:w-0.5 before:bg-slate-200">
-            {data.timeline.map((event, idx) => (
-              <div key={idx} className="relative flex items-start gap-4 pl-6 text-xs">
-                <div className="absolute left-1.5 top-1.5 h-3 w-3 rounded-full bg-amber-400 border-2 border-white shadow-xs" />
-                <div>
-                  <span className="text-[10px] font-bold text-amber-800 block">{event.date}</span>
-                  <p className="text-slate-800 font-medium mt-0.5">{event.event}</p>
+          <h4 className="text-sm font-black text-slate-900">Garis Waktu Peristiwa Tokoh</h4>
+          {data.timeline.length > 0 ? (
+            <div className="space-y-3 relative before:absolute before:inset-0 before:left-3 before:w-0.5 before:bg-slate-200">
+              {data.timeline.map((event, idx) => (
+                <div key={idx} className="relative flex items-start gap-4 pl-6 text-xs">
+                  <div className="absolute left-1.5 top-1.5 h-3 w-3 rounded-full bg-amber-400 border-2 border-white shadow-xs" />
+                  <div>
+                    <span className="text-[10px] font-bold text-amber-800 block">{event.date}</span>
+                    <p className="text-slate-800 font-medium mt-0.5">{event.event}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-6 text-center text-xs text-slate-500">
+              Belum ada catatan linimasa untuk tokoh ini.
+            </div>
+          )}
         </Card>
       )}
 
-      {/* Tab 12: Kontinuitas (Continuity) */}
+      {/* Tab 12: Kontinuitas */}
       {activeTab === 'continuity' && (
         <Card className="p-6 space-y-4 animate-fade-in">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-sm font-black text-slate-900">Validasi Kontinuitas & Integritas Kanun</h4>
-              <p className="text-xs text-slate-500">Status keselarasan data tokoh terhadap seluruh hukum dunia cerita.</p>
+              <h4 className="text-sm font-black text-slate-900">Status Kontinuitas Kanun</h4>
+              <p className="text-xs text-slate-500">Keselarasan data tokoh terhadap hukum dunia cerita.</p>
             </div>
             <Shield className="h-6 w-6 text-emerald-600" />
           </div>
 
           <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center gap-3 text-xs text-emerald-950 font-bold">
             <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-            <span>Seluruh invarian karakter, peran, dan identitas valid dan konsisten.</span>
+            <span>Seluruh status identitas, peran, dan relasi valid dalam kanun.</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -1043,7 +1211,7 @@ export function CharacterWorkspaceView({
             </div>
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
               <span className="text-slate-500 font-bold block mb-0.5">Tanggal Verifikasi Terakhir:</span>
-              <span className="font-bold text-slate-800">{data.continuity.lastCheckedDate}</span>
+              <span className="font-bold text-slate-800">{data.continuity.lastCheckedDate || 'Belum tercatat'}</span>
             </div>
           </div>
         </Card>
@@ -1053,8 +1221,8 @@ export function CharacterWorkspaceView({
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title="Edit Profil Tokoh Lengkap"
-        subtitle="Ubah atribut 7 dimensi tokoh secara komprehensif."
+        title="Edit Profil Tokoh"
+        subtitle="Ubah atribut karakter secara mendalam."
         maxWidth="max-w-3xl"
       >
         <form onSubmit={handleSaveProfile} className="space-y-4 text-xs max-h-[70vh] overflow-y-auto pr-2">
@@ -1074,12 +1242,12 @@ export function CharacterWorkspaceView({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Nama Tokoh</label>
+              <label className="block font-bold text-slate-700 mb-1">Nama Tokoh *</label>
               <input
                 type="text"
                 value={editDisplayName}
                 onChange={(e) => setEditDisplayName(e.target.value)}
-                className="clay-input w-full p-2.5 rounded-xl font-bold"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
                 required
               />
             </div>
@@ -1089,7 +1257,8 @@ export function CharacterWorkspaceView({
                 type="text"
                 value={editNickname}
                 onChange={(e) => setEditNickname(e.target.value)}
-                className="clay-input w-full p-2.5 rounded-xl"
+                placeholder="Contoh: Sang Tabib"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
               />
             </div>
           </div>
@@ -1101,7 +1270,8 @@ export function CharacterWorkspaceView({
                 type="number"
                 value={editAge}
                 onChange={(e) => setEditAge(e.target.value)}
-                className="clay-input w-full p-2.5 rounded-xl"
+                placeholder="25"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
               />
             </div>
             <div>
@@ -1110,7 +1280,8 @@ export function CharacterWorkspaceView({
                 type="text"
                 value={editBirthDate}
                 onChange={(e) => setEditBirthDate(e.target.value)}
-                className="clay-input w-full p-2.5 rounded-xl"
+                placeholder="Contoh: 14 Bulan Sabit"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
               />
             </div>
             <div>
@@ -1119,7 +1290,8 @@ export function CharacterWorkspaceView({
                 type="text"
                 value={editZodiac}
                 onChange={(e) => setEditZodiac(e.target.value)}
-                className="clay-input w-full p-2.5 rounded-xl"
+                placeholder="Aries"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
               />
             </div>
             <div>
@@ -1128,7 +1300,8 @@ export function CharacterWorkspaceView({
                 type="text"
                 value={editShio}
                 onChange={(e) => setEditShio(e.target.value)}
-                className="clay-input w-full p-2.5 rounded-xl"
+                placeholder="Naga"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
               />
             </div>
           </div>
@@ -1140,7 +1313,8 @@ export function CharacterWorkspaceView({
                 type="text"
                 value={editPersonalityType}
                 onChange={(e) => setEditPersonalityType(e.target.value)}
-                className="clay-input w-full p-2.5 rounded-xl"
+                placeholder="Contoh: Cermat & Rasional"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
               />
             </div>
             <div>
@@ -1149,49 +1323,54 @@ export function CharacterWorkspaceView({
                 type="text"
                 value={editOccupation}
                 onChange={(e) => setEditOccupation(e.target.value)}
-                className="clay-input w-full p-2.5 rounded-xl"
+                placeholder="Contoh: Penjaga Arsip"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Sifat Positif (Pisahkan dengan koma)</label>
+              <label className="block font-bold text-slate-700 mb-1">Sifat Positif (Pisahkan koma)</label>
               <input
                 type="text"
                 value={editTraits}
                 onChange={(e) => setEditTraits(e.target.value)}
-                className="clay-input w-full p-2.5 rounded-xl"
+                placeholder="Contoh: Gigih, Jujur"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
               />
             </div>
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Kelemahan / Cacat Karakter</label>
+              <label className="block font-bold text-slate-700 mb-1">Kelemahan Karakter</label>
               <input
                 type="text"
                 value={editFlaws}
                 onChange={(e) => setEditFlaws(e.target.value)}
-                className="clay-input w-full p-2.5 rounded-xl"
+                placeholder="Contoh: Keras kepala, Ceroboh"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Tujuan Utama (Primary Goal)</label>
+              <label className="block font-bold text-slate-700 mb-1">Tujuan Utama</label>
               <input
                 type="text"
                 value={editPrimaryGoal}
                 onChange={(e) => setEditPrimaryGoal(e.target.value)}
-                className="clay-input w-full p-2.5 rounded-xl"
+                placeholder="Contoh: Memecahkan teka-teki prasasti"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
               />
             </div>
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Luka Batin (Inner Wound)</label>
+              <label className="block font-bold text-slate-700 mb-1">Luka Batin</label>
               <input
                 type="text"
                 value={editInnerWound}
                 onChange={(e) => setEditInnerWound(e.target.value)}
-                className="clay-input w-full p-2.5 rounded-xl"
+                placeholder="Contoh: Rasa bersalah kegagalan masa lalu"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
               />
             </div>
           </div>
@@ -1200,7 +1379,7 @@ export function CharacterWorkspaceView({
             <Button type="button" kind="secondary" size="sm" onClick={() => setIsEditModalOpen(false)}>
               Batal
             </Button>
-            <Button type="submit" kind="primary" size="sm" disabled={isSubmitting}>
+            <Button type="submit" kind="clay" size="sm" disabled={isSubmitting}>
               {isSubmitting ? 'Menyimpan...' : 'Simpan Profil'}
             </Button>
           </div>
@@ -1216,11 +1395,11 @@ export function CharacterWorkspaceView({
       >
         <form onSubmit={handleSaveState} className="space-y-4 text-xs">
           <div>
-            <label className="block font-bold text-slate-700 mb-1">Vitalitas / Kondisi</label>
+            <label className="block font-bold text-slate-700 mb-1">Vitalitas</label>
             <select
               value={stateVitality}
               onChange={(e) => setStateVitality(e.target.value)}
-              className="clay-input w-full p-2.5 rounded-xl font-bold"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
             >
               <option value="NORMAL">NORMAL & BUGAR</option>
               <option value="TIRED">LELAH</option>
@@ -1234,8 +1413,8 @@ export function CharacterWorkspaceView({
               type="text"
               value={stateMood}
               onChange={(e) => setStateMood(e.target.value)}
-              placeholder="Contoh: Fokus & Waspada"
-              className="clay-input w-full p-2.5 rounded-xl"
+              placeholder="Contoh: Waspada"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
             />
           </div>
           <div>
@@ -1245,17 +1424,17 @@ export function CharacterWorkspaceView({
               value={stateActivity}
               onChange={(e) => setStateActivity(e.target.value)}
               placeholder="Contoh: Meneliti gulungan perkamen"
-              className="clay-input w-full p-2.5 rounded-xl"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
             />
           </div>
           <div>
-            <label className="block font-bold text-slate-700 mb-1">Tujuan Langsung (Immediate Goal)</label>
+            <label className="block font-bold text-slate-700 mb-1">Tujuan Langsung</label>
             <input
               type="text"
               value={stateGoal}
               onChange={(e) => setStateGoal(e.target.value)}
-              placeholder="Contoh: Mencari jalur rahasia sebelum malam"
-              className="clay-input w-full p-2.5 rounded-xl"
+              placeholder="Contoh: Mencari jalur rahasia"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
             />
           </div>
 
@@ -1263,7 +1442,7 @@ export function CharacterWorkspaceView({
             <Button type="button" kind="secondary" size="sm" onClick={() => setIsStateModalOpen(false)}>
               Batal
             </Button>
-            <Button type="submit" kind="primary" size="sm" disabled={isSubmitting}>
+            <Button type="submit" kind="clay" size="sm" disabled={isSubmitting}>
               {isSubmitting ? 'Menyimpan...' : 'Perbarui Status'}
             </Button>
           </div>
@@ -1279,13 +1458,13 @@ export function CharacterWorkspaceView({
       >
         <form onSubmit={handleSaveBehavior} className="space-y-4 text-xs">
           <div>
-            <label className="block font-bold text-slate-700 mb-1">Pola Perilaku</label>
+            <label className="block font-bold text-slate-700 mb-1">Pola Perilaku *</label>
             <input
               type="text"
               value={behPattern}
               onChange={(e) => setBehPattern(e.target.value)}
-              placeholder="Contoh: Selalu memeriksa pintu keluar saat memasuki ruangan baru"
-              className="clay-input w-full p-2.5 rounded-xl font-bold"
+              placeholder="Contoh: Selalu memeriksa pintu keluar saat memasuki ruangan"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
               required
             />
           </div>
@@ -1295,8 +1474,8 @@ export function CharacterWorkspaceView({
               type="text"
               value={behContext}
               onChange={(e) => setBehContext(e.target.value)}
-              placeholder="Contoh: Di tempat asing atau pertemuan faksi"
-              className="clay-input w-full p-2.5 rounded-xl"
+              placeholder="Contoh: Di tempat asing"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -1305,7 +1484,7 @@ export function CharacterWorkspaceView({
               <select
                 value={behFrequency}
                 onChange={(e) => setBehFrequency(e.target.value)}
-                className="clay-input w-full p-2.5 rounded-xl font-bold"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
               >
                 <option value="ALWAYS">SELALU</option>
                 <option value="FREQUENT">SERING</option>
@@ -1318,7 +1497,7 @@ export function CharacterWorkspaceView({
               <select
                 value={behIntensity}
                 onChange={(e) => setBehIntensity(e.target.value)}
-                className="clay-input w-full p-2.5 rounded-xl font-bold"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
               >
                 <option value="HIGH">TINGGI</option>
                 <option value="MODERATE">SEDANG</option>
@@ -1332,8 +1511,8 @@ export function CharacterWorkspaceView({
               type="text"
               value={behTriggers}
               onChange={(e) => setBehTriggers(e.target.value)}
-              placeholder="Contoh: Suara langkah mencurigakan, Tatapan tajam orang asing"
-              className="clay-input w-full p-2.5 rounded-xl"
+              placeholder="Contoh: Suara langkah mencurigakan"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
             />
           </div>
 
@@ -1341,7 +1520,7 @@ export function CharacterWorkspaceView({
             <Button type="button" kind="secondary" size="sm" onClick={() => setIsBehaviorModalOpen(false)}>
               Batal
             </Button>
-            <Button type="submit" kind="primary" size="sm" disabled={isSubmitting}>
+            <Button type="submit" kind="clay" size="sm" disabled={isSubmitting}>
               {isSubmitting ? 'Menyimpan...' : 'Simpan Perilaku'}
             </Button>
           </div>
@@ -1362,8 +1541,8 @@ export function CharacterWorkspaceView({
               type="text"
               value={styleLanguage}
               onChange={(e) => setStyleLanguage(e.target.value)}
-              placeholder="Contoh: Ringkas, tenang, dan analitis"
-              className="clay-input w-full p-2.5 rounded-xl font-bold"
+              placeholder="Contoh: Ringkas dan analitis"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -1373,8 +1552,8 @@ export function CharacterWorkspaceView({
                 type="text"
                 value={styleWordChoice}
                 onChange={(e) => setStyleWordChoice(e.target.value)}
-                placeholder="Contoh: Istilah navigasi dan arkais"
-                className="clay-input w-full p-2.5 rounded-xl"
+                placeholder="Contoh: Arkais"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
               />
             </div>
             <div>
@@ -1383,8 +1562,8 @@ export function CharacterWorkspaceView({
                 type="text"
                 value={styleFormality}
                 onChange={(e) => setStyleFormality(e.target.value)}
-                placeholder="Contoh: Semi-formal"
-                className="clay-input w-full p-2.5 rounded-xl"
+                placeholder="Contoh: Formal"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
               />
             </div>
           </div>
@@ -1395,7 +1574,7 @@ export function CharacterWorkspaceView({
               value={styleVerbalSignature}
               onChange={(e) => setStyleVerbalSignature(e.target.value)}
               placeholder="Contoh: 'Bintang tidak pernah berbohong...'"
-              className="clay-input w-full p-2.5 rounded-xl"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
             />
           </div>
 
@@ -1403,7 +1582,7 @@ export function CharacterWorkspaceView({
             <Button type="button" kind="secondary" size="sm" onClick={() => setIsStyleModalOpen(false)}>
               Batal
             </Button>
-            <Button type="submit" kind="primary" size="sm" disabled={isSubmitting}>
+            <Button type="submit" kind="clay" size="sm" disabled={isSubmitting}>
               {isSubmitting ? 'Menyimpan...' : 'Simpan Gaya Bicara'}
             </Button>
           </div>
@@ -1419,13 +1598,13 @@ export function CharacterWorkspaceView({
       >
         <form onSubmit={handleSaveKnowledge} className="space-y-4 text-xs">
           <div>
-            <label className="block font-bold text-slate-700 mb-1">Pernyataan Pengetahuan / Fakta</label>
+            <label className="block font-bold text-slate-700 mb-1">Pernyataan Pengetahuan / Fakta *</label>
             <textarea
               value={knowStatement}
               onChange={(e) => setKnowStatement(e.target.value)}
               rows={3}
-              placeholder="Contoh: Pintu rahasia makam bawah tanah hanya bisa dibuka saat gerhana bulan sabit."
-              className="clay-input w-full p-2.5 rounded-xl"
+              placeholder="Pernyataan fakta atau keyakinan yang diketahui..."
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
               required
             />
           </div>
@@ -1436,8 +1615,8 @@ export function CharacterWorkspaceView({
                 type="text"
                 value={knowSubject}
                 onChange={(e) => setKnowSubject(e.target.value)}
-                placeholder="Contoh: Makam Kuno"
-                className="clay-input w-full p-2.5 rounded-xl"
+                placeholder="Contoh: Pusaka Kuno"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
               />
             </div>
             <div>
@@ -1445,10 +1624,10 @@ export function CharacterWorkspaceView({
               <select
                 value={knowCertainty}
                 onChange={(e) => setKnowCertainty(e.target.value)}
-                className="clay-input w-full p-2.5 rounded-xl font-bold"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
               >
                 <option value="FACT">FAKTA PASTI (FACT)</option>
-                <option value="BELIEF">KEYAKINAN KUAT (BELIEF)</option>
+                <option value="BELIEF">KEYAKINAN (BELIEF)</option>
                 <option value="SUSPICION">KECURIGAAN (SUSPICION)</option>
                 <option value="RUMOR">KABAR ANGIN (RUMOR)</option>
               </select>
@@ -1460,8 +1639,8 @@ export function CharacterWorkspaceView({
               type="text"
               value={knowSource}
               onChange={(e) => setKnowSource(e.target.value)}
-              placeholder="Contoh: Membaca manuskrip kuno di perpustakaan"
-              className="clay-input w-full p-2.5 rounded-xl"
+              placeholder="Contoh: Membaca manuskrip kuno"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
             />
           </div>
 
@@ -1469,7 +1648,7 @@ export function CharacterWorkspaceView({
             <Button type="button" kind="secondary" size="sm" onClick={() => setIsKnowledgeModalOpen(false)}>
               Batal
             </Button>
-            <Button type="submit" kind="primary" size="sm" disabled={isSubmitting}>
+            <Button type="submit" kind="clay" size="sm" disabled={isSubmitting}>
               {isSubmitting ? 'Menyimpan...' : 'Tambah Pengetahuan'}
             </Button>
           </div>

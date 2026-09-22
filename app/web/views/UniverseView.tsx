@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Users,
+  Compass,
   MapPin,
   Package,
   Heart,
@@ -8,12 +8,14 @@ import {
   PlusCircle,
   Sparkles,
   ChevronRight,
-  Eye,
-  Wand2,
   Shield,
-  Layers
+  Layers,
+  Wand2,
+  AlertCircle,
+  CheckCircle2,
+  Users
 } from 'lucide-react';
-import { Card, StatusBadge, Button, Modal, InfoCallout } from '../components/UIElements.tsx';
+import { Card, StatusBadge, Button, InfoCallout, Modal } from '../components/UIElements.tsx';
 import type {
   UniverseDetails,
   UniverseCharacter,
@@ -42,141 +44,196 @@ export function UniverseView({
   onAddMystery: (data: any) => Promise<void>;
   onAiAssist: (capability: string, input: any) => Promise<any>;
 }) {
-  const [activeTab, setActiveTab] = useState<'characters' | 'locations' | 'objects' | 'relationships' | 'mysteries'>('characters');
+  const [activeTab, setActiveTab] = useState<'locations' | 'objects' | 'relationships' | 'mysteries' | 'characters'>('locations');
 
-  // Modals state
-  const [isCharModalOpen, setIsCharModalOpen] = useState(false);
+  // Modals
   const [isLocModalOpen, setIsLocModalOpen] = useState(false);
   const [isObjModalOpen, setIsObjModalOpen] = useState(false);
   const [isRelModalOpen, setIsRelModalOpen] = useState(false);
   const [isMysteryModalOpen, setIsMysteryModalOpen] = useState(false);
+  const [isCharModalOpen, setIsCharModalOpen] = useState(false);
 
-  // Form states
-  const [charName, setCharName] = useState('');
-  const [charRole, setCharRole] = useState('Tokoh Utama');
-  const [charTraits, setCharTraits] = useState('Pemberani, Cerdas, Setia');
-  const [charPersonality, setCharPersonality] = useState('Visioner & Tangguh');
-  const [charOccupation, setCharOccupation] = useState('Penjelajah');
-  const [charGoal, setCharGoal] = useState('Menemukan kebenaran masa lalu');
-  const [charWound, setCharWound] = useState('Rasa bersalah masa kecil');
-
+  // Forms
   const [locName, setLocName] = useState('');
-  const [locType, setLocType] = useState('SETTLEMENT');
   const [locDesc, setLocDesc] = useState('');
+  const [locType, setLocType] = useState('SETTLEMENT');
+  const [locAccess, setLocAccess] = useState('OPEN');
 
   const [objName, setObjName] = useState('');
-  const [objType, setObjType] = useState('PHYSICAL');
-  const [objCondition, setObjCondition] = useState('INTACT');
+  const [objDesc, setObjDesc] = useState('');
+  const [objType, setObjType] = useState('RELIC');
+  const [objOwnerId, setObjOwnerId] = useState('');
+  const [objLocationId, setObjLocationId] = useState('');
 
-  const [relSub, setRelSub] = useState('');
-  const [relTar, setRelTar] = useState('');
+  const [relChar1, setRelChar1] = useState('');
+  const [relChar2, setRelChar2] = useState('');
   const [relType, setRelType] = useState('ALLY');
-  const [relDynamic, setRelDynamic] = useState('Saling Mendukung');
+  const [relDynamic, setRelDynamic] = useState('');
 
   const [mysteryDesc, setMysteryDesc] = useState('');
-  const [mysteryType, setMysteryType] = useState('NARRATIVE_MYSTERY');
+  const [mysteryType, setMysteryType] = useState('MYSTERY');
+  const [mysterySignificance, setMysterySignificance] = useState('MAJOR');
 
+  const [charName, setCharName] = useState('');
+  const [charRole, setCharRole] = useState('');
+  const [charPersonality, setCharPersonality] = useState('');
+  const [charTraits, setCharTraits] = useState('');
+  const [charOccupation, setCharOccupation] = useState('');
+  const [charGoal, setCharGoal] = useState('');
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
 
   if (!universe || !universe.mounted) {
     return (
-      <Card className="p-12 text-center text-slate-500 text-xs">
-        Buka atau buat dunia cerita terlebih dahulu untuk menjelajah entitas.
-      </Card>
+      <div className="p-12 text-center text-slate-500 text-sm font-medium">
+        Belum ada dunia cerita yang dimuat.
+      </div>
     );
   }
 
-  // AI Assist Handlers
-  const handleCharAiAssist = async () => {
-    setIsAiLoading(true);
+  // Handlers
+  const handleCreateLocation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!locName.trim()) return;
+    setIsSubmitting(true);
     try {
-      const res = await onAiAssist('CHARACTER_PROFILE', {
-        name: charName || 'Kaelen',
-        archetype: charRole,
+      await onAddLocation({
+        displayName: locName.trim(),
+        description: locDesc.trim() || undefined,
+        locationType: locType,
+        accessibilityStatus: locAccess,
       });
-      if (res?.proposal) {
-        if (!charName) setCharName(res.proposal.displayName);
-        setCharPersonality(res.proposal.personalityType);
-        setCharTraits(res.proposal.traits.join(', '));
-        setCharOccupation(res.proposal.occupation);
-        setCharGoal(res.proposal.primaryGoal);
-        setCharWound(res.proposal.innerWound);
-      }
+      setLocName('');
+      setLocDesc('');
+      setIsLocModalOpen(false);
     } finally {
-      setIsAiLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleLocAiAssist = async () => {
-    setIsAiLoading(true);
+  const handleCreateObject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!objName.trim()) return;
+    setIsSubmitting(true);
     try {
-      const res = await onAiAssist('LOCATION', { name: locName || 'Lembah Kabut' });
-      if (res?.proposal) {
-        if (!locName) setLocName(res.proposal.displayName);
-        setLocDesc(res.proposal.description);
-        setLocType(res.proposal.locationType);
-      }
+      await onAddObject({
+        displayName: objName.trim(),
+        description: objDesc.trim() || undefined,
+        objectType: objType,
+        currentOwnerCharacterId: objOwnerId || undefined,
+        currentLocationId: objLocationId || undefined,
+      });
+      setObjName('');
+      setObjDesc('');
+      setIsObjModalOpen(false);
     } finally {
-      setIsAiLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleObjAiAssist = async () => {
-    setIsAiLoading(true);
+  const handleCreateRelationship = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!relChar1 || !relChar2 || relChar1 === relChar2) return;
+    setIsSubmitting(true);
     try {
-      const res = await onAiAssist('OBJECT', { name: objName || 'Pusaka Kuno' });
-      if (res?.proposal) {
-        if (!objName) setObjName(res.proposal.displayName);
-        setObjCondition(res.proposal.condition);
-      }
+      await onAddRelationship({
+        characterIdA: relChar1,
+        characterIdB: relChar2,
+        relationshipType: relType,
+        dynamic: relDynamic.trim() || undefined,
+      });
+      setRelDynamic('');
+      setIsRelModalOpen(false);
     } finally {
-      setIsAiLoading(false);
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateMystery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mysteryDesc.trim()) return;
+    setIsSubmitting(true);
+    try {
+      await onAddMystery({
+        description: mysteryDesc.trim(),
+        conditionType: mysteryType,
+        significance: mysterySignificance,
+      });
+      setMysteryDesc('');
+      setIsMysteryModalOpen(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateCharacter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!charName.trim()) return;
+    setIsSubmitting(true);
+    try {
+      await onAddCharacter({
+        displayName: charName.trim(),
+        role: charRole.trim() || undefined,
+        personalityType: charPersonality.trim() || undefined,
+        traits: charTraits ? charTraits.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        occupation: charOccupation.trim() || undefined,
+        goal: charGoal.trim() || undefined,
+      });
+      setCharName('');
+      setCharRole('');
+      setCharPersonality('');
+      setCharTraits('');
+      setCharOccupation('');
+      setCharGoal('');
+      setIsCharModalOpen(false);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-black text-slate-900 tracking-tight">
-            Ensiklopedia Semesta Cerita
+            Dunia Cerita & Entitas Semesta
           </h2>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            Kelola tokoh, wilayah, pusaka kuno, relasi, dan misteri yang membangun kedalaman dunia Anda.
+            Eksplorasi wilayah geografi, pusaka, dinamika relasi antartokoh, dan misteri yang belum terpecahkan.
           </p>
         </div>
 
-        {/* Dynamic Action Button */}
-        <div>
-          {activeTab === 'characters' && (
-            <Button kind="clay" size="sm" onClick={() => setIsCharModalOpen(true)}>
-              <PlusCircle className="h-4 w-4" />
-              <span>+ Tokoh Baru</span>
-            </Button>
-          )}
+        <div className="flex items-center gap-2">
           {activeTab === 'locations' && (
-            <Button kind="clay" size="sm" onClick={() => setIsLocModalOpen(true)}>
+            <Button kind="clay" size="sm" onClick={() => setIsLocModalOpen(true)} className="gap-1.5 shadow-xs">
               <PlusCircle className="h-4 w-4" />
-              <span>+ Wilayah Baru</span>
+              <span>+ Wilayah</span>
             </Button>
           )}
           {activeTab === 'objects' && (
-            <Button kind="clay" size="sm" onClick={() => setIsObjModalOpen(true)}>
+            <Button kind="clay" size="sm" onClick={() => setIsObjModalOpen(true)} className="gap-1.5 shadow-xs">
               <PlusCircle className="h-4 w-4" />
-              <span>+ Benda Pusaka Baru</span>
+              <span>+ Benda Pusaka</span>
             </Button>
           )}
           {activeTab === 'relationships' && (
-            <Button kind="clay" size="sm" onClick={() => setIsRelModalOpen(true)}>
+            <Button kind="clay" size="sm" onClick={() => setIsRelModalOpen(true)} className="gap-1.5 shadow-xs">
               <PlusCircle className="h-4 w-4" />
-              <span>+ Ikatan Relasi Baru</span>
+              <span>+ Relasi Antartokoh</span>
             </Button>
           )}
           {activeTab === 'mysteries' && (
-            <Button kind="clay" size="sm" onClick={() => setIsMysteryModalOpen(true)}>
+            <Button kind="clay" size="sm" onClick={() => setIsMysteryModalOpen(true)} className="gap-1.5 shadow-xs">
               <PlusCircle className="h-4 w-4" />
-              <span>+ Catat Misteri Baru</span>
+              <span>+ Misteri Baru</span>
+            </Button>
+          )}
+          {activeTab === 'characters' && (
+            <Button kind="clay" size="sm" onClick={() => setIsCharModalOpen(true)} className="gap-1.5 shadow-xs">
+              <PlusCircle className="h-4 w-4" />
+              <span>+ Tokoh</span>
             </Button>
           )}
         </div>
@@ -185,11 +242,11 @@ export function UniverseView({
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto no-scrollbar">
         {[
-          { id: 'characters', label: `Tokoh & Karakter (${universe.characters.length})`, icon: Users },
-          { id: 'locations', label: `Wilayah & Lokasi (${universe.locations.length})`, icon: MapPin },
-          { id: 'objects', label: `Pusaka & Benda (${universe.objects.length})`, icon: Package },
+          { id: 'locations', label: `Wilayah (${universe.locations.length})`, icon: MapPin },
+          { id: 'objects', label: `Benda Pusaka (${universe.objects.length})`, icon: Package },
           { id: 'relationships', label: `Ikatan Relasi (${universe.relationships.length})`, icon: Heart },
-          { id: 'mysteries', label: `Misteri Terbuka (${universe.unresolvedConditions.length})`, icon: HelpCircle },
+          { id: 'mysteries', label: `Misteri (${universe.unresolvedConditions.length})`, icon: HelpCircle },
+          { id: 'characters', label: `Tokoh (${universe.characters.length})`, icon: Users },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -199,7 +256,7 @@ export function UniverseView({
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 ${
                 isActive
-                  ? 'bg-amber-400 text-slate-950 shadow-sm border border-amber-300'
+                  ? 'bg-amber-400 text-slate-950 shadow-xs border border-amber-300'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -210,7 +267,143 @@ export function UniverseView({
         })}
       </div>
 
-      {/* Characters Tab */}
+      {/* TAB: Wilayah & Lokasi */}
+      {activeTab === 'locations' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
+          {universe.locations.map((loc) => (
+            <Card key={loc.id} className="p-5 space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-amber-100 text-amber-900 rounded-xl">
+                    <MapPin className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">{loc.displayName}</h4>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">{loc.locationType}</span>
+                  </div>
+                </div>
+                <StatusBadge status={loc.accessibilityStatus || 'OPEN'} />
+              </div>
+
+              <p className="text-xs text-slate-600 line-clamp-3">
+                {loc.description || 'Deskripsi belum tercatat.'}
+              </p>
+            </Card>
+          ))}
+
+          {universe.locations.length === 0 && (
+            <div className="col-span-3 p-12 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-100">
+              Belum ada wilayah yang dicatat. Klik "+ Wilayah" di atas untuk menambahkan.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: Pusaka & Benda */}
+      {activeTab === 'objects' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
+          {universe.objects.map((obj) => (
+            <Card key={obj.id} className="p-5 space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-amber-100 text-amber-900 rounded-xl">
+                    <Package className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">{obj.displayName}</h4>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">{obj.objectType}</span>
+                  </div>
+                </div>
+                <StatusBadge status={obj.condition || 'PRISTINE'} />
+              </div>
+
+              <p className="text-xs text-slate-600 line-clamp-2">
+                {obj.description || 'Deskripsi belum tercatat.'}
+              </p>
+
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+                <span>Pemilik: {obj.currentOwnerCharacterId ? 'Dimiliki Tokoh' : 'Belum bertuan'}</span>
+              </div>
+            </Card>
+          ))}
+
+          {universe.objects.length === 0 && (
+            <div className="col-span-3 p-12 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-100">
+              Belum ada benda pusaka yang dicatat. Klik "+ Benda Pusaka" untuk menambahkan.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: Ikatan Relasi */}
+      {activeTab === 'relationships' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
+          {universe.relationships.map((r) => {
+            const actorAId = r.characterIdA || r.sourceActorRef;
+            const actorBId = r.characterIdB || r.targetActorRef;
+            const charA = universe.characters.find((c) => c.id === actorAId);
+            const charB = universe.characters.find((c) => c.id === actorBId);
+            return (
+              <Card key={r.id} className="p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">
+                    {r.relationshipType}
+                  </span>
+                  <StatusBadge status={r.status || 'ACTIVE'} />
+                </div>
+
+                <div className="flex items-center justify-between py-2 text-xs font-bold text-slate-900">
+                  <span>{charA?.displayName || actorAId || 'Tokoh'}</span>
+                  <Heart className="h-4 w-4 text-rose-500 fill-rose-500 shrink-0 mx-2" />
+                  <span>{charB?.displayName || actorBId || 'Tokoh'}</span>
+                </div>
+
+                <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                  {r.dynamic || 'Dinamika belum tercatat.'}
+                </p>
+              </Card>
+            );
+          })}
+
+          {universe.relationships.length === 0 && (
+            <div className="col-span-3 p-12 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-100">
+              Belum ada ikatan relasi antartokoh. Klik "+ Relasi Antartokoh" untuk menghubungkan dua karakter.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: Misteri Terbuka */}
+      {activeTab === 'mysteries' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
+          {universe.unresolvedConditions.map((m) => (
+            <Card key={m.id} className="p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-xs font-bold">
+                  {m.conditionType}
+                </span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase">{m.significance}</span>
+              </div>
+
+              <p className="text-xs text-slate-800 font-medium leading-relaxed">
+                {m.description}
+              </p>
+
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Status: <strong className="text-amber-800">{m.resolutionStatus || 'TERBUKA'}</strong></span>
+              </div>
+            </Card>
+          ))}
+
+          {universe.unresolvedConditions.length === 0 && (
+            <div className="col-span-3 p-12 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-100">
+              Belum ada misteri terbuka. Klik "+ Misteri Baru" untuk memicu intrik alur.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: Tokoh */}
       {activeTab === 'characters' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
           {universe.characters.map((c) => (
@@ -221,37 +414,45 @@ export function UniverseView({
               <div onClick={() => onOpenCharacterWorkspace(c.id)} className="space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 border-2 border-amber-300 text-amber-900 font-black text-lg shadow-inner">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-100 border border-amber-300 text-amber-900 font-black text-sm shadow-inner shrink-0">
                       {c.displayName.charAt(0)}
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-slate-900 group-hover:text-amber-800 transition">
+                      <h4 className="text-sm font-bold text-slate-900 group-hover:text-amber-800 transition truncate max-w-[150px]">
                         {c.displayName}
                       </h4>
-                      <p className="text-xs text-slate-500 font-medium">{c.role || 'Tokoh Utama'}</p>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {c.role || 'Belum ditentukan'}
+                      </p>
                     </div>
                   </div>
                   <StatusBadge status={c.status} />
                 </div>
 
                 <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-600">
-                  <span className="font-bold text-slate-800">Tipe: </span>
-                  {c.personalityType || 'Pemberani & Visioner'}
+                  <span className="font-bold text-slate-700">Tipe: </span>
+                  <span>{c.personalityType || 'Belum diisi'}</span>
                 </div>
 
-                <div className="flex flex-wrap gap-1.5">
-                  {c.traits?.slice(0, 3).map((t, idx) => (
-                    <span
-                      key={idx}
-                      className="px-2 py-0.5 bg-amber-50 text-amber-800 text-[11px] font-semibold rounded-lg border border-amber-200"
-                    >
-                      {t}
+                <div className="flex flex-wrap gap-1.5 min-h-[24px]">
+                  {c.traits && c.traits.length > 0 ? (
+                    c.traits.slice(0, 3).map((t, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-0.5 bg-amber-50 text-amber-800 text-[11px] font-semibold rounded-lg border border-amber-200"
+                      >
+                        {t}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-[11px] text-slate-400 italic">
+                      Belum ada sifat yang tercatat
                     </span>
-                  ))}
+                  )}
                 </div>
 
                 <div className="pt-2 flex items-center justify-between text-xs font-bold text-amber-700">
-                  <span>Buka Ruang Kerja Tokoh (9 Tab)</span>
+                  <span>Buka Ruang Profil Tokoh</span>
                   <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition" />
                 </div>
               </div>
@@ -260,494 +461,351 @@ export function UniverseView({
         </div>
       )}
 
-      {/* Locations Tab */}
-      {activeTab === 'locations' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
-          {universe.locations.map((loc) => (
-            <Card key={loc.id} className="p-5 space-y-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900">{loc.displayName}</h4>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">{loc.locationType}</span>
-                </div>
-                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-[10px] font-bold">
-                  {loc.accessibilityStatus}
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 line-clamp-2">
-                {loc.description || 'Pusat pemukiman dan interaksi antar tokoh.'}
-              </p>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Objects Tab */}
-      {activeTab === 'objects' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
-          {universe.objects.map((obj) => (
-            <Card key={obj.id} className="p-5 space-y-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900">{obj.displayName}</h4>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">{obj.objectType}</span>
-                </div>
-                <span className="px-2 py-0.5 bg-amber-50 text-amber-900 border border-amber-200 rounded-lg text-[10px] font-bold">
-                  {obj.condition}
-                </span>
-              </div>
-              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-600 flex items-center justify-between">
-                <span>Status Pemilikan:</span>
-                <strong className="text-slate-800">{obj.possessionStatus}</strong>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Relationships Tab */}
-      {activeTab === 'relationships' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-in">
-          {universe.relationships.map((r) => {
-            const charA = universe.characters.find((c) => c.id === r.sourceActorRef)?.displayName || r.sourceActorRef;
-            const charB = universe.characters.find((c) => c.id === r.targetActorRef)?.displayName || r.targetActorRef;
-            return (
-              <Card key={r.id} className="p-5 space-y-3">
-                <div className="flex items-center justify-between font-bold text-slate-900">
-                  <span>{charA} ↔ {charB}</span>
-                  <span className="px-2.5 py-0.5 bg-amber-100 text-amber-900 text-xs rounded-xl font-bold">
-                    {r.relationshipType}
-                  </span>
-                </div>
-                <div className="p-2.5 bg-slate-50 rounded-xl text-xs text-slate-600">
-                  <span className="font-bold text-slate-800">Dinamika: </span>
-                  {r.dynamic || 'Hubungan Saling Percaya'}
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Mysteries Tab */}
-      {activeTab === 'mysteries' && (
-        <div className="space-y-4 animate-fade-in">
-          {universe.unresolvedConditions.map((uc) => (
-            <Card key={uc.id} className="p-5 space-y-2 bg-rose-50/30 border border-rose-200">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-rose-900 uppercase">{uc.title}</span>
-                <span className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-lg text-[10px] font-bold">
-                  {uc.status}
-                </span>
-              </div>
-              <p className="text-xs text-slate-800 font-medium">{uc.description}</p>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Character Builder Modal */}
-      <Modal
-        isOpen={isCharModalOpen}
-        onClose={() => setIsCharModalOpen(false)}
-        title="Daftarkan Tokoh Baru"
-        subtitle="Lengkapi data profil karakter untuk memperkaya dunia cerita."
-      >
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            await onAddCharacter({
-              displayName: charName,
-              role: charRole,
-              personalityType: charPersonality,
-              traits: charTraits.split(',').map((t) => t.trim()).filter(Boolean),
-              occupation: charOccupation,
-              primaryGoal: charGoal,
-              innerWound: charWound,
-            });
-            setIsCharModalOpen(false);
-          }}
-          className="space-y-4"
-        >
-          <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-900">Bantuan AI:</span>
-            <Button kind="clay" size="sm" onClick={handleCharAiAssist} disabled={isAiLoading}>
-              <Wand2 className={`h-4 w-4 ${isAiLoading ? 'animate-spin' : ''}`} />
-              <span>{isAiLoading ? 'Menyusun...' : 'Saran Profil AI'}</span>
-            </Button>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Nama Tokoh *</label>
-            <input
-              type="text"
-              required
-              value={charName}
-              onChange={(e) => setCharName(e.target.value)}
-              placeholder="cth. Lyra Valen"
-              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Peran / Profesi</label>
-              <input
-                type="text"
-                value={charOccupation}
-                onChange={(e) => setCharOccupation(e.target.value)}
-                placeholder="cth. Peneliti Pusaka"
-                className="clay-input w-full px-3 py-2 text-xs rounded-xl"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Tipe Kepribadian</label>
-              <input
-                type="text"
-                value={charPersonality}
-                onChange={(e) => setCharPersonality(e.target.value)}
-                placeholder="cth. Analitis & Waspada"
-                className="clay-input w-full px-3 py-2 text-xs rounded-xl"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Sifat Utama (pisahkan dengan koma)</label>
-            <input
-              type="text"
-              value={charTraits}
-              onChange={(e) => setCharTraits(e.target.value)}
-              placeholder="cth. Teliti, Tenang, Protektif"
-              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Tujuan Utama (Goal)</label>
-            <input
-              type="text"
-              value={charGoal}
-              onChange={(e) => setCharGoal(e.target.value)}
-              placeholder="cth. Membuka segel gerbang utara"
-              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Luka Batin (Inner Wound)</label>
-            <input
-              type="text"
-              value={charWound}
-              onChange={(e) => setCharWound(e.target.value)}
-              placeholder="cth. Kehilangan rekan tim dalam ekspedisi lama"
-              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-            <Button kind="secondary" size="md" onClick={() => setIsCharModalOpen(false)}>
-              Batal
-            </Button>
-            <Button kind="clay" size="md" onClick={() => {}}>
-              <span>Simpan Tokoh</span>
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Location Builder Modal */}
+      {/* MODAL: Add Location */}
       <Modal
         isOpen={isLocModalOpen}
         onClose={() => setIsLocModalOpen(false)}
-        title="Daftarkan Wilayah / Lokasi Baru"
-        subtitle="Tambahkan area penting untuk petualangan tokoh."
+        title="Tambah Wilayah / Lokasi Baru"
+        subtitle="Petakan lanskap geografis baru ke dalam semesta."
       >
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            await onAddLocation({
-              displayName: locName,
-              locationType: locType,
-              description: locDesc,
-            });
-            setIsLocModalOpen(false);
-          }}
-          className="space-y-4"
-        >
-          <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-900">Bantuan AI:</span>
-            <Button kind="clay" size="sm" onClick={handleLocAiAssist} disabled={isAiLoading}>
-              <Wand2 className={`h-4 w-4 ${isAiLoading ? 'animate-spin' : ''}`} />
-              <span>{isAiLoading ? 'Menyusun...' : 'Saran Wilayah AI'}</span>
-            </Button>
-          </div>
-
+        <form onSubmit={handleCreateLocation} className="space-y-4 text-xs">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Nama Wilayah *</label>
+            <label className="block font-bold text-slate-700 mb-1">Nama Wilayah *</label>
             <input
               type="text"
               required
               value={locName}
               onChange={(e) => setLocName(e.target.value)}
-              placeholder="cth. Menara Obsidian"
-              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+              placeholder="Contoh: Benteng Karang Hitam"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
             />
           </div>
-
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Tipe Lokasi</label>
+            <label className="block font-bold text-slate-700 mb-1">Tipe Wilayah</label>
             <select
               value={locType}
               onChange={(e) => setLocType(e.target.value)}
-              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
             >
-              <option value="SETTLEMENT">Pemukiman / Kota</option>
-              <option value="STRUCTURE">Bangunan / Kuil</option>
-              <option value="WILDERNESS">Alam Liar / Hutan</option>
-              <option value="DUNGEON">Reruntuhan / Bawah Tanah</option>
+              <option value="SETTLEMENT">PEMUKIMAN / KOTA</option>
+              <option value="WILDERNESS">ALAM LIAR / HUTAN</option>
+              <option value="DUNGEON">RUANG BAWAH TANAH / SITUS</option>
+              <option value="FORTRESS">BENTENG / ISTANA</option>
             </select>
           </div>
-
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Deskripsi Suasana</label>
+            <label className="block font-bold text-slate-700 mb-1">Deskripsi Wilayah</label>
             <textarea
               rows={3}
               value={locDesc}
               onChange={(e) => setLocDesc(e.target.value)}
-              placeholder="Keadaan atmosfer dan karakteristik area..."
-              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+              placeholder="Gambaran visual, suasana, dan kondisi cuaca..."
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-            <Button kind="secondary" size="md" onClick={() => setIsLocModalOpen(false)}>
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+            <Button type="button" kind="secondary" size="sm" onClick={() => setIsLocModalOpen(false)}>
               Batal
             </Button>
-            <Button kind="clay" size="md" onClick={() => {}}>
-              <span>Simpan Wilayah</span>
+            <Button type="submit" kind="clay" size="sm" disabled={isSubmitting || !locName.trim()}>
+              {isSubmitting ? 'Menyimpan...' : 'Simpan Wilayah'}
             </Button>
           </div>
         </form>
       </Modal>
 
-      {/* Object Builder Modal */}
+      {/* MODAL: Add Object */}
       <Modal
         isOpen={isObjModalOpen}
         onClose={() => setIsObjModalOpen(false)}
-        title="Daftarkan Pusaka / Benda Baru"
-        subtitle="Tambahkan relik, artefak, atau senjata naratif."
+        title="Tambah Benda Pusaka / Artefak"
+        subtitle="Catat objek penting yang memengaruhi alur narasi."
       >
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            await onAddObject({
-              displayName: objName,
-              objectType: objType,
-              condition: objCondition,
-            });
-            setIsObjModalOpen(false);
-          }}
-          className="space-y-4"
-        >
-          <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-900">Bantuan AI:</span>
-            <Button kind="clay" size="sm" onClick={handleObjAiAssist} disabled={isAiLoading}>
-              <Wand2 className={`h-4 w-4 ${isAiLoading ? 'animate-spin' : ''}`} />
-              <span>{isAiLoading ? 'Menyusun...' : 'Saran Benda AI'}</span>
-            </Button>
-          </div>
-
+        <form onSubmit={handleCreateObject} className="space-y-4 text-xs">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Nama Benda *</label>
+            <label className="block font-bold text-slate-700 mb-1">Nama Benda *</label>
             <input
               type="text"
               required
               value={objName}
               onChange={(e) => setObjName(e.target.value)}
-              placeholder="cth. Cincin Surya Abadi"
-              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+              placeholder="Contoh: Kompas Bintang Kuno"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
             />
           </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Tipe Benda</label>
+              <label className="block font-bold text-slate-700 mb-1">Tipe Benda</label>
               <select
                 value={objType}
                 onChange={(e) => setObjType(e.target.value)}
-                className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
               >
-                <option value="PHYSICAL">Fisik / Artefak</option>
-                <option value="MAGICAL">Magis / Pusaka</option>
-                <option value="DOCUMENT">Dokumen / Peta Kuno</option>
+                <option value="RELIC">PUSAKA / ARTEFAK</option>
+                <option value="WEAPON">SENJATA</option>
+                <option value="DOCUMENT">DOKUMEN / MANUSKRIP</option>
+                <option value="TOOL">PERALATAN</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Kondisi</label>
+              <label className="block font-bold text-slate-700 mb-1">Pemilik (Opsional)</label>
               <select
-                value={objCondition}
-                onChange={(e) => setObjCondition(e.target.value)}
-                className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+                value={objOwnerId}
+                onChange={(e) => setObjOwnerId(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
               >
-                <option value="INTACT">Utuh & Berkilau</option>
-                <option value="DAMAGED">Retak Sebagian</option>
-                <option value="ANCIENT">Kuno & Aus</option>
+                <option value="">-- Belum Bertuan --</option>
+                {universe.characters.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.displayName}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Deskripsi Kegunaan & Khasiat</label>
+            <textarea
+              rows={3}
+              value={objDesc}
+              onChange={(e) => setObjDesc(e.target.value)}
+              placeholder="Sejarah atau kekuatan khusus yang tersimpan..."
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
+            />
+          </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-            <Button kind="secondary" size="md" onClick={() => setIsObjModalOpen(false)}>
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+            <Button type="button" kind="secondary" size="sm" onClick={() => setIsObjModalOpen(false)}>
               Batal
             </Button>
-            <Button kind="clay" size="md" onClick={() => {}}>
-              <span>Simpan Benda</span>
+            <Button type="submit" kind="clay" size="sm" disabled={isSubmitting || !objName.trim()}>
+              {isSubmitting ? 'Menyimpan...' : 'Simpan Pusaka'}
             </Button>
           </div>
         </form>
       </Modal>
 
-      {/* Relationship Builder Modal */}
+      {/* MODAL: Add Relationship */}
       <Modal
         isOpen={isRelModalOpen}
         onClose={() => setIsRelModalOpen(false)}
-        title="Daftarkan Ikatan Relasi Baru"
-        subtitle="Tentukan dinamika hubungan antara dua tokoh."
+        title="Hubungkan Relasi Antartokoh"
+        subtitle="Bangun keterikatan naratif antara dua karakter."
       >
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (!relSub || !relTar) return;
-            await onAddRelationship({
-              subjectRef: relSub,
-              targetRef: relTar,
-              relationshipType: relType,
-              dynamic: relDynamic,
-            });
-            setIsRelModalOpen(false);
-          }}
-          className="space-y-4"
-        >
+        <form onSubmit={handleCreateRelationship} className="space-y-4 text-xs">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Tokoh Pertama *</label>
+              <label className="block font-bold text-slate-700 mb-1">Tokoh Pertama *</label>
               <select
                 required
-                value={relSub}
-                onChange={(e) => setRelSub(e.target.value)}
-                className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+                value={relChar1}
+                onChange={(e) => setRelChar1(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
               >
                 <option value="">-- Pilih Tokoh --</option>
                 {universe.characters.map((c) => (
-                  <option key={c.id} value={c.id}>{c.displayName}</option>
+                  <option key={c.id} value={c.id}>
+                    {c.displayName}
+                  </option>
                 ))}
               </select>
             </div>
-
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Tokoh Kedua *</label>
+              <label className="block font-bold text-slate-700 mb-1">Tokoh Kedua *</label>
               <select
                 required
-                value={relTar}
-                onChange={(e) => setRelTar(e.target.value)}
-                className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+                value={relChar2}
+                onChange={(e) => setRelChar2(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
               >
                 <option value="">-- Pilih Tokoh --</option>
-                {universe.characters.map((c) => (
-                  <option key={c.id} value={c.id}>{c.displayName}</option>
-                ))}
+                {universe.characters
+                  .filter((c) => c.id !== relChar1)
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.displayName}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>
-
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Tipe Ikatan</label>
+            <label className="block font-bold text-slate-700 mb-1">Tipe Ikatan</label>
             <select
               value={relType}
               onChange={(e) => setRelType(e.target.value)}
-              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
             >
-              <option value="ALLY">Sekutu / Rekan</option>
-              <option value="RIVAL">Rival / Pesaing</option>
-              <option value="MENTOR">Mentor & Murid</option>
-              <option value="FAMILY">Keluarga</option>
-              <option value="ENEMY">Musuh Bebuyutan</option>
+              <option value="ALLY">SEKUTU / KAWAN (ALLY)</option>
+              <option value="RIVAL">RIVAL / PESAING (RIVAL)</option>
+              <option value="MENTOR">GURU - MURID (MENTOR)</option>
+              <option value="ENEMY">MUSUH (ENEMY)</option>
+              <option value="FAMILY">KELUARGA / KERABAT (FAMILY)</option>
             </select>
           </div>
-
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Dinamika Hubungan</label>
+            <label className="block font-bold text-slate-700 mb-1">Dinamika Hubungan</label>
             <input
               type="text"
               value={relDynamic}
               onChange={(e) => setRelDynamic(e.target.value)}
-              placeholder="cth. Saling menghormati namun bersaing"
-              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+              placeholder="Contoh: Saling menghormati namun bersaing dalam keahlian"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-            <Button kind="secondary" size="md" onClick={() => setIsRelModalOpen(false)}>
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+            <Button type="button" kind="secondary" size="sm" onClick={() => setIsRelModalOpen(false)}>
               Batal
             </Button>
-            <Button kind="clay" size="md" onClick={() => {}}>
-              <span>Simpan Ikatan</span>
+            <Button
+              type="submit"
+              kind="clay"
+              size="sm"
+              disabled={isSubmitting || !relChar1 || !relChar2 || relChar1 === relChar2}
+            >
+              {isSubmitting ? 'Menyambungkan...' : 'Simpan Ikatan'}
             </Button>
           </div>
         </form>
       </Modal>
 
-      {/* Mystery Builder Modal */}
+      {/* MODAL: Add Mystery */}
       <Modal
         isOpen={isMysteryModalOpen}
         onClose={() => setIsMysteryModalOpen(false)}
-        title="Catat Misteri / Ketegangan Baru"
-        subtitle="Misteri akan diteruskan dan diselesaikan sepanjang alur cerita."
+        title="Catat Misteri / Konflik Terbuka"
+        subtitle="Tambahkan teka-teki yang perlu dipecahkan dalam alur cerita."
       >
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            await onAddMystery({
-              conditionType: mysteryType,
-              description: mysteryDesc,
-            });
-            setIsMysteryModalOpen(false);
-          }}
-          className="space-y-4"
-        >
+        <form onSubmit={handleCreateMystery} className="space-y-4 text-xs">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Tipe Misteri</label>
-            <select
-              value={mysteryType}
-              onChange={(e) => setMysteryType(e.target.value)}
-              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
-            >
-              <option value="NARRATIVE_MYSTERY">Misteri Rahasia Kuno</option>
-              <option value="POLITICAL_TENSION">Ketegangan Politik Antar Faksi</option>
-              <option value="MISSING_ARTIFACT">Pusaka yang Hilang</option>
-              <option value="PROPHECY">Ramalan Masa Depan</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Deskripsi Misteri *</label>
+            <label className="block font-bold text-slate-700 mb-1">Uraian Misteri / Persoalan *</label>
             <textarea
               required
               rows={3}
               value={mysteryDesc}
               onChange={(e) => setMysteryDesc(e.target.value)}
-              placeholder="Jelaskan teka-teki naratif yang belum terpecahkan..."
-              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+              placeholder="Uraikan teka-teki atau ancaman yang sedang mengintai..."
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-medium"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Klasifikasi</label>
+              <select
+                value={mysteryType}
+                onChange={(e) => setMysteryType(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
+              >
+                <option value="MYSTERY">MISTERI DUNIA</option>
+                <option value="CONFLICT">KONFLIK ANTARFAKSI</option>
+                <option value="PROPHECY">RAMALAN / PETUNJUK</option>
+              </select>
+            </div>
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Tingkat Pengaruh</label>
+              <select
+                value={mysterySignificance}
+                onChange={(e) => setMysterySignificance(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
+              >
+                <option value="MAJOR">UTAMA (MAJOR)</option>
+                <option value="MINOR">SAMPINGAN (MINOR)</option>
+                <option value="CRITICAL">KRITIS / KANUN</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+            <Button type="button" kind="secondary" size="sm" onClick={() => setIsMysteryModalOpen(false)}>
+              Batal
+            </Button>
+            <Button type="submit" kind="clay" size="sm" disabled={isSubmitting || !mysteryDesc.trim()}>
+              {isSubmitting ? 'Mencatat...' : 'Simpan Misteri'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* MODAL: Add Character */}
+      <Modal
+        isOpen={isCharModalOpen}
+        onClose={() => setIsCharModalOpen(false)}
+        title="Daftarkan Tokoh Baru"
+        subtitle="Tambahkan figur baru ke dalam panggung semesta."
+      >
+        <form onSubmit={handleCreateCharacter} className="space-y-4 text-xs">
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Nama Tokoh *</label>
+            <input
+              type="text"
+              required
+              value={charName}
+              onChange={(e) => setCharName(e.target.value)}
+              placeholder="Contoh: Kaelen"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Peran Naratif</label>
+              <input
+                type="text"
+                value={charRole}
+                onChange={(e) => setCharRole(e.target.value)}
+                placeholder="Contoh: Protagonis / Pendamping"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Pekerjaan / Peran</label>
+              <input
+                type="text"
+                value={charOccupation}
+                onChange={(e) => setCharOccupation(e.target.value)}
+                placeholder="Contoh: Tabib / Peneliti"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Tipe Kepribadian</label>
+            <input
+              type="text"
+              value={charPersonality}
+              onChange={(e) => setCharPersonality(e.target.value)}
+              placeholder="Contoh: Tenang & Waspada"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
+            />
+          </div>
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Sifat & Karakter (Pisahkan koma)</label>
+            <input
+              type="text"
+              value={charTraits}
+              onChange={(e) => setCharTraits(e.target.value)}
+              placeholder="Contoh: Gigih, Cerdas, Setia"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
+            />
+          </div>
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Tujuan Pribadi</label>
+            <input
+              type="text"
+              value={charGoal}
+              onChange={(e) => setCharGoal(e.target.value)}
+              placeholder="Contoh: Menemukan obat penawar untuk desanya"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-            <Button kind="secondary" size="md" onClick={() => setIsMysteryModalOpen(false)}>
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+            <Button type="button" kind="secondary" size="sm" onClick={() => setIsCharModalOpen(false)}>
               Batal
             </Button>
-            <Button kind="clay" size="md" onClick={() => {}}>
-              <span>Simpan Misteri</span>
+            <Button type="submit" kind="clay" size="sm" disabled={isSubmitting || !charName.trim()}>
+              {isSubmitting ? 'Mendaftarkan...' : 'Simpan Tokoh'}
             </Button>
           </div>
         </form>

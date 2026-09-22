@@ -61,7 +61,7 @@ export function HistoryView({
                   <StatusBadge status={r.status} />
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 font-medium">
-                  <span>📅 {r.timestamp?.slice(0, 10) || '2024-01-01'}</span>
+                  <span>📅 {r.timestamp?.slice(0, 10) || 'Belum tercatat'}</span>
                   <span>{r.outputTokens || 0} Token</span>
                 </div>
               </div>
@@ -78,7 +78,7 @@ export function HistoryView({
         {/* Right Column: Detailed Reader & Run Info */}
         <div className="md:col-span-2">
           {selectedRun ? (
-            <Card className="p-6 space-y-6 bg-white border-2 border-slate-200 shadow-sm min-h-[550px]">
+            <Card className="p-6 space-y-6 bg-white border border-slate-200 shadow-xs min-h-[550px]">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div>
                   <span className="text-[10px] font-mono text-slate-400 uppercase">
@@ -99,32 +99,24 @@ export function HistoryView({
                 <Button
                   kind="secondary"
                   size="sm"
-                  onClick={() =>
-                    handleCopy(
-                      typeof selectedRun.output === 'string'
-                        ? selectedRun.output
-                        : JSON.stringify(selectedRun.output, null, 2)
-                    )
-                  }
+                  onClick={() => handleCopy(JSON.stringify(selectedRun.output, null, 2))}
+                  className="gap-1.5"
                 >
                   {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-                  <span>{copied ? 'Tersalin' : 'Salin Teks'}</span>
+                  <span>{copied ? 'Tersalin' : 'Salin Naskah'}</span>
                 </Button>
               </div>
 
-              {/* Story Content */}
-              <div className="p-6 bg-slate-50/70 rounded-2xl border border-slate-200 text-xs sm:text-sm text-slate-800 leading-relaxed font-serif whitespace-pre-wrap">
+              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 font-serif text-sm leading-relaxed text-slate-900 whitespace-pre-wrap max-h-[500px] overflow-y-auto">
                 {typeof selectedRun.output === 'string'
                   ? selectedRun.output
-                  : typeof selectedRun.output?.storyContent === 'string'
-                    ? selectedRun.output.storyContent
-                    : JSON.stringify(selectedRun.output || selectedRun.reason || 'Naskah tersimpan.', null, 2)}
+                  : JSON.stringify(selectedRun.output, null, 2)}
               </div>
             </Card>
           ) : (
-            <Card className="p-12 text-center text-xs text-slate-400">
-              Pilih salah satu arsip naskah dari daftar untuk melihat isi bab.
-            </Card>
+            <div className="h-full flex items-center justify-center p-12 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-100">
+              Pilih salah satu bab di sebelah kiri untuk membaca arsip naskah.
+            </div>
           )}
         </div>
       </div>
