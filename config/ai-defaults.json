@@ -1,0 +1,18 @@
+{
+  "phase": 26,
+  "provider": "gemini",
+  "requiredEnvironment": ["GEMINI_API_KEY", "GEMINI_MODEL"],
+  "optionalEnvironment": ["GEMINI_BASE_URL", "GEMINI_TIMEOUT_MS", "GEMINI_PROVIDER_ID"],
+  "defaults": {
+    "temperature": 0.2,
+    "maxOutputTokens": 4096,
+    "rejectAuthorityClaims": true
+  },
+  "authority": {
+    "modelIsProposalOnly": true,
+    "modelCannotMutateCanon": true,
+    "modelCannotChooseDeterministicIds": true,
+    "modelCannotChooseStorage": true,
+    "modelCannotAuthorizeMutation": true
+  }
+}
