@@ -1,17 +1,24 @@
-# Style System
+# Relationship System
 
-Patch untuk membangun **Character Style System** sesuai semantic system Pocer lama.
+Patch untuk mengaktifkan Relationship System sebagai pemilik fakta hubungan antar-aktor.
 
-## Ownership
-Style berada di bawah **CHARACTER_SYSTEM**. Sistem ini mengatur bagaimana karakter mengekspresikan sesuatu, bukan isi pengetahuan, personality, tindakan, atau kondisi emosional saat ini.
+## Prinsip
+- Group bukan Relationship.
+- Kemunculan bersama tidak otomatis menghasilkan Relationship.
+- Relationship memiliki status saat ini dan riwayat perubahan.
+- Pengetahuan karakter mengenai hubungan tetap berada di Knowledge System.
+- `AI_PROPOSAL` dan `UNKNOWN` tidak dapat menjadi sumber Relationship authoritative.
+- Relationship romantis/partner hanya sah bila gender kedua pihak telah diketahui sebagai `ACTOR` dan `ACTRESS`.
+- Konflik tidak diperbaiki otomatis.
 
-## Cakupan
-- language style, word choice, formality, sentence pattern, speech rhythm
-- emotional expression, humor, reaction, emphasis
-- verbal signature, common expressions, dialogue tendency, communication habits
-- context-specific style: casual, serious, conflict, emotional
-- style change dengan previous/current snapshot dan trigger
-- source/provenance dan validasi referensi Character ↔ Style
-- Story-derived style membutuhkan bukti berulang atau signifikansi naratif
+## Integrasi
+`relationship.ts` memperluas model Relationship lama tanpa menghapus field runtime existing. `validation.ts` memvalidasi endpoint, referensi dari Character, history perubahan, source, dan aturan gender untuk hubungan romantis/partner.
 
-Jalankan `node apply.mjs` dari root repository untuk memasang patch.
+## Instalasi
+Jalankan:
+
+```bash
+node apply.mjs
+```
+
+Installer membuat backup `*.bak` untuk file yang disentuh.
