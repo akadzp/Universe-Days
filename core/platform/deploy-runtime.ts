@@ -11,6 +11,7 @@ export interface DeploymentReadinessReport {
     readonly catalog: { readonly status: string; readonly total: number; readonly enabled: number };
     readonly providers: { readonly status: string; readonly connected: number; readonly health: Record<string, unknown> };
     readonly storage: { readonly status: string; readonly rootDir: string };
+    readonly universePersistence: { readonly status: string; readonly rootDir: string; readonly mounted: boolean; readonly storedUniverses: number };
     readonly scheduler: { readonly status: string; readonly activeSchedules: number; readonly jobStoreRoot: string };
     readonly costController: { readonly status: string; readonly totalCommittedCost: number };
     readonly hardening: { readonly status: string };
@@ -18,6 +19,7 @@ export interface DeploymentReadinessReport {
   readonly checks: {
     readonly engineAuthoritative: boolean;
     readonly persistenceAccessible: boolean;
+    readonly universePersistenceWired: boolean;
     readonly providersAvailable: boolean;
     readonly outputValidationActive: boolean;
     readonly schedulerDispatcherWired: boolean;
@@ -32,7 +34,8 @@ export function inspectDeploymentReadiness(runtime: ProductionRuntime): Deployme
   const committedCost = runtime.costController.totalCommitted();
   const providersAvailable = providers.length > 0;
   const schedulerDispatcherWired = Boolean(runtime.schedulerDispatcher && runtime.scheduledJobStore);
-  const overallStatus = providersAvailable && schedulerDispatcherWired ? 'READY' : providersAvailable ? 'DEGRADED' : 'DEGRADED';
+  const universePersistenceWired = Boolean(runtime.universeStore && runtime.universeInstances);
+  const overallStatus = providersAvailable && schedulerDispatcherWired && universePersistenceWired ? 'READY' : 'DEGRADED';
 
   return Object.freeze({
     status: overallStatus,
@@ -43,6 +46,12 @@ export function inspectDeploymentReadiness(runtime: ProductionRuntime): Deployme
       catalog: { status: pages.length > 0 ? 'READY' : 'EMPTY', total: pages.length, enabled: enabledPages },
       providers: { status: providersAvailable ? 'CONNECTED' : 'NO_PROVIDER', connected: providers.length, health: providerHealth },
       storage: { status: 'READY', rootDir: runtime.productionStore.getRootDir() },
+      universePersistence: {
+        status: universePersistenceWired ? 'READY' : 'UNWIRED',
+        rootDir: runtime.universeStore.getRootDir(),
+        mounted: runtime.universeAuthority.get() !== null,
+        storedUniverses: runtime.universeStore.listUniverseIds().length
+      },
       scheduler: {
         status: schedulerDispatcherWired ? 'READY' : 'UNWIRED',
         activeSchedules: runtime.scheduler.list().length,
@@ -54,6 +63,7 @@ export function inspectDeploymentReadiness(runtime: ProductionRuntime): Deployme
     checks: {
       engineAuthoritative: true,
       persistenceAccessible: true,
+      universePersistenceWired,
       providersAvailable,
       outputValidationActive: true,
       schedulerDispatcherWired
