@@ -1,11 +1,11 @@
 /**
- * Phase 7: Character Domain Integration Contract
+ * Character / Actor Domain Integration Contract
  *
  * Authoritative Owner: CHARACTER_SYSTEM
  * Domain ID: CHARACTER
  *
- * Defines abstract integration types for character queries, state references,
- * availability checks, and transition change requests.
+ * Character System owns Actor identity/classification and Character data.
+ * Consumers may READ and REQUEST changes; only the owner may APPLY.
  */
 
 import { DomainID, SystemID, makeDomainID, makeSystemID } from '../../types/identifiers.ts';
@@ -15,6 +15,12 @@ import {
   DomainChangeRequest,
   DomainChangeResult
 } from './common.ts';
+import {
+  ActorDataSource,
+  ActorEntityType,
+  ActorGender,
+  ActorLevel
+} from '../../universe/model/actor.ts';
 
 export const CHARACTER_DOMAIN_ID: DomainID = makeDomainID('CHARACTER');
 export const CHARACTER_OWNER_ID: SystemID = makeSystemID('CHARACTER_SYSTEM');
@@ -25,7 +31,9 @@ export enum CharacterOperation {
   GET_STATE_REF = 'GET_STATE_REF',
   GET_KNOWLEDGE_REF = 'GET_KNOWLEDGE_REF',
   GET_AVAILABILITY = 'GET_AVAILABILITY',
-  REQUEST_TRANSITION = 'REQUEST_TRANSITION'
+  REQUEST_TRANSITION = 'REQUEST_TRANSITION',
+  REQUEST_GROUP_CHANGE = 'REQUEST_GROUP_CHANGE',
+  REQUEST_LEVEL_CHANGE = 'REQUEST_LEVEL_CHANGE'
 }
 
 export interface CharacterRef {
@@ -38,6 +46,12 @@ export interface CharacterProfileRef {
   archetypeReference: string;
   canonicalName: string;
   status: 'ACTIVE' | 'INACTIVE' | 'DORMANT' | 'DECEASED' | 'UNKNOWN';
+  gender?: ActorGender;
+  level?: ActorLevel;
+  groupId?: string | null;
+  entityType?: ActorEntityType;
+  source?: ActorDataSource;
+  roleReferences?: readonly string[];
 }
 
 export interface CharacterStateRef {
@@ -69,6 +83,26 @@ export interface CharacterTransitionPayload {
   metadata?: Record<string, unknown>;
 }
 
+export interface CharacterGroupChangePayload {
+  characterId: string;
+  currentGroupId: string | null;
+  targetGroupId: string | null;
+  effectiveFrom: string;
+  reason?: string;
+  source: ActorDataSource;
+}
+
+export interface CharacterLevelChangePayload {
+  characterId: string;
+  currentLevel: ActorLevel;
+  targetLevel: ActorLevel;
+  currentGroupId: string | null;
+  targetGroupId: string | null;
+  effectiveFrom: string;
+  reason?: string;
+  source: ActorDataSource;
+}
+
 export type CharacterQueryRequest = DomainQueryRequest<{
   characterId?: string;
   scope?: string;
@@ -78,5 +112,8 @@ export type CharacterQueryResult = DomainQueryResult<
   CharacterProfileRef | CharacterStateRef | CharacterKnowledgeRef | CharacterAvailabilityRef | CharacterProfileRef[]
 >;
 
-export type CharacterChangeRequest = DomainChangeRequest<CharacterTransitionPayload>;
-export type CharacterChangeResult = DomainChangeResult<CharacterStateRef | CharacterAvailabilityRef>;
+export type CharacterChangeRequest =
+  DomainChangeRequest<CharacterTransitionPayload | CharacterGroupChangePayload | CharacterLevelChangePayload>;
+
+export type CharacterChangeResult =
+  DomainChangeResult<CharacterStateRef | CharacterAvailabilityRef | CharacterProfileRef>;
