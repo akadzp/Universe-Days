@@ -1,0 +1,53 @@
+{
+  "version": "2.0.0",
+  "registryName": "pocer-architecture-specification",
+  "specifications": [
+    {
+      "ruleId": "RULE-ARCH-001",
+      "version": "1.0.0",
+      "owner": "TEMPORAL_SYSTEM",
+      "domain": "TEMPORAL",
+      "type": "VALIDATION",
+      "dependencies": [],
+      "preconditions": [
+        { "operator": "EXISTS", "field": "values.currentCycle" }
+      ],
+      "conditions": [
+        { "operator": "GTE", "field": "values.currentCycle", "value": 0, "description": "Cycle must be non-negative" }
+      ],
+      "forbiddenConditions": [
+        { "operator": "EQ", "field": "flags.CORRUPTED", "value": true, "description": "State must not be corrupted" }
+      ],
+      "actions": [
+        { "type": "SET_FLAG", "target": "TEMPORAL_VALID", "value": true }
+      ],
+      "severity": "CRITICAL",
+      "enabled": true,
+      "rationale": "Temporal progression must remain non-retrograde and structurally valid.",
+      "invariants": ["currentCycle must exist", "currentCycle must be non-negative", "CORRUPTED must not be true"],
+      "metadata": { "monotonicity": true }
+    },
+    {
+      "ruleId": "RULE-ARCH-002",
+      "version": "1.0.0",
+      "owner": "INSTANCE_MANAGEMENT_SYSTEM",
+      "domain": "INSTANCE_MANAGEMENT",
+      "type": "GATE",
+      "dependencies": ["RULE-ARCH-001"],
+      "preconditions": [],
+      "conditions": [
+        { "operator": "EQ", "field": "enums.INSTANCE_STATUS", "value": "READY", "description": "Instance status must be READY" },
+        { "operator": "EQ", "field": "flags.CAN_WRITE", "value": true, "description": "Instance write flag must be true" }
+      ],
+      "forbiddenConditions": [],
+      "actions": [
+        { "type": "SET_FLAG", "target": "SNAPSHOT_PERMITTED", "value": true }
+      ],
+      "severity": "HIGH",
+      "enabled": true,
+      "rationale": "A persistent snapshot may only proceed when the instance is ready and writable.",
+      "invariants": ["INSTANCE_STATUS must be READY", "CAN_WRITE must be true"],
+      "metadata": { "snapshotIntegrity": true }
+    }
+  ]
+}
