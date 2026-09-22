@@ -6,25 +6,11 @@ import { getProductionRuntime } from '../runtime.ts';
 export const controlRouter = Router();
 function getRuntime(): ProductionRuntime { return getProductionRuntime(); }
 
-interface MountedUniverseState {
-  universeId: string;
-  universeDate: string;
-  periodId: string;
-  universeScope: string;
-  mountedAt: string;
-}
-
-let activeUniverse: MountedUniverseState | null = {
-  universeId: 'UNIVERSE_PRIME',
-  universeDate: '2026-03-22',
-  periodId: 'PERIOD_CYCLE_01',
-  universeScope: 'CANONICAL',
-  mountedAt: new Date().toISOString()
-};
-
 function systemComponents(current: ProductionRuntime) {
   const providers = current.providerRegistry.list().length;
+  const mounted = current.universeAuthority.get();
   return [
+    { id: 'universe_authority', name: 'Universe Authority', status: mounted ? 'READY' : 'NO_UNIVERSE', detail: mounted ? `Mounted ${mounted.universe.universeId}` : 'No authoritative Universe mounted' },
     { id: 'page_catalog', name: 'Page Catalog', status: 'WIRED', detail: `${current.pageCatalog.list().length} page definition(s)` },
     { id: 'parallel_executor', name: 'Parallel Page Executor', status: 'WIRED', detail: 'Bounded fan-out enabled' },
     { id: 'context_compiler', name: 'Production Context Compiler', status: 'WIRED', detail: 'Universe-aware context assembly active' },
@@ -47,35 +33,32 @@ controlRouter.get('/overview', async (_req, res) => {
   const models = current.providerRegistry.list();
   const runs = await current.productionStore.list({ limit: 1 });
   const lastRun = runs[0] ?? null;
-
-  const isMounted = activeUniverse !== null;
+  const mounted = current.universeAuthority.get();
 
   res.json({
     project: 'Pocer Universe Engine',
     uiPhase: 'Phase 34 — Production Control Center',
     runtime: { status: 'INITIALIZED', architecturePhase: 34, productionRoot: 'CONNECTED' },
     universe: {
-      status: isMounted ? 'READY' : 'NOT_INITIALIZED',
-      universeId: activeUniverse?.universeId ?? null,
-      universeDate: activeUniverse?.universeDate ?? null,
-      periodId: activeUniverse?.periodId ?? null,
-      universeScope: activeUniverse?.universeScope ?? null,
-      message: isMounted
-        ? `Authoritative Universe '${activeUniverse.universeId}' is mounted for period '${activeUniverse.periodId}'.`
-        : 'No active Universe instance is mounted in this UI session.'
+      status: mounted ? 'READY' : 'NOT_INITIALIZED',
+      universeId: mounted?.universe.universeId ?? null,
+      universeDate: mounted?.universe.temporalContext.currentUniverseDate ?? null,
+      periodId: mounted?.universe.temporalContext.currentPeriodRef ?? null,
+      universeScope: mounted?.universeScope ?? null,
+      message: mounted
+        ? `Authoritative Universe '${mounted.universe.universeId}' is mounted at ${mounted.universe.temporalContext.currentUniverseTime}.`
+        : 'No authoritative Universe instance is mounted.'
     },
     daily: {
-      status: isMounted ? 'READY' : 'WAITING_FOR_UNIVERSE',
-      message: isMounted
-        ? `Authoritative Daily Universe state is established for ${activeUniverse.universeDate}.`
-        : 'Daily Universe state will appear after an authoritative Universe instance is initialized.'
+      status: mounted ? 'WAITING_FOR_DAILY_CONTEXT' : 'WAITING_FOR_UNIVERSE',
+      message: mounted
+        ? 'Universe is mounted. Daily period context must come from the Daily Universe owner system.'
+        : 'Daily Universe state will appear after an authoritative Universe instance is mounted.'
     },
     story: {
-      status: isMounted ? 'READY' : 'WAITING_FOR_DAILY_CONTEXT',
-      storyId: isMounted ? `STORY_${activeUniverse.universeDate.replace(/-/g, '')}` : null,
-      message: isMounted
-        ? `Daily Story pipeline is downstream of valid ${activeUniverse.universeDate} context.`
-        : 'Daily Story remains downstream of validated Daily Universe context.'
+      status: 'WAITING_FOR_DAILY_CONTEXT',
+      storyId: null,
+      message: 'Daily Story requires a validated UniversePeriodContext or StoryProductionPackage.'
     },
     pages: {
       status: pages.length > 0 ? 'READY' : 'EMPTY',
@@ -103,19 +86,43 @@ controlRouter.get('/overview', async (_req, res) => {
   });
 });
 
-controlRouter.post('/universe/mount', (req, res) => {
-  activeUniverse = {
-    universeId: req.body?.universeId || 'UNIVERSE_PRIME',
-    universeDate: req.body?.universeDate || '2026-03-22',
-    periodId: req.body?.periodId || 'PERIOD_CYCLE_01',
-    universeScope: req.body?.universeScope || 'CANONICAL',
-    mountedAt: new Date().toISOString()
-  };
-  res.json({ success: true, universe: activeUniverse });
+controlRouter.post('/universe/mount', async (req, res) => {
+  try {
+    const current = getRuntime();
+    let universe = req.body?.universe;
+    let scope = req.body?.universeScope;
+
+    if (req.body?.mode === 'GENERIC_SEED') {
+      const { createGenericSeedUniverse } = await import('../../../core/universe/model/seed.ts');
+      universe = createGenericSeedUniverse();
+      scope = 'SANDBOX';
+    }
+
+    if (!universe) {
+      return res.status(400).json({
+        error: 'UNIVERSE_CONTEXT_REQUIRED',
+        message: 'Provide body.universe as a validated UniverseModel, or explicitly request mode=GENERIC_SEED for development.'
+      });
+    }
+
+    const mounted = current.universeAuthority.mount(universe, scope || 'CANONICAL');
+    return res.json({
+      success: true,
+      universe: {
+        universeId: mounted.universe.universeId,
+        universeDate: mounted.universe.temporalContext.currentUniverseDate,
+        universeTime: mounted.universe.temporalContext.currentUniverseTime,
+        periodId: mounted.universe.temporalContext.currentPeriodRef ?? null,
+        universeScope: mounted.universeScope
+      }
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error instanceof Error ? error.message : String(error) });
+  }
 });
 
 controlRouter.post('/universe/unmount', (_req, res) => {
-  activeUniverse = null;
+  getRuntime().universeAuthority.unmount();
   res.json({ success: true, message: 'Universe unmounted.' });
 });
 
@@ -126,37 +133,19 @@ controlRouter.get('/pages', (_req, res) => {
 
 controlRouter.post('/pages/seed', (_req, res) => {
   const current = getRuntime();
+  const mounted = current.universeAuthority.get();
+  if (!mounted) {
+    return res.status(409).json({ error: 'UNIVERSE_NOT_MOUNTED', message: 'Mount an authoritative Universe before seeding page definitions.' });
+  }
   const existing = current.pageCatalog.list();
   if (existing.length === 0) {
-    current.pageCatalog.register({
-      universeId: activeUniverse?.universeId || 'UNIVERSE_PRIME',
-      universeScope: activeUniverse?.universeScope || 'CANONICAL',
-      pageKey: 'DAILY_CHRONICLE',
-      pageScope: 'NARRATIVE',
-      status: 'ENABLED',
-      priority: 10,
-      tags: ['story', 'daily', 'chronicle']
-    });
-    current.pageCatalog.register({
-      universeId: activeUniverse?.universeId || 'UNIVERSE_PRIME',
-      universeScope: activeUniverse?.universeScope || 'CANONICAL',
-      pageKey: 'FACTION_STATUS_DIGEST',
-      pageScope: 'STATE',
-      status: 'ENABLED',
-      priority: 5,
-      tags: ['factions', 'state', 'digest']
-    });
-    current.pageCatalog.register({
-      universeId: activeUniverse?.universeId || 'UNIVERSE_PRIME',
-      universeScope: activeUniverse?.universeScope || 'CANONICAL',
-      pageKey: 'CONTINUITY_LEDGER_REPORT',
-      pageScope: 'CONTINUITY',
-      status: 'ENABLED',
-      priority: 3,
-      tags: ['continuity', 'audit']
-    });
+    const universeId = mounted.universe.universeId;
+    const universeScope = mounted.universeScope;
+    current.pageCatalog.register({ universeId, universeScope, pageKey: 'DAILY_CHRONICLE', pageScope: 'NARRATIVE', status: 'ENABLED', priority: 10, tags: ['story', 'daily', 'chronicle'] });
+    current.pageCatalog.register({ universeId, universeScope, pageKey: 'FACTION_STATUS_DIGEST', pageScope: 'STATE', status: 'ENABLED', priority: 5, tags: ['factions', 'state', 'digest'] });
+    current.pageCatalog.register({ universeId, universeScope, pageKey: 'CONTINUITY_LEDGER_REPORT', pageScope: 'CONTINUITY', status: 'ENABLED', priority: 3, tags: ['continuity', 'audit'] });
   }
-  res.json({ success: true, count: current.pageCatalog.list().length, definitions: current.pageCatalog.list() });
+  return res.json({ success: true, count: current.pageCatalog.list().length, definitions: current.pageCatalog.list() });
 });
 
 controlRouter.post('/pages/:pageDefinitionId/toggle', (req, res) => {
@@ -171,11 +160,7 @@ controlRouter.post('/pages/:pageDefinitionId/toggle', (req, res) => {
 
 controlRouter.get('/ai/status', (_req, res) => {
   const current = getRuntime();
-  res.json({
-    status: current.ai.hasProvider() ? 'READY' : 'NO_PROVIDER',
-    providers: current.providerRegistry.list().map(adapter => adapter.profile),
-    health: current.providerRegistry.healthSnapshot()
-  });
+  res.json({ status: current.ai.hasProvider() ? 'READY' : 'NO_PROVIDER', providers: current.providerRegistry.list().map(adapter => adapter.profile), health: current.providerRegistry.healthSnapshot() });
 });
 
 controlRouter.get('/production/usage', (_req, res) => {
@@ -185,14 +170,19 @@ controlRouter.get('/production/usage', (_req, res) => {
 controlRouter.post('/produce', async (req, res) => {
   try {
     const current = getRuntime();
-    const universeId = activeUniverse?.universeId || req.body?.universeId || 'UNIVERSE_PRIME';
-    const universeScope = activeUniverse?.universeScope || req.body?.universeScope || 'CANONICAL';
-    const purpose = req.body?.purpose || 'DAILY_STORY';
-    const userInstruction = req.body?.userInstruction || 'Synthesize canonical daily log and world status.';
+    const mounted = current.universeAuthority.get();
+    if (!mounted) {
+      return res.status(409).json({ error: 'UNIVERSE_NOT_MOUNTED', message: 'Mount an authoritative Universe before production execution.' });
+    }
+
+    const purpose = req.body?.purpose || 'GENERAL_PRODUCTION';
+    const userInstruction = req.body?.userInstruction || 'Generate a proposal from the current authoritative Universe.';
 
     const result = await current.productionRunner.run({
-      universeId,
-      universeScope,
+      ...req.body,
+      universe: mounted.universe,
+      universeId: mounted.universe.universeId,
+      universeScope: mounted.universeScope,
       purpose,
       userInstruction
     });
