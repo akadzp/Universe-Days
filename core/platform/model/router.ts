@@ -5,6 +5,10 @@ const tierRank = { LOCAL: 1, LOW_COST: 2, STANDARD: 3, HIGH_CAPABILITY: 4 } as c
 export class ModelRouter {
   public constructor(private readonly adapters: readonly ModelAdapter[]) {}
 
+  public list(): readonly ModelAdapter[] {
+    return this.adapters;
+  }
+
   public resolve(request: GenerationRequest, policy: ModelRoutingPolicy): ModelAdapter {
     const candidates = this.adapters.filter(adapter => {
       const profile = adapter.profile;
