@@ -1,15 +1,8 @@
 /**
- * Phase 8: Universe Model Validation Layer
+ * Universe Model Validation Layer
  *
- * Provides comprehensive, non-repairing validation of the Universe Data Model:
- * - ID validation
- * - Cross-domain reference integrity
- * - Domain ownership checks
- * - Temporal metadata validity
- * - Circular hierarchy / dependency detection
- * - Historical revision immutability
- *
- * RULE: Validation detects issues and returns FAIL/BLOCK/CONFLICT. It NEVER auto-repairs invalid data.
+ * Validates structure, cross-domain references, ownership bindings, temporal
+ * metadata, and Actor classification rules. Validation never auto-repairs data.
  */
 
 import { UniverseModel } from './universe.ts';
@@ -17,6 +10,7 @@ import { Result, success, failure } from '../../types/result.ts';
 import { EngineErrorCode } from '../../types/errors.ts';
 import { EntityIdentityFactory } from './identity.ts';
 import { isKnownDomain } from '../../architecture/ownership.ts';
+import { validateActorClassification } from './actor.ts';
 
 export interface ValidationIssue {
   readonly code: string;
@@ -31,13 +25,9 @@ export interface UniverseValidationReport {
 }
 
 export class UniverseModelValidator {
-  /**
-   * Validates an entire UniverseModel snapshot against all structural and domain rules.
-   */
   public static validate(universe: UniverseModel): UniverseValidationReport {
     const issues: ValidationIssue[] = [];
 
-    // 1. Root Identity & Temporal Context
     if (!universe.universeId || !EntityIdentityFactory.isValidId(universe.universeId)) {
       issues.push({
         code: 'INVALID_UNIVERSE_ID',
@@ -56,15 +46,12 @@ export class UniverseModelValidator {
       });
     }
 
-    // Index all known entity IDs for cross-reference validation
     const knownEntityIds = new Set<string>();
-    const characterIds = new Set<string>();
     const locationIds = new Set<string>();
-    const objectIds = new Set<string>();
 
     for (const [id, char] of Object.entries(universe.characters || {})) {
-      characterIds.add(id);
       knownEntityIds.add(id);
+
       if (char.identity.id !== id) {
         issues.push({
           code: 'ID_KEY_MISMATCH',
@@ -73,6 +60,19 @@ export class UniverseModelValidator {
           severity: 'ERROR'
         });
       }
+
+      if (char.actor) {
+        const actorValidation = validateActorClassification(char.actor);
+        for (const issue of actorValidation.issues) {
+          issues.push({
+            code: issue.code,
+            path: `characters.${id}.actor.${issue.path}`,
+            message: issue.message,
+            severity: 'ERROR'
+          });
+        }
+      }
+
       if (char.stateReference && (!universe.states || !universe.states[char.stateReference])) {
         issues.push({
           code: 'DANGLING_STATE_REFERENCE',
@@ -97,7 +97,6 @@ export class UniverseModelValidator {
     }
 
     for (const [id, obj] of Object.entries(universe.objects || {})) {
-      objectIds.add(id);
       knownEntityIds.add(id);
       if (obj.identity.id !== id) {
         issues.push({
@@ -109,7 +108,6 @@ export class UniverseModelValidator {
       }
     }
 
-    // 2. Cross-domain reference validation: Relationships
     for (const [relId, rel] of Object.entries(universe.relationships || {})) {
       if (!rel.subjectRef || !rel.targetRef) {
         issues.push({
@@ -137,7 +135,6 @@ export class UniverseModelValidator {
       }
     }
 
-    // 3. Object references
     for (const [objId, obj] of Object.entries(universe.objects || {})) {
       if (obj.ownershipRef && !knownEntityIds.has(obj.ownershipRef)) {
         issues.push({
@@ -165,7 +162,6 @@ export class UniverseModelValidator {
       }
     }
 
-    // 4. Circular Location Hierarchy Detection
     for (const [locId, loc] of Object.entries(universe.locations || {})) {
       let currentParent = loc.parentLocationRef;
       const visited = new Set<string>([locId]);
@@ -185,9 +181,7 @@ export class UniverseModelValidator {
       }
     }
 
-    // 5. Process Dependency Cycle Detection
-    for (const [procId, proc] of Object.entries(universe.processes || {})) {
-      const visited = new Set<string>();
+    for (const [procId] of Object.entries(universe.processes || {})) {
       const checkCycles = (currId: string, path: string[]): boolean => {
         if (path.includes(currId)) {
           issues.push({
@@ -198,13 +192,10 @@ export class UniverseModelValidator {
           });
           return true;
         }
-        visited.add(currId);
         const currProc = universe.processes[currId];
-        if (currProc && currProc.dependencies) {
+        if (currProc?.dependencies) {
           for (const depId of currProc.dependencies) {
-            if (checkCycles(depId, [...path, currId])) {
-              return true;
-            }
+            if (checkCycles(depId, [...path, currId])) return true;
           }
         }
         return false;
@@ -212,10 +203,8 @@ export class UniverseModelValidator {
       checkCycles(procId, []);
     }
 
-    // 6. Domain Ownership Verification
     for (const binding of universe.domainBindings || []) {
-      const isRegistered = isKnownDomain(String(binding.domainId));
-      if (!isRegistered) {
+      if (!isKnownDomain(String(binding.domainId))) {
         issues.push({
           code: 'UNKNOWN_DOMAIN_BINDING',
           path: `domainBindings.${binding.domainId}`,
@@ -226,15 +215,9 @@ export class UniverseModelValidator {
     }
 
     const hasErrors = issues.some(i => i.severity === 'ERROR');
-    return {
-      isValid: !hasErrors,
-      issues: Object.freeze(issues)
-    };
+    return { isValid: !hasErrors, issues: Object.freeze(issues) };
   }
 
-  /**
-   * Helper that throws or returns a Result for integration pipelines.
-   */
   public static validateAsResult(universe: UniverseModel): Result<UniverseModel> {
     const report = this.validate(universe);
     if (!report.isValid) {
