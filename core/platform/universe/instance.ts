@@ -1,4 +1,4 @@
-/** Phase 03 — persistent Universe instance boundary. */
+/** Phase 34 — persistent Universe instance boundary with explicit ownership. */
 
 import type { SystemID } from '../../types/identifiers.ts';
 import { makeSystemID } from '../../types/identifiers.ts';
@@ -28,11 +28,7 @@ export class UniverseInstanceManager {
   private readonly store: FileUniverseSnapshotStore;
   private readonly persistenceActor: SystemID;
 
-  public constructor(
-    authority: UniverseAuthorityStore,
-    store: FileUniverseSnapshotStore,
-    options?: UniverseInstanceManagerOptions
-  ) {
+  public constructor(authority: UniverseAuthorityStore, store: FileUniverseSnapshotStore, options?: UniverseInstanceManagerOptions) {
     this.authority = authority;
     this.store = store;
     this.persistenceActor = options?.persistenceActor ?? INSTANCE_MANAGEMENT_ACTOR;
@@ -47,15 +43,16 @@ export class UniverseInstanceManager {
 
   public load(universeId: string, universeScope: string): MountedUniverse {
     const universe = this.store.load(universeId);
-    if (!universe) {
-      throw new Error(`Persistent Universe '${universeId}' was not found.`);
-    }
-
-    const mounted = this.authority.mount(universe, universeScope);
-    if (mounted.universeScope !== 'SANDBOX') {
-      this.store.setCurrent({ universeId: mounted.universe.universeId, universeScope: mounted.universeScope });
-    }
+    if (!universe) throw new Error(`Persistent Universe '${universeId}' was not found.`);
+    const mounted = this.authority.mountAuthoritative(universe, universeScope, this.persistenceActor);
+    this.store.setCurrent({ universeId: mounted.universe.universeId, universeScope: mounted.universeScope });
     return mounted;
+  }
+
+  public loadSandbox(universeId: string): MountedUniverse {
+    const universe = this.store.load(universeId);
+    if (!universe) throw new Error(`Persistent Universe '${universeId}' was not found.`);
+    return this.authority.mountSandbox(universe);
   }
 
   public loadCurrent(): MountedUniverse | null {
@@ -79,7 +76,8 @@ export class UniverseInstanceManager {
     return mounted;
   }
 
-  public clearCurrent(): void {
+  public clearCurrent(actor: SystemID = this.persistenceActor): void {
+    this.assertPersistenceAuthority(actor);
     this.store.clearCurrent();
   }
 
