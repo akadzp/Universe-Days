@@ -1,17 +1,28 @@
-PHASE 27 — PRODUCTION CONTEXT COMPILER
+POCER UNIVERSE ENGINE
+PHASE 28 -> PHASE 34 COMPLETE OVERLAY
 
-Added:
-- core/platform/context/compiler.ts
-- core/platform/context/index.ts (overlay)
-- core/platform/final/runtime.ts (overlay; exposes contextCompiler)
-- PHASE27_NOTES.md
+NEW:
+core/platform/validation/
+core/platform/production/
+core/platform/persistence/
+core/platform/scheduler/
+core/platform/cost/
+core/platform/providers/
+core/platform/deploy-runtime.ts
+app/api/routes/production.ts
+app/api/runtime.ts
+Dockerfile
+.dockerignore
+docker-compose.yml
+.env.production.example
+config/production-runtime.json
+scripts/healthcheck.mjs
+deploy/README.md
 
-Integration:
-- Reuses Phase 17 token budget/planning.
-- Reuses Phase 18 deterministic context compression.
-- Reuses Phase 23 provider-neutral model routing.
-- Reuses Phase 26 AI proposal boundary.
-
-No package dependencies added.
-No Canon mutation added.
-No dedicated test phase added.
+REPLACED INTEGRATION FILES:
+core/platform/ai/production.ts
+core/platform/final/runtime.ts
+core/platform/index.ts
+app/api/server.ts
+app/api/runtime.ts
+app/api/routes/control.ts

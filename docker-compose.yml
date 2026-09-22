@@ -1,0 +1,21 @@
+services:
+  pocer-universe:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      POCER_DATA_DIR: /app/data/runtime/production-runs
+    volumes:
+      - pocer-runtime-data:/app/data/runtime
+    healthcheck:
+      test: ["CMD", "node", "scripts/healthcheck.mjs"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+volumes:
+  pocer-runtime-data:
