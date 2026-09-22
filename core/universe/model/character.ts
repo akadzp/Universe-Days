@@ -2,7 +2,7 @@
  * Character / Actor Domain Data Model
  *
  * Character data remains a domain-owned profile connected to State, Knowledge,
- * Relationship, Location, and Continuity by stable references.
+ * Relationship, Location, Behavior, and Continuity by stable references.
  */
 
 import { EntityIdentity } from './identity.ts';
@@ -16,6 +16,7 @@ export interface CharacterEntity {
   readonly identity: EntityIdentity;
   readonly actor?: ActorClassification;
   readonly profile?: CharacterProfile;
+  readonly behaviorReferences?: readonly string[];
   readonly roleReferences: readonly string[];
   readonly stateReference?: string;
   readonly knowledgeReferences: readonly string[];
