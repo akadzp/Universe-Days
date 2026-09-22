@@ -11,6 +11,7 @@ function systemComponents(current: ProductionRuntime) {
   const mounted = current.universeAuthority.get();
   return [
     { id: 'universe_authority', name: 'Universe Authority', status: mounted ? 'READY' : 'NO_UNIVERSE', detail: mounted ? `Mounted ${mounted.universe.universeId}` : 'No authoritative Universe mounted' },
+    { id: 'universe_persistence', name: 'Universe Persistence', status: 'WIRED', detail: `${current.universeStore.listUniverseIds().length} stored Universe snapshot(s)` },
     { id: 'page_catalog', name: 'Page Catalog', status: 'WIRED', detail: `${current.pageCatalog.list().length} page definition(s)` },
     { id: 'parallel_executor', name: 'Parallel Page Executor', status: 'WIRED', detail: 'Bounded fan-out enabled' },
     { id: 'context_compiler', name: 'Production Context Compiler', status: 'WIRED', detail: 'Universe-aware context assembly active' },
@@ -34,6 +35,7 @@ controlRouter.get('/overview', async (_req, res) => {
   const runs = await current.productionStore.list({ limit: 1 });
   const lastRun = runs[0] ?? null;
   const mounted = current.universeAuthority.get();
+  const storedCurrent = current.universeStore.getCurrent();
 
   res.json({
     project: 'Pocer Universe Engine',
@@ -45,9 +47,14 @@ controlRouter.get('/overview', async (_req, res) => {
       universeDate: mounted?.universe.temporalContext.currentUniverseDate ?? null,
       periodId: mounted?.universe.temporalContext.currentPeriodRef ?? null,
       universeScope: mounted?.universeScope ?? null,
+      storedCurrent,
+      storedCount: current.universeStore.listUniverseIds().length,
+      storageRoot: current.universeStore.getRootDir(),
       message: mounted
         ? `Authoritative Universe '${mounted.universe.universeId}' is mounted at ${mounted.universe.temporalContext.currentUniverseTime}.`
-        : 'No authoritative Universe instance is mounted.'
+        : storedCurrent
+          ? `No Universe is mounted. Persisted current Universe '${storedCurrent.universeId}' is available for explicit load.`
+          : 'No authoritative Universe instance is mounted and no persisted current Universe is configured.'
     },
     daily: {
       status: mounted ? 'WAITING_FOR_DAILY_CONTEXT' : 'WAITING_FOR_UNIVERSE',
@@ -86,36 +93,116 @@ controlRouter.get('/overview', async (_req, res) => {
   });
 });
 
+controlRouter.get('/universe/storage', (_req, res) => {
+  const current = getRuntime();
+  res.json(current.universeInstances.status());
+});
+
+controlRouter.post('/universe/load', (req, res) => {
+  try {
+    const universeId = typeof req.body?.universeId === 'string' ? req.body.universeId : '';
+    const universeScope = typeof req.body?.universeScope === 'string' ? req.body.universeScope : 'CANONICAL';
+    if (!universeId) return res.status(400).json({ error: 'UNIVERSE_ID_REQUIRED' });
+    const mounted = getRuntime().universeInstances.load(universeId, universeScope);
+    return res.json({ success: true, source: 'PERSISTED_SNAPSHOT', universe: {
+      universeId: mounted.universe.universeId,
+      universeDate: mounted.universe.temporalContext.currentUniverseDate,
+      universeTime: mounted.universe.temporalContext.currentUniverseTime,
+      periodId: mounted.universe.temporalContext.currentPeriodRef ?? null,
+      universeScope: mounted.universeScope
+    }});
+  } catch (error) {
+    return res.status(404).json({ error: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+controlRouter.post('/universe/load-current', (_req, res) => {
+  try {
+    const mounted = getRuntime().universeInstances.loadCurrent();
+    if (!mounted) return res.status(404).json({ error: 'PERSISTED_CURRENT_UNIVERSE_NOT_FOUND' });
+    return res.json({ success: true, source: 'PERSISTED_CURRENT', universe: {
+      universeId: mounted.universe.universeId,
+      universeDate: mounted.universe.temporalContext.currentUniverseDate,
+      universeTime: mounted.universe.temporalContext.currentUniverseTime,
+      periodId: mounted.universe.temporalContext.currentPeriodRef ?? null,
+      universeScope: mounted.universeScope
+    }});
+  } catch (error) {
+    return res.status(409).json({ error: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+controlRouter.post('/universe/persist', (_req, res) => {
+  try {
+    const current = getRuntime();
+    const mounted = current.universeAuthority.get();
+    if (!mounted) return res.status(409).json({ error: 'UNIVERSE_NOT_MOUNTED' });
+    current.universeInstances.persistMounted();
+    const currentPointer = mounted.universeScope === 'SANDBOX' ? null : current.universeStore.getCurrent();
+    return res.json({
+      success: true,
+      universeId: mounted.universe.universeId,
+      universeScope: mounted.universeScope,
+      snapshotPersisted: true,
+      currentPointerUpdated: currentPointer !== null,
+      currentPointer
+    });
+  } catch (error) {
+    return res.status(409).json({ error: error instanceof Error ? error.message : String(error) });
+  }
+});
+
 controlRouter.post('/universe/mount', async (req, res) => {
   try {
     const current = getRuntime();
-    let universe = req.body?.universe;
-    let scope = req.body?.universeScope;
 
-    if (req.body?.mode === 'GENERIC_SEED') {
-      const { createGenericSeedUniverse } = await import('../../../core/universe/model/seed.ts');
-      universe = createGenericSeedUniverse();
-      scope = 'SANDBOX';
-    }
-
-    if (!universe) {
-      return res.status(400).json({
-        error: 'UNIVERSE_CONTEXT_REQUIRED',
-        message: 'Provide body.universe as a validated UniverseModel, or explicitly request mode=GENERIC_SEED for development.'
-      });
-    }
-
-    const mounted = current.universeAuthority.mount(universe, scope || 'CANONICAL');
-    return res.json({
-      success: true,
-      universe: {
+    if (req.body?.mode === 'PERSISTED_CURRENT') {
+      const mounted = current.universeInstances.loadCurrent();
+      if (!mounted) return res.status(404).json({ error: 'PERSISTED_CURRENT_UNIVERSE_NOT_FOUND' });
+      return res.json({ success: true, source: 'PERSISTED_CURRENT', universe: {
         universeId: mounted.universe.universeId,
         universeDate: mounted.universe.temporalContext.currentUniverseDate,
         universeTime: mounted.universe.temporalContext.currentUniverseTime,
         periodId: mounted.universe.temporalContext.currentPeriodRef ?? null,
         universeScope: mounted.universeScope
-      }
-    });
+      }});
+    }
+
+    if (req.body?.mode === 'GENERIC_SEED') {
+      const { createGenericSeedUniverse } = await import('../../../core/universe/model/seed.ts');
+      const mounted = current.universeAuthority.mount(createGenericSeedUniverse(), 'SANDBOX');
+      return res.json({ success: true, source: 'GENERIC_SEED', universe: {
+        universeId: mounted.universe.universeId,
+        universeDate: mounted.universe.temporalContext.currentUniverseDate,
+        universeTime: mounted.universe.temporalContext.currentUniverseTime,
+        periodId: mounted.universe.temporalContext.currentPeriodRef ?? null,
+        universeScope: mounted.universeScope
+      }});
+    }
+
+    const universe = req.body?.universe;
+    const scope = typeof req.body?.universeScope === 'string' ? req.body.universeScope : 'SANDBOX';
+    if (!universe) {
+      return res.status(400).json({
+        error: 'UNIVERSE_CONTEXT_REQUIRED',
+        message: 'Use mode=PERSISTED_CURRENT or mode=GENERIC_SEED. Direct model mounting is permitted only for SANDBOX scope.'
+      });
+    }
+    if (scope !== 'SANDBOX') {
+      return res.status(403).json({
+        error: 'DIRECT_CANONICAL_MOUNT_PROHIBITED',
+        message: 'Canonical Universe instances must be loaded from the persistent instance store or mounted by an owner subsystem, not supplied directly by the control API.'
+      });
+    }
+
+    const mounted = current.universeAuthority.mount(universe, scope);
+    return res.json({ success: true, source: 'SANDBOX_INPUT', universe: {
+      universeId: mounted.universe.universeId,
+      universeDate: mounted.universe.temporalContext.currentUniverseDate,
+      universeTime: mounted.universe.temporalContext.currentUniverseTime,
+      periodId: mounted.universe.temporalContext.currentPeriodRef ?? null,
+      universeScope: mounted.universeScope
+    }});
   } catch (error) {
     return res.status(400).json({ error: error instanceof Error ? error.message : String(error) });
   }
@@ -123,7 +210,7 @@ controlRouter.post('/universe/mount', async (req, res) => {
 
 controlRouter.post('/universe/unmount', (_req, res) => {
   getRuntime().universeAuthority.unmount();
-  res.json({ success: true, message: 'Universe unmounted.' });
+  res.json({ success: true, message: 'Universe unmounted. Persistent snapshots are unchanged.' });
 });
 
 controlRouter.get('/pages', (_req, res) => {
