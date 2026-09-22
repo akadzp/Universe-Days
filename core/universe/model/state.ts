@@ -1,8 +1,9 @@
 /**
- * Phase 8: State Domain Data Model
+ * State Domain Data Model
  *
- * Implements state representation compatible with the Phase 2 State Machine Engine.
- * Represents entity conditions at a given time without reimplementing state transition logic.
+ * StateEntity tetap menjadi model State generik. Character State menggunakan
+ * subtype terstruktur melalui stateType = CHARACTER dan currentValue bertipe
+ * CharacterStateSnapshot.
  */
 
 import { EntityID } from '../../types/identifiers.ts';
@@ -26,6 +27,13 @@ export interface StateEntity {
   };
   readonly transitionCount: number;
   readonly continuityReference?: string;
+  readonly stateEvent?: string;
+  readonly stateChange?: string;
+  readonly changeTrigger?: string;
+  readonly changeDate?: string;
+  readonly sourceEventReference?: string;
+  readonly source?: string;
+  readonly fieldSources?: Readonly<Record<string, string>>;
   readonly history: RevisionHistory;
   readonly provenance: SourceAuthorityMetadata;
 }

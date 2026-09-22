@@ -2,8 +2,8 @@
  * Universe Model Validation Layer
  *
  * Validates structure, cross-domain references, ownership bindings, temporal
- * metadata, Actor classification, and Character Profile rules. Validation
- * never auto-repairs data.
+ * metadata, Actor classification, Character Profile, Behavior, and Character State.
+ * Validation never auto-repairs data.
  */
 
 import { UniverseModel } from './universe.ts';
@@ -13,6 +13,8 @@ import { EntityIdentityFactory } from './identity.ts';
 import { isKnownDomain } from '../../architecture/ownership.ts';
 import { validateActorClassification } from './actor.ts';
 import { validateCharacterProfile } from './character-profile.ts';
+import { validateBehavior } from './behavior.ts';
+import { CharacterStateEntity, validateCharacterState } from './character-state.ts';
 
 export interface ValidationIssue {
   readonly code: string;
@@ -87,6 +89,24 @@ export class UniverseModelValidator {
         }
       }
 
+      for (const behaviorRef of char.behaviorReferences ?? []) {
+        if (!universe.behaviors || !universe.behaviors[behaviorRef]) {
+          issues.push({
+            code: 'DANGLING_BEHAVIOR_REFERENCE',
+            path: `characters.${id}.behaviorReferences`,
+            message: `Character behavior reference '${behaviorRef}' not found in behaviors`,
+            severity: 'ERROR'
+          });
+        } else if (universe.behaviors[behaviorRef].characterId !== id) {
+          issues.push({
+            code: 'BEHAVIOR_CHARACTER_MISMATCH',
+            path: `characters.${id}.behaviorReferences.${behaviorRef}`,
+            message: `Behavior '${behaviorRef}' belongs to character '${universe.behaviors[behaviorRef].characterId}', not '${id}'`,
+            severity: 'ERROR'
+          });
+        }
+      }
+
       if (char.stateReference && (!universe.states || !universe.states[char.stateReference])) {
         issues.push({
           code: 'DANGLING_STATE_REFERENCE',
@@ -94,6 +114,47 @@ export class UniverseModelValidator {
           message: `Character state '${char.stateReference}' not found in states`,
           severity: 'ERROR'
         });
+      } else if (char.stateReference && universe.states[char.stateReference]) {
+        const state = universe.states[char.stateReference];
+        if (state.entityRef !== id) {
+          issues.push({
+            code: 'STATE_CHARACTER_MISMATCH',
+            path: `characters.${id}.stateReference`,
+            message: `State '${char.stateReference}' belongs to '${state.entityRef}', not '${id}'`,
+            severity: 'ERROR'
+          });
+        }
+      }
+    }
+
+    for (const [id, state] of Object.entries(universe.states || {})) {
+      if (state.stateId !== id) {
+        issues.push({
+          code: 'ID_KEY_MISMATCH',
+          path: `states.${id}`,
+          message: `State map key '${id}' does not match state id '${state.stateId}'`,
+          severity: 'ERROR'
+        });
+      }
+      if (!universe.characters[state.entityRef]) {
+        issues.push({
+          code: 'DANGLING_STATE_CHARACTER_REFERENCE',
+          path: `states.${id}.entityRef`,
+          message: `State character '${state.entityRef}' not found in characters`,
+          severity: 'ERROR'
+        });
+      }
+
+      if (state.stateType === 'CHARACTER') {
+        const stateValidation = validateCharacterState(state as CharacterStateEntity);
+        for (const issue of stateValidation.issues) {
+          issues.push({
+            code: issue.code,
+            path: `states.${id}.${issue.path}`,
+            message: issue.message,
+            severity: 'ERROR'
+          });
+        }
       }
     }
 
