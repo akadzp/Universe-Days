@@ -1,0 +1,1 @@
+const port=Number(process.env.PORT||3000);try{const r=await fetch(`http://127.0.0.1:${port}/api/health`);if(!r.ok)process.exit(1);const p=await r.json();process.exit(p?.status==='ok'?0:1);}catch{process.exit(1);}
