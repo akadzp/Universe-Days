@@ -1,15 +1,21 @@
-PHASE 25.5 — UI CONTROL CENTER
+PHASE 26 — AI PRODUCTION INTEGRATION
 
-NEW
+ADDITIVE / OVERLAY FILES
+- core/platform/ai/types.ts
+- core/platform/ai/guard.ts
+- core/platform/ai/gemini.ts
+- core/platform/ai/production.ts
+- core/platform/ai/index.ts
+- config/ai-defaults.json
+- .env.example
+- llm_README_PHASE26.md
+- PHASE26_NOTES.md
+
+REPLACEMENT / UPDATED FILES
+- core/platform/model/index.ts
+- core/platform/final/runtime.ts
+- core/platform/index.ts
 - app/api/routes/control.ts
-- PHASE25_5_UI_NOTES.md
-- PATCH_MANIFEST.txt
 
-REPLACE / OVERLAY
-- app/api/server.ts
-- app/web/App.tsx
-- app/web/styles/theme.css
-
-The UI now reads /api/control/overview instead of the obsolete Phase 1–6 dashboard status model.
-Legacy /api/architecture remains available.
-- core/platform/model/router.ts (adds read-only list() accessor for runtime inspection)
+No package.json replacement is required. The adapter uses the server's native fetch implementation.
+Do not commit GEMINI_API_KEY. Put provider secrets in the server environment.
