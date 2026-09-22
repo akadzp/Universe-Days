@@ -2,7 +2,8 @@
  * Universe Model Validation Layer
  *
  * Validates structure, cross-domain references, ownership bindings, temporal
- * metadata, and Actor classification rules. Validation never auto-repairs data.
+ * metadata, Actor classification, and Character Profile rules. Validation
+ * never auto-repairs data.
  */
 
 import { UniverseModel } from './universe.ts';
@@ -11,6 +12,7 @@ import { EngineErrorCode } from '../../types/errors.ts';
 import { EntityIdentityFactory } from './identity.ts';
 import { isKnownDomain } from '../../architecture/ownership.ts';
 import { validateActorClassification } from './actor.ts';
+import { validateCharacterProfile } from './character-profile.ts';
 
 export interface ValidationIssue {
   readonly code: string;
@@ -67,6 +69,18 @@ export class UniverseModelValidator {
           issues.push({
             code: issue.code,
             path: `characters.${id}.actor.${issue.path}`,
+            message: issue.message,
+            severity: 'ERROR'
+          });
+        }
+      }
+
+      if (char.profile) {
+        const profileValidation = validateCharacterProfile(char.profile);
+        for (const issue of profileValidation.issues) {
+          issues.push({
+            code: issue.code,
+            path: `characters.${id}.profile.${issue.path}`,
             message: issue.message,
             severity: 'ERROR'
           });

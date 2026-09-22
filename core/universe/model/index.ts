@@ -8,6 +8,7 @@ export * from './identity.ts';
 export * from './history.ts';
 export * from './provenance.ts';
 export * from './actor.ts';
+export * from './character-profile.ts';
 export * from './character.ts';
 export * from './relationship.ts';
 export * from './object.ts';
