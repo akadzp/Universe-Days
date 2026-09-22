@@ -1,1 +1,1 @@
-.
+export * from './authority.ts';
