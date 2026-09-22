@@ -1,21 +1,20 @@
-# Behavior System
+# Knowledge System Package
 
-Patch untuk menambahkan **Behavior System** ke Universe-Days.
+Package ini menambahkan implementasi **Knowledge System** ke repository Universe-Days.
+
+## Target
+
+- `core/universe/model/knowledge.ts`
+- `core/universe/model/character.ts`
+- `core/universe/model/validation.ts`
+- `core/universe/model/index.ts`
 
 ## Prinsip
-- Behavior adalah pola perilaku, bukan Personality, State, Knowledge, atau Relationship.
-- Behavior tidak boleh diisi dengan asumsi.
-- Satu kejadian tunggal yang tidak signifikan tidak cukup untuk membentuk pola persisten.
-- Perubahan behavior wajib memiliki trigger/basis peristiwa dan mempertahankan pola lama sebagai history.
-- `AI_PROPOSAL` dan `UNKNOWN` tidak dapat menjadi sumber otoritatif.
-- Character hanya menyimpan referensi Behavior; data Behavior sendiri tersimpan pada koleksi Universe sebagai entitas domain model.
 
-## Isi
-- `core/universe/model/behavior.ts`
-- perubahan `character.ts` untuk `behaviorReferences`
-- perubahan `types.ts` untuk `EntityType.BEHAVIOR`
-- perubahan `universe.ts` agar Behavior tersedia sebagai koleksi model
-- perubahan `validation.ts` dan `index.ts`
-- dokumentasi dan unit test
+Knowledge adalah pengetahuan milik Actor, bukan kebenaran objektif Universe.
+Perubahan harus mempunyai dasar yang dapat ditelusuri dan tidak menghapus riwayat.
 
-Gunakan `node apply.mjs` dari root repository untuk memasang patch.
+Source authoritative: `USER_DEFINED`, `STORY_DERIVED`.
+Source proposal/non-authoritative: `AI_PROPOSAL`, `UNKNOWN`.
+
+Package memakai nama file repository yang tetap; tidak membuat nama `v2`, `phaseXX`, atau `overlay`.

@@ -24,75 +24,53 @@ function backup(rel) {
 }
 
 const files = [
-  'core/universe/model/types.ts',
   'core/universe/model/character.ts',
   'core/universe/model/index.ts',
-  'core/universe/model/universe.ts',
-  'core/universe/model/validation.ts'
+  'core/universe/model/validation.ts',
+  'core/universe/model/knowledge.ts',
+  'core/universe/model/seed.ts'
 ];
-for (const f of files) backup(f);
+for (const f of files) if (fs.existsSync(path.join(root, f))) backup(f);
 
 fs.copyFileSync(
-  path.join(path.dirname(fileURLToPath(import.meta.url)), 'core/universe/model/behavior.ts'),
-  path.join(root, 'core/universe/model/behavior.ts')
-);
-
-replaceOnce(
-  'core/universe/model/types.ts',
-  "  UNRESOLVED_CONDITION = 'UNRESOLVED_CONDITION'\n",
-  "  UNRESOLVED_CONDITION = 'UNRESOLVED_CONDITION',\n  BEHAVIOR = 'BEHAVIOR'\n"
+  path.join(packageDir, 'core/universe/model/knowledge.ts'),
+  path.join(root, 'core/universe/model/knowledge.ts')
 );
 
 replaceOnce(
   'core/universe/model/index.ts',
   "export * from './character-profile.ts';\n",
-  "export * from './character-profile.ts';\nexport * from './behavior.ts';\n"
+  "export * from './character-profile.ts';\nexport * from './knowledge.ts';\n"
 );
 
 replaceOnce(
-  'core/universe/model/character.ts',
-  "  readonly profile?: CharacterProfile;\n",
-  "  readonly profile?: CharacterProfile;\n  readonly behaviorReferences?: readonly string[];\n"
+  'core/universe/model/seed.ts',
+  "import { TemporalStatus } from '../../types/temporal.ts';\n",
+  "import { TemporalStatus } from '../../types/temporal.ts';\nimport { ActorDataSource } from './actor.ts';\n"
 );
 
 replaceOnce(
-  'core/universe/model/universe.ts',
-  "import { UnresolvedConditionEntity } from './unresolved.ts';\n",
-  "import { UnresolvedConditionEntity } from './unresolved.ts';\nimport { BehaviorEntity } from './behavior.ts';\n"
-);
-replaceOnce(
-  'core/universe/model/universe.ts',
-  "  readonly unresolvedConditions: Readonly<Record<string, UnresolvedConditionEntity>>;\n",
-  "  readonly unresolvedConditions: Readonly<Record<string, UnresolvedConditionEntity>>;\n  readonly behaviors: Readonly<Record<string, BehaviorEntity>>;\n"
-);
-replaceOnce(
-  'core/universe/model/universe.ts',
-  "  unresolvedConditions?: Record<string, UnresolvedConditionEntity>;\n",
-  "  unresolvedConditions?: Record<string, UnresolvedConditionEntity>;\n  behaviors?: Record<string, BehaviorEntity>;\n"
-);
-replaceOnce(
-  'core/universe/model/universe.ts',
-  "      unresolvedConditions: freezeMap(params.unresolvedConditions),\n",
-  "      unresolvedConditions: freezeMap(params.unresolvedConditions),\n      behaviors: freezeMap(params.behaviors),\n"
+  'core/universe/model/seed.ts',
+  "    acquisitionSource: 'OBSERVATION',\n    certainty: 'FACT',\n",
+  "    acquisitionSource: 'OBSERVATION',\n    knowledgeStatus: 'ACTIVE',\n    certainty: 'FACT',\n    changes: [],\n    source: ActorDataSource.USER_DEFINED,\n"
 );
 
 replaceOnce(
   'core/universe/model/validation.ts',
   "import { validateCharacterProfile } from './character-profile.ts';\n",
-  "import { validateCharacterProfile } from './character-profile.ts';\nimport { validateBehavior } from './behavior.ts';\n"
+  "import { validateCharacterProfile } from './character-profile.ts';\nimport { validateKnowledge } from './knowledge.ts';\n"
 );
-replaceOnce(
-  'core/universe/model/validation.ts',
-  "    for (const [id, loc] of Object.entries(universe.locations || {})) {\n",
-  "    for (const [id, behavior] of Object.entries(universe.behaviors || {})) {\n      if (behavior.identity.id !== id) {\n        issues.push({\n          code: 'ID_KEY_MISMATCH',\n          path: `behaviors.${id}`,\n          message: `Behavior map key '${id}' does not match entity id '${behavior.identity.id}'`,\n          severity: 'ERROR'\n        });\n      }\n      const behaviorValidation = validateBehavior(behavior);\n      for (const issue of behaviorValidation.issues) {\n        issues.push({\n          code: issue.code,\n          path: `behaviors.${id}.${issue.path}`,\n          message: issue.message,\n          severity: 'ERROR'\n        });\n      }\n      if (!universe.characters[behavior.characterId]) {\n        issues.push({\n          code: 'DANGLING_BEHAVIOR_CHARACTER_REFERENCE',\n          path: `behaviors.${id}.characterId`,\n          message: `Behavior character '${behavior.characterId}' not found in characters`,\n          severity: 'ERROR'\n        });\n      }\n    }\n\n    for (const [id, loc] of Object.entries(universe.locations || {})) {\n"
-);
+
 replaceOnce(
   'core/universe/model/validation.ts',
   "      if (char.stateReference && (!universe.states || !universe.states[char.stateReference])) {\n",
-  "      for (const behaviorRef of char.behaviorReferences ?? []) {\n        if (!universe.behaviors || !universe.behaviors[behaviorRef]) {\n          issues.push({\n            code: 'DANGLING_BEHAVIOR_REFERENCE',\n            path: `characters.${id}.behaviorReferences`,\n            message: `Character behavior reference '${behaviorRef}' not found in behaviors`,\n            severity: 'ERROR'\n          });\n        } else if (universe.behaviors[behaviorRef].characterId !== id) {\n          issues.push({\n            code: 'BEHAVIOR_CHARACTER_MISMATCH',\n            path: `characters.${id}.behaviorReferences.${behaviorRef}`,\n            message: `Behavior '${behaviorRef}' belongs to character '${universe.behaviors[behaviorRef].characterId}', not '${id}'`,\n            severity: 'ERROR'\n          });\n        }\n      }\n\n      if (char.stateReference && (!universe.states || !universe.states[char.stateReference])) {\n"
+  "      for (const knowledgeRef of char.knowledgeReferences ?? []) {\n        if (!universe.knowledge || !universe.knowledge[knowledgeRef]) {\n          issues.push({\n            code: 'DANGLING_KNOWLEDGE_REFERENCE',\n            path: `characters.${id}.knowledgeReferences`,\n            message: `Character knowledge reference '${knowledgeRef}' not found in knowledge`,\n            severity: 'ERROR'\n          });\n        } else if (universe.knowledge[knowledgeRef].knowerRef !== id) {\n          issues.push({\n            code: 'KNOWLEDGE_KNOWER_MISMATCH',\n            path: `characters.${id}.knowledgeReferences.${knowledgeRef}`,\n            message: `Knowledge '${knowledgeRef}' belongs to '${universe.knowledge[knowledgeRef].knowerRef}', not '${id}'`,\n            severity: 'ERROR'\n          });\n        }\n      }\n\n      if (char.stateReference && (!universe.states || !universe.states[char.stateReference])) {\n"
 );
 
-write('docs/behavior-system.md', fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'docs/behavior-system.md'), 'utf8'));
-write('README.md', fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'README.md'), 'utf8'));
+replaceOnce(
+  'core/universe/model/validation.ts',
+  "    for (const [id, loc] of Object.entries(universe.locations || {})) {\n",
+  "    for (const [id, knowledge] of Object.entries(universe.knowledge || {})) {\n      if (knowledge.knowledgeId !== id) {\n        issues.push({\n          code: 'ID_KEY_MISMATCH',\n          path: `knowledge.${id}`,\n          message: `Knowledge map key '${id}' does not match knowledgeId '${knowledge.knowledgeId}'`,\n          severity: 'ERROR'\n        });\n      }\n      const knowledgeValidation = validateKnowledge(knowledge);\n      for (const issue of knowledgeValidation.issues) {\n        issues.push({\n          code: issue.code,\n          path: `knowledge.${id}.${issue.path}`,\n          message: issue.message,\n          severity: 'ERROR'\n        });\n      }\n      if (!universe.characters[knowledge.knowerRef]) {\n        issues.push({\n          code: 'DANGLING_KNOWLEDGE_KNOWER_REFERENCE',\n          path: `knowledge.${id}.knowerRef`,\n          message: `Knowledge knower '${knowledge.knowerRef}' not found in characters`,\n          severity: 'ERROR'\n        });\n      }\n    }\n\n    for (const [id, loc] of Object.entries(universe.locations || {})) {\n"
+);
 
-console.log('Behavior System berhasil dipasang. Backup dibuat sebagai *.bak.');
+console.log('Knowledge System berhasil dipasang. Backup dibuat sebagai *.bak bila file sebelumnya tersedia.');
