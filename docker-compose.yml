@@ -10,6 +10,8 @@ services:
       NODE_ENV: production
       PORT: 3000
       POCER_DATA_DIR: /app/data/runtime/production-runs
+      POCER_SCHEDULE_DATA_DIR: /app/data/runtime/scheduled-jobs
+      POCER_UNIVERSE_DATA_DIR: /app/data/runtime/universes
     volumes:
       - pocer-runtime-data:/app/data/runtime
     healthcheck:

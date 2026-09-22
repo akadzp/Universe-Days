@@ -1,26 +1,32 @@
-# Real Scheduler Execution — Phase 31 Closure
+# Phase 03 — Persistent Universe Runtime
 
-This overlay upgrades the Phase 31 scheduler from a `due()` calculator into a deterministic production dispatcher.
+This overlay adds durable Universe snapshot storage and a persistent instance boundary.
 
-## What changes
+## Runtime behavior
 
-- `PageProductionScheduler.due()` now respects `DAILY`, `WEEKLY`, `MONTHLY`, and a small deterministic `CUSTOM` filter grammar.
-- Scheduled jobs receive persistent lifecycle state under `data/runtime/scheduled-jobs` (or `POCER_SCHEDULE_DATA_DIR`).
-- `ScheduledProductionDispatcher` verifies that the requested Universe date matches the mounted authoritative Universe.
-- Completed jobs are idempotently skipped on subsequent dispatches.
-- Failed/blocked jobs require `retryFailed=true` to retry; interrupted `DISPATCHED` jobs require `retryDispatched=true`.
-- Due jobs execute through the existing bounded page executor and `DailyProductionBridge`.
-- `POST /api/production/schedules/execute/:universeDate` is the real scheduler dispatch endpoint.
-- `GET /api/production/schedules/jobs/:universeDate` exposes durable scheduler state.
-- Deployment readiness reports scheduler dispatcher wiring and job-store root.
+- `FileUniverseSnapshotStore` persists validated `UniverseModel` snapshots as atomic JSON under `POCER_UNIVERSE_DATA_DIR`.
+- `UniverseInstanceManager` is the instance-management boundary between storage and `UniverseAuthorityStore`.
+- Storage does not become Canon authority; mounting still occurs through `UniverseAuthorityStore`.
+- Canonical Universe instances are loaded from persisted snapshots. Direct raw canonical mounts through the Control API are rejected.
+- `GENERIC_SEED` remains an explicit `SANDBOX` development path and is not promoted to the persistent current-Universe pointer.
+- Runtime startup automatically loads the persisted current Universe pointer when one exists. Corrupt persistence blocks auto-mount instead of repairing or replacing data.
+- `POST /api/control/universe/persist` persists the currently mounted Universe through `INSTANCE_MANAGEMENT_SYSTEM` authority.
+- `POST /api/control/universe/load` loads a named persisted snapshot.
+- `POST /api/control/universe/load-current` loads the persisted current snapshot.
+- `GET /api/control/universe/storage` exposes storage and instance state.
+- Docker now places Universe snapshots and scheduler job state inside the shared runtime volume.
 
 ## Apply
 
-From repository root:
+From the repository root:
 
 ```bash
-node apply-scheduler-execution.mjs
+node apply-phase03.mjs
 npm run lint
 ```
 
-No dedicated test phase is added.
+No dedicated test phase is added. The overlay should at minimum be syntax/transpile-checked before commit.
+
+## Repository layout
+
+The ZIP intentionally places repository files at their actual paths (`core/...`, `app/...`, etc.). There is no redundant `patch/` source directory.
