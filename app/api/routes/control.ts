@@ -175,17 +175,49 @@ controlRouter.post('/produce', async (req, res) => {
       return res.status(409).json({ error: 'UNIVERSE_NOT_MOUNTED', message: 'Mount an authoritative Universe before production execution.' });
     }
 
-    const purpose = req.body?.purpose || 'GENERAL_PRODUCTION';
-    const userInstruction = req.body?.userInstruction || 'Generate a proposal from the current authoritative Universe.';
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const purpose = body.purpose || 'DAILY_STORY';
+    const userInstruction = body.userInstruction || 'Generate today\'s production from the current authoritative Universe.';
+
+    if (purpose === 'DAILY_STORY' || purpose === 'DAILY_PAGE') {
+      const bridge = await current.dailyBridge.run({
+        ...(body as Record<string, unknown>),
+        universe: mounted.universe,
+        universeScope: mounted.universeScope,
+        userInstruction,
+        mode: purpose === 'DAILY_PAGE' ? 'PAGE_ONLY' : 'FULL_DAILY'
+      } as any);
+
+      const statusCode = bridge.status === 'FAILED' ? 502 : bridge.status === 'BLOCKED' ? 409 : 200;
+      return res.status(statusCode).json({
+        status: bridge.status,
+        runId: bridge.runId,
+        universeId: bridge.universeId,
+        universeScope: bridge.universeScope,
+        universeDate: bridge.universeDate,
+        periodId: bridge.periodId,
+        initializationMode: bridge.initializationMode,
+        storyId: bridge.storyPackage?.storyId ?? null,
+        storyProduction: bridge.storyProduction ?? null,
+        pages: bridge.pagePackages.map(page => ({
+          pageId: page.pageId,
+          pageKey: page.pageKey,
+          pageScope: page.pageScope,
+          validationStatus: page.validationStatus
+        })),
+        pageProduction: bridge.pageProduction ?? null,
+        reason: bridge.reason ?? null
+      });
+    }
 
     const result = await current.productionRunner.run({
-      ...req.body,
+      ...(body as Record<string, unknown>),
       universe: mounted.universe,
       universeId: mounted.universe.universeId,
       universeScope: mounted.universeScope,
       purpose,
       userInstruction
-    });
+    } as any);
 
     return res.status(result.status === 'FAILED' ? 502 : result.status === 'BLOCKED' ? 409 : 200).json(result);
   } catch (error) {
