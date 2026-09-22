@@ -194,7 +194,7 @@ export const App: React.FC = () => {
           <header className="mb-7 flex flex-col gap-4 border-b border-stone-800 pb-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div className="mb-2 flex flex-wrap items-center gap-2 text-[10px] font-mono uppercase tracking-[0.18em] text-stone-500">
-                <span>{data?.uiPhase ?? 'Phase 25.5 — UI Control Center'}</span>
+                <span>{data?.uiPhase ?? 'Production Control Center'}</span>
                 <span className="text-stone-700">/</span>
                 <span>{currentView.label}</span>
               </div>
@@ -239,7 +239,7 @@ export const App: React.FC = () => {
                 <div className="mb-4 flex items-center justify-between gap-4">
                   <div>
                     <h2 className="text-sm font-semibold text-stone-100">Runtime Components</h2>
-                    <p className="mt-1 text-xs text-stone-500">Infrastructure registered by the Phase 25 production composition root.</p>
+                    <p className="mt-1 text-xs text-stone-500">Infrastructure registered by the Phase 34 production composition root.</p>
                   </div>
                   <StatusBadge status={data.runtime.productionRoot} />
                 </div>
@@ -309,7 +309,7 @@ export const App: React.FC = () => {
           )}
 
           <footer className="mt-10 flex flex-col gap-2 border-t border-stone-800 pt-4 text-[10px] font-mono text-stone-600 sm:flex-row sm:items-center sm:justify-between">
-            <span>Pocer Universe Engine · Architecture Phase 25 · UI Phase 25.5</span>
+            <span>Pocer Universe Engine · Architecture Phase 34 · Production Control Center</span>
             <span>{lastRefreshed ? `Last refresh: ${lastRefreshed}` : 'Waiting for runtime'}</span>
           </footer>
         </main>
