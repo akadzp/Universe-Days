@@ -18,7 +18,7 @@ import { BehaviorEntity, BehaviorFrequency, BehaviorResponseIntensity } from '..
 import { CharacterStyleEntity, CharacterStyleSnapshot } from '../../../core/universe/model/character-style.ts';
 import { KnowledgeEntity, EpistemicCertainty } from '../../../core/universe/model/knowledge.ts';
 import { UniverseModel, UniverseModelFactory } from '../../../core/universe/model/universe.ts';
-import { ContinuityCheckStatus, ContinuityCheckType, ContinuityConflictType, ContinuityResolutionStatus } from '../../../core/universe/model/continuity.ts';
+import { ContinuityCheckStatus, ContinuityCheckType, ContinuityConflictType, ContinuityResolutionStatus, validateCharacterContinuity } from '../../../core/universe/model/continuity.ts';
 import { PersistenceError } from '../../../core/platform/persistence/file.ts';
 import { INSTANCE_MANAGEMENT_ACTOR } from '../../../core/platform/universe/index.ts';
 import { parseProductionHttpInput, toDailyBridgeInput, toProductionRunInput } from '../input.ts';
@@ -184,7 +184,9 @@ controlRouter.post('/story/create', async (req, res) => {
       history: RevisionHistoryManager.createInitial(makeSystemID('LOCATION_SYSTEM'), seedTime),
       provenance: createProvenanceMetadata(makeSystemID('LOCATION_SYSTEM'), makeDomainID('LOCATION'))
     };
-    (location as any).description = `Lokasi awal mula kisah: ${locName}. Titik temu para pengelana dan pusat peristiwa penting.`;
+    if (initialLocation && typeof initialLocation === 'string' && initialLocation.trim()) {
+      (location as any).description = `Lokasi awal: ${locName}.`;
+    }
 
     // 2. Initial Character
     const charName = initialCharacter?.displayName ? String(initialCharacter.displayName).trim() : 'Tokoh Utama';
@@ -200,24 +202,24 @@ controlRouter.post('/story/create', async (req, res) => {
       shio: initialCharacter?.shio ? String(initialCharacter.shio) : undefined,
       distinctiveFeatures: initialCharacter?.distinctFeatures ? [String(initialCharacter.distinctFeatures)] : undefined,
       appearanceStyle: initialCharacter?.clothingStyle ? String(initialCharacter.clothingStyle) : undefined,
-      personalityType: initialCharacter?.personalityType || 'Pemberani & Penuh Tekad',
+      personalityType: initialCharacter?.personalityType ? String(initialCharacter.personalityType) : undefined,
       mainTraits: initialCharacter?.traits && Array.isArray(initialCharacter.traits) && initialCharacter.traits.length > 0
         ? initialCharacter.traits
-        : ['Gigih', 'Setia Kawan', 'Cerdas'],
+        : [],
       flaws: initialCharacter?.flaws && Array.isArray(initialCharacter.flaws) && initialCharacter.flaws.length > 0
         ? initialCharacter.flaws
-        : ['Kadang keras kepala', 'Sulit percaya pada orang asing'],
+        : [],
       habits: initialCharacter?.habits && Array.isArray(initialCharacter.habits) ? initialCharacter.habits : undefined,
       fears: initialCharacter?.fears && Array.isArray(initialCharacter.fears) ? initialCharacter.fears : undefined,
-      values: initialCharacter?.values && Array.isArray(initialCharacter.values) ? initialCharacter.values : ['Kejujuran', 'Kesetiaan'],
-      occupation: initialCharacter?.occupation || 'Penjelajah',
+      values: initialCharacter?.values && Array.isArray(initialCharacter.values) ? initialCharacter.values : [],
+      occupation: initialCharacter?.occupation ? String(initialCharacter.occupation) : undefined,
       hobbies: initialCharacter?.hobbies && Array.isArray(initialCharacter.hobbies) ? initialCharacter.hobbies : undefined,
       interests: initialCharacter?.interests && Array.isArray(initialCharacter.interests) ? initialCharacter.interests : undefined,
       skills: initialCharacter?.skills && Array.isArray(initialCharacter.skills) ? initialCharacter.skills : undefined,
-      dailyPattern: initialCharacter?.dailyRoutine || 'Berlatih di pagi hari dan meneliti arsip di malam hari',
-      socialTendency: (initialCharacter?.socialOrientation as SocialTendency) || SocialTendency.AMBIVERT,
+      dailyPattern: initialCharacter?.dailyRoutine ? String(initialCharacter.dailyRoutine) : undefined,
+      socialTendency: (initialCharacter?.socialOrientation as SocialTendency) || SocialTendency.UNKNOWN,
       openWounds: initialCharacter?.innerWound ? [String(initialCharacter.innerWound)] : undefined,
-      personalGoal: initialCharacter?.primaryGoal || 'Menemukan kebenaran di balik takdir dunia',
+      personalGoal: initialCharacter?.primaryGoal ? String(initialCharacter.primaryGoal) : undefined,
       longTermAspiration: initialCharacter?.aspiration ? String(initialCharacter.aspiration) : undefined,
       secrets: initialCharacter?.secretBackstory ? [String(initialCharacter.secretBackstory)] : undefined,
       notes: initialCharacter?.notes ? String(initialCharacter.notes) : undefined,
@@ -260,28 +262,31 @@ controlRouter.post('/story/create', async (req, res) => {
       history: RevisionHistoryManager.createInitial(makeSystemID('STATE_SYSTEM'), seedTime),
       provenance: createProvenanceMetadata(makeSystemID('STATE_SYSTEM'), makeDomainID('STATE'))
     };
-    (charState as any).mood = 'Fokus & Tenang';
-    (charState as any).activity = 'Mempersiapkan bekal perjalanan';
-    (charState as any).goal = charProfile.personalGoal;
+    if (charProfile.personalGoal) {
+      (charState as any).goal = charProfile.personalGoal;
+    }
 
-    // 3. Initial Conflict / Mystery
-    const conflictDesc = initialConflict ? String(initialConflict).trim() : 'Sebuah tanda misterius muncul menjelang senja.';
-    const unresId = `UNRES_${Date.now().toString(36).toUpperCase()}_01`;
-    const unresolved: UnresolvedConditionEntity = {
-      conditionId: unresId,
-      conditionType: 'NARRATIVE_TENSION',
-      description: conflictDesc,
-      ownerDomain: makeDomainID('LOCATION'),
-      targetEntityRef: locId,
-      temporalScope: { effectiveFrom: seedTime, temporalCategory: 'POSSIBILITY' as any },
-      dependencyRefs: [],
-      currentStatus: 'CARRYOVER',
-      createdAt: seedTime,
-      lastUpdated: seedTime,
-      sourceSystem: makeSystemID('DAILY_UNIVERSE_SYSTEM'),
-      validationStatus: 'VALID' as any,
-      provenance: createProvenanceMetadata(makeSystemID('DAILY_UNIVERSE_SYSTEM'), makeDomainID('DAILY_UNIVERSE'))
-    };
+    // 3. Initial Conflict / Mystery (if user provided)
+    const initialUnresolvedConditions: Record<string, UnresolvedConditionEntity> = {};
+    if (initialConflict && String(initialConflict).trim()) {
+      const conflictDesc = String(initialConflict).trim();
+      const unresId = `UNRES_${Date.now().toString(36).toUpperCase()}_01`;
+      initialUnresolvedConditions[unresId] = {
+        conditionId: unresId,
+        conditionType: 'NARRATIVE_TENSION',
+        description: conflictDesc,
+        ownerDomain: makeDomainID('LOCATION'),
+        targetEntityRef: locId,
+        temporalScope: { effectiveFrom: seedTime, temporalCategory: 'POSSIBILITY' as any },
+        dependencyRefs: [],
+        currentStatus: 'CARRYOVER',
+        createdAt: seedTime,
+        lastUpdated: seedTime,
+        sourceSystem: makeSystemID('DAILY_UNIVERSE_SYSTEM'),
+        validationStatus: 'VALID' as any,
+        provenance: createProvenanceMetadata(makeSystemID('DAILY_UNIVERSE_SYSTEM'), makeDomainID('DAILY_UNIVERSE'))
+      };
+    }
 
     // Create Universe Model
     const newUniverse = UniverseModelFactory.create({
@@ -293,7 +298,7 @@ controlRouter.post('/story/create', async (req, res) => {
       locations: { [locId]: location },
       characters: { [charId]: character },
       states: { [charStateId]: charState },
-      unresolvedConditions: { [unresId]: unresolved },
+      unresolvedConditions: initialUnresolvedConditions,
       relationships: {},
       objects: {},
       knowledge: {},
@@ -310,7 +315,7 @@ controlRouter.post('/story/create', async (req, res) => {
       synopsis: synopsis ? String(synopsis).trim() : '',
       genre: genre ? String(genre).trim() : 'Fantasi / Petualangan',
       theme: theme ? String(theme).trim() : 'Perjuangan & Takdir',
-      initialConflict: conflictDesc,
+      initialConflict: initialConflict ? String(initialConflict).trim() : '',
       createdAt: seedTime
     };
 
@@ -771,26 +776,57 @@ controlRouter.get('/universe/character/:characterId', (req, res) => {
       relationships: relevantRels,
       knowledge: charKnowledge,
       possessions,
-      continuity: {
-        status: 'KONSISTEN',
-        lastCheckedDate: u.temporalContext.currentUniverseDate,
-        invariantsPassed: true,
-        conflictsCount: 0
-      },
-      timeline: [
-        {
-          date: '2024-01-01',
-          event: `Pencatatan awal tokoh ${char.identity.displayName} ke dalam kanun semesta.`
-        },
-        ...(char.temporalValidity?.effectiveFrom ? [{
-          date: char.temporalValidity.effectiveFrom.slice(0, 10),
-          event: `Mulai aktif beroperasi pada tanggal ${char.temporalValidity.effectiveFrom.slice(0, 10)}.`
-        }] : []),
-        {
-          date: u.temporalContext.currentUniverseDate,
-          event: `Status mutakhir pada tanggal cerita ${u.temporalContext.currentUniverseDate}.`
+      continuity: (() => {
+        const report = validateCharacterContinuity(u, charId);
+        return {
+          status: report.result === 'PASS' ? 'CONSISTENT' : report.result,
+          lastCheckedDate: u.temporalContext.currentUniverseDate,
+          invariantsPassed: report.result === 'PASS',
+          conflictsCount: report.issues.length,
+          issues: report.issues,
+          checks: report.checks
+        };
+      })(),
+      timeline: (() => {
+        const events: Array<{ date: string; event: string; category?: string }> = [];
+        if (char.temporalValidity?.effectiveFrom) {
+          events.push({
+            date: char.temporalValidity.effectiveFrom.slice(0, 10),
+            event: `Pencatatan awal tokoh ${char.identity.displayName} ke dalam kanun semesta.`
+          });
         }
-      ]
+        if (char.history?.revisions) {
+          for (let i = 0; i < char.history.revisions.length; i++) {
+            const rev = char.history.revisions[i];
+            if (i > 0) {
+              events.push({
+                date: rev.effectiveTime ? rev.effectiveTime.slice(0, 10) : u.temporalContext.currentUniverseDate,
+                event: `Pembaruan data tokoh (${rev.revisionId}): ${rev.reason || 'Pembaruan profil'}.`
+              });
+            }
+          }
+        }
+        for (const k of charKnowledge) {
+          if (k.acquiredDate) {
+            events.push({
+              date: k.acquiredDate,
+              event: `Memperoleh pengetahuan: "${k.statement}"`
+            });
+          }
+        }
+        for (const r of relevantRels) {
+          const relEnt = (u.relationships as Record<string, RelationshipEntity>)[r.id];
+          if (relEnt?.changes) {
+            for (const ch of relEnt.changes) {
+              events.push({
+                date: ch.date || u.temporalContext.currentUniverseDate,
+                event: `Perubahan relasi dengan ${r.otherCharacterName}: ${ch.previousType || ''} ➔ ${ch.newType || r.relationshipType} (${ch.trigger || 'Perkembangan dinamika'})`
+              });
+            }
+          }
+        }
+        return events.sort((a, b) => a.date.localeCompare(b.date));
+      })()
     });
   } catch (error) {
     return res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
@@ -818,7 +854,7 @@ controlRouter.get('/universe/daily-context', (_req, res) => {
       ...chars.map(c => {
         const loc = c.locationReference ? (u.locations as Record<string, LocationEntity>)[c.locationReference]?.identity.displayName : 'Lokasi Terbuka';
         const st = c.stateReference ? (u.states as Record<string, StateEntity>)[c.stateReference] : null;
-        const moodInfo = (st as any)?.mood ? ` [Mood: ${(st as any).mood}]` : '';
+        const moodInfo = (st as any)?.mood ? ` [Kondisi: ${(st as any).mood}]` : '';
         return `Tokoh ${c.identity.displayName} berada di ${loc}.${moodInfo}`;
       }),
       ...rels.map(r => {
@@ -914,7 +950,7 @@ async function buildDevelopmentData() {
   };
 }
 
-// Development endpoints (Both routes supported to satisfy API contract & aliases)
+// Development endpoints
 controlRouter.get('/universe/development', async (_req, res) => {
   try {
     const data = await buildDevelopmentData();
@@ -945,32 +981,83 @@ controlRouter.get('/universe/timeline', async (_req, res) => {
     const runs = await current.productionStore.list({ limit: 20 });
     const chars = Object.values(u.characters || {}) as CharacterEntity[];
     const locs = Object.values(u.locations || {}) as LocationEntity[];
+    const rels = Object.values(u.relationships || {}) as RelationshipEntity[];
+    const objs = Object.values(u.objects || {}) as ObjectEntity[];
 
-    const timelineItems = [
+    const timelineItems: Array<{ date: string; title: string; category: string; description: string }> = [
       {
         date: '2024-01-01',
         title: 'Awal Mula Dunia Cerita',
         category: 'FOUNDATION',
         description: `Dunia cerita '${(u as any).storyMetadata?.title || u.universeId}' diresmikan dengan ${locs.length} wilayah dan ${chars.length} tokoh awal.`
-      },
-      ...runs.map(r => ({
-        date: (r as any).universeDate ?? u.temporalContext.currentUniverseDate,
-        title: `Penerbitan Naskah: ${r.purpose}`,
-        category: 'NARRATIVE',
-        description: `Proses penulisan naskah harian diselesaikan dengan status ${r.status}.`
-      }))
+      }
     ];
+
+    for (const c of chars) {
+      if (c.history?.revisions) {
+        for (let i = 0; i < c.history.revisions.length; i++) {
+          const rev = c.history.revisions[i];
+          if (i > 0) {
+            timelineItems.push({
+              date: rev.effectiveTime ? rev.effectiveTime.slice(0, 10) : u.temporalContext.currentUniverseDate,
+              title: `Pembaruan Tokoh: ${c.identity.displayName}`,
+              category: 'CHARACTER',
+              description: rev.reason || `Pembaruan (${rev.revisionId}) oleh ${rev.changeSource}`
+            });
+          }
+        }
+      }
+    }
+
+    for (const r of rels) {
+      if (r.changes) {
+        for (const ch of r.changes) {
+          timelineItems.push({
+            date: ch.date || u.temporalContext.currentUniverseDate,
+            title: `Perubahan Dinamika Hubungan`,
+            category: 'RELATIONSHIP',
+            description: `${ch.previousType} ➔ ${ch.newType} (${ch.trigger})`
+          });
+        }
+      }
+    }
+
+    for (const o of objs) {
+      if (o.history?.revisions) {
+        for (let i = 0; i < o.history.revisions.length; i++) {
+          const rev = o.history.revisions[i];
+          if (i > 0) {
+            timelineItems.push({
+              date: rev.effectiveTime ? rev.effectiveTime.slice(0, 10) : u.temporalContext.currentUniverseDate,
+              title: `Perubahan Benda: ${o.identity.displayName}`,
+              category: 'OBJECT',
+              description: rev.reason || `Revisi (${rev.revisionId})`
+            });
+          }
+        }
+      }
+    }
+
+    for (const rn of runs) {
+      timelineItems.push({
+        date: (rn as any).universeDate ?? u.temporalContext.currentUniverseDate,
+        title: `Penerbitan Naskah: ${rn.purpose}`,
+        category: 'NARRATIVE',
+        description: `Proses penulisan naskah harian selesai dengan status ${rn.status}.`
+      });
+    }
 
     return res.json({
       universeId: u.universeId,
       currentDate: u.temporalContext.currentUniverseDate,
-      items: timelineItems.reverse()
+      items: timelineItems.sort((a, b) => b.date.localeCompare(a.date))
     });
   } catch (error) {
     return res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
   }
 });
 
+// Full continuity audit endpoint
 controlRouter.get('/universe/continuity', (_req, res) => {
   try {
     const current = getRuntime();
@@ -979,28 +1066,132 @@ controlRouter.get('/universe/continuity', (_req, res) => {
 
     const u = mounted.universe;
     const chars = Object.values(u.characters || {}) as CharacterEntity[];
+    const conflicts: Array<{ id: string; type: string; description: string; affectedData: string[] }> = [];
 
-    const checks = chars.map(c => ({
-      characterId: c.identity.id,
-      characterName: c.identity.displayName,
-      status: 'CONSISTENT' as ContinuityCheckStatus,
-      identityCheck: 'CONSISTENT',
-      roleCheck: 'CONSISTENT',
-      stateCheck: 'CONSISTENT',
-      behaviorCheck: 'CONSISTENT',
-      knowledgeCheck: 'CONSISTENT',
-      styleCheck: 'CONSISTENT',
-      invariantsPassed: true,
-      lastCheckedDate: u.temporalContext.currentUniverseDate
-    }));
+    const checks = chars.map(c => {
+      const report = validateCharacterContinuity(u, c.identity.id);
+      if (report.result !== 'PASS') {
+        for (const issue of report.issues) {
+          conflicts.push({
+            id: `CONF_${c.identity.id}_${issue.code}`,
+            type: issue.type,
+            description: issue.message,
+            affectedData: [c.identity.displayName, ...issue.evidenceReferences]
+          });
+        }
+      }
+      return {
+        characterId: c.identity.id,
+        characterName: c.identity.displayName,
+        status: report.result === 'PASS' ? 'CONSISTENT' : report.result,
+        identityCheck: report.checks.IDENTITY?.status ?? 'CONSISTENT',
+        roleCheck: report.checks.ROLE?.status ?? 'CONSISTENT',
+        stateCheck: report.checks.STATE?.status ?? 'CONSISTENT',
+        behaviorCheck: report.checks.BEHAVIOR?.status ?? 'CONSISTENT',
+        knowledgeCheck: report.checks.KNOWLEDGE?.status ?? 'CONSISTENT',
+        styleCheck: report.checks.STYLE?.status ?? 'CONSISTENT',
+        invariantsPassed: report.result === 'PASS',
+        lastCheckedDate: u.temporalContext.currentUniverseDate,
+        issues: report.issues
+      };
+    });
+
+    // Cross-entity reference checks
+    for (const [objId, obj] of Object.entries(u.objects || {})) {
+      if (obj.ownershipRef && !(u.characters as Record<string, CharacterEntity>)[String(obj.ownershipRef)]) {
+        conflicts.push({
+          id: `CONF_OBJ_OWNER_${objId}`,
+          type: 'REFERENCE_INTEGRITY',
+          description: `Pemilik benda '${obj.identity.displayName}' (${obj.ownershipRef}) tidak ditemukan dalam kanun.`,
+          affectedData: [obj.identity.displayName, String(obj.ownershipRef)]
+        });
+      }
+      if (obj.locationRef && !(u.locations as Record<string, LocationEntity>)[obj.locationRef]) {
+        conflicts.push({
+          id: `CONF_OBJ_LOC_${objId}`,
+          type: 'REFERENCE_INTEGRITY',
+          description: `Lokasi benda '${obj.identity.displayName}' (${obj.locationRef}) tidak ditemukan dalam kanun.`,
+          affectedData: [obj.identity.displayName, obj.locationRef]
+        });
+      }
+    }
+
+    for (const [relId, rel] of Object.entries(u.relationships || {})) {
+      if (!(u.characters as Record<string, CharacterEntity>)[String(rel.subjectRef)]) {
+        conflicts.push({
+          id: `CONF_REL_SUBJ_${relId}`,
+          type: 'REFERENCE_INTEGRITY',
+          description: `Subjek hubungan ${relId} (${rel.subjectRef}) tidak terdaftar dalam karakter kanun.`,
+          affectedData: [relId, String(rel.subjectRef)]
+        });
+      }
+      if (!(u.characters as Record<string, CharacterEntity>)[String(rel.targetRef)]) {
+        conflicts.push({
+          id: `CONF_REL_TGT_${relId}`,
+          type: 'REFERENCE_INTEGRITY',
+          description: `Target hubungan ${relId} (${rel.targetRef}) tidak terdaftar dalam karakter kanun.`,
+          affectedData: [relId, String(rel.targetRef)]
+        });
+      }
+    }
+
+    const hasCriticalConflicts = conflicts.length > 0 || checks.some(c => c.status === 'CONFLICT' || c.status === 'BLOCKED');
+    const hasReviewRequired = checks.some(c => c.status === 'REVIEW_REQUIRED');
+    const overallStatus = hasCriticalConflicts ? 'CONFLICT' : hasReviewRequired ? 'REVIEW_REQUIRED' : 'CONSISTENT';
 
     return res.json({
       universeId: u.universeId,
-      overallStatus: 'CONSISTENT',
-      invariantsPassed: true,
+      overallStatus,
+      invariantsPassed: conflicts.length === 0,
       totalChecks: checks.length,
       checks,
-      conflicts: []
+      conflicts
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+// Explicit continuity check trigger endpoint
+controlRouter.post('/universe/continuity/check', (_req, res) => {
+  try {
+    const current = getRuntime();
+    const mounted = current.universeAuthority.get();
+    if (!mounted) return res.status(409).json({ error: 'UNIVERSE_NOT_MOUNTED' });
+
+    const u = mounted.universe;
+    const chars = Object.values(u.characters || {}) as CharacterEntity[];
+    const conflicts: Array<{ id: string; type: string; description: string; affectedData: string[] }> = [];
+
+    const checks = chars.map(c => {
+      const report = validateCharacterContinuity(u, c.identity.id);
+      if (report.result !== 'PASS') {
+        for (const issue of report.issues) {
+          conflicts.push({
+            id: `CONF_${c.identity.id}_${issue.code}`,
+            type: issue.type,
+            description: issue.message,
+            affectedData: [c.identity.displayName, ...issue.evidenceReferences]
+          });
+        }
+      }
+      return {
+        characterId: c.identity.id,
+        characterName: c.identity.displayName,
+        status: report.result === 'PASS' ? 'CONSISTENT' : report.result,
+        invariantsPassed: report.result === 'PASS',
+        lastCheckedDate: u.temporalContext.currentUniverseDate,
+        issues: report.issues
+      };
+    });
+
+    return res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      universeId: u.universeId,
+      overallStatus: conflicts.length === 0 ? 'CONSISTENT' : 'CONFLICT',
+      checks,
+      conflicts
     });
   } catch (error) {
     return res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
@@ -1184,20 +1375,20 @@ function handleCharacterCreation(req: any, res: any) {
       shio: shio ? String(shio) : undefined,
       distinctiveFeatures: distinctFeatures ? [String(distinctFeatures)] : undefined,
       appearanceStyle: clothingStyle ? String(clothingStyle) : undefined,
-      personalityType: personalityType ? String(personalityType) : 'Pemberani & Visioner',
-      mainTraits: Array.isArray(traits) ? traits : [String(traits || 'Pemberani')],
-      flaws: Array.isArray(flaws) ? flaws : [String(flaws || 'Terkadang keras kepala')],
+      personalityType: personalityType ? String(personalityType) : undefined,
+      mainTraits: Array.isArray(traits) ? traits : (traits ? [String(traits)] : []),
+      flaws: Array.isArray(flaws) ? flaws : (flaws ? [String(flaws)] : []),
       habits: Array.isArray(habits) ? habits : (habits ? [String(habits)] : undefined),
       fears: Array.isArray(fears) ? fears : (fears ? [String(fears)] : undefined),
-      values: Array.isArray(coreValues) ? coreValues : (coreValues ? [String(coreValues)] : undefined),
-      occupation: occupation ? String(occupation) : 'Penjelajah',
+      values: Array.isArray(coreValues) ? coreValues : (coreValues ? [String(coreValues)] : []),
+      occupation: occupation ? String(occupation) : undefined,
       hobbies: Array.isArray(hobbies) ? hobbies : (hobbies ? [String(hobbies)] : undefined),
       interests: Array.isArray(interests) ? interests : (interests ? [String(interests)] : undefined),
       skills: Array.isArray(skills) ? skills : (skills ? [String(skills)] : undefined),
       dailyPattern: dailyRoutine ? String(dailyRoutine) : undefined,
-      socialTendency: (socialOrientation as SocialTendency) || SocialTendency.AMBIVERT,
+      socialTendency: (socialOrientation as SocialTendency) || SocialTendency.UNKNOWN,
       openWounds: innerWound ? [String(innerWound)] : undefined,
-      personalGoal: primaryGoal ? String(primaryGoal) : 'Mencapai tujuan mulia',
+      personalGoal: primaryGoal ? String(primaryGoal) : undefined,
       longTermAspiration: aspiration ? String(aspiration) : undefined,
       secrets: secretBackstory ? [String(secretBackstory)] : undefined,
       notes: notes ? String(notes) : undefined,
@@ -1244,7 +1435,9 @@ function handleCharacterCreation(req: any, res: any) {
       history: RevisionHistoryManager.createInitial(makeSystemID('STATE_SYSTEM'), uCopy.temporalContext.currentUniverseTime),
       provenance: createProvenanceMetadata(makeSystemID('STATE_SYSTEM'), makeDomainID('STATE'))
     };
-    (charState as any).mood = 'Tenang';
+    if (profile.personalGoal) {
+      (charState as any).goal = profile.personalGoal;
+    }
     (uCopy as any).states = uCopy.states || {};
     (uCopy.states as any)[`STATE_${newId}_01`] = charState;
 
@@ -1570,6 +1763,65 @@ function handleLocationCreation(req: any, res: any) {
 controlRouter.post('/universe/entity/location', handleLocationCreation);
 controlRouter.post('/location/add', handleLocationCreation);
 
+// Location Edit & Lifecycle
+controlRouter.post('/universe/location/:locationId/edit', (req, res) => {
+  try {
+    const current = getRuntime();
+    const mounted = current.universeAuthority.get();
+    if (!mounted) return res.status(409).json({ error: 'UNIVERSE_NOT_MOUNTED' });
+
+    const locId = req.params.locationId;
+    const uCopy = JSON.parse(JSON.stringify(mounted.universe)) as UniverseModel;
+    const existing = (uCopy.locations as Record<string, LocationEntity>)[locId];
+    if (!existing) return res.status(404).json({ error: 'LOCATION_NOT_FOUND' });
+
+    const { displayName, locationType, accessibilityStatus, description, parentLocationRef } = req.body ?? {};
+    const updatedLoc: LocationEntity = {
+      ...existing,
+      identity: displayName ? { ...existing.identity, displayName: String(displayName).trim() } : existing.identity,
+      locationType: locationType ? String(locationType).trim() as any : existing.locationType,
+      accessibilityStatus: accessibilityStatus ? String(accessibilityStatus).trim() as any : existing.accessibilityStatus,
+      parentLocationRef: parentLocationRef !== undefined ? (parentLocationRef || null) : existing.parentLocationRef
+    };
+    if (description !== undefined) {
+      (updatedLoc as any).description = String(description).trim();
+    }
+
+    (uCopy.locations as Record<string, LocationEntity>)[locId] = updatedLoc;
+    commitUniverseMutation(current, mounted.universeScope, uCopy);
+    return res.json({ success: true, location: updatedLoc });
+  } catch (error) {
+    return res.status(400).json({ error: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+controlRouter.post('/universe/location/:locationId/accessibility', (req, res) => {
+  try {
+    const current = getRuntime();
+    const mounted = current.universeAuthority.get();
+    if (!mounted) return res.status(409).json({ error: 'UNIVERSE_NOT_MOUNTED' });
+
+    const locId = req.params.locationId;
+    const uCopy = JSON.parse(JSON.stringify(mounted.universe)) as UniverseModel;
+    const existing = (uCopy.locations as Record<string, LocationEntity>)[locId];
+    if (!existing) return res.status(404).json({ error: 'LOCATION_NOT_FOUND' });
+
+    const { status } = req.body ?? {};
+    if (!status) return res.status(400).json({ error: 'STATUS_AKSES_DIBUTUHKAN' });
+
+    const updatedLoc: LocationEntity = {
+      ...existing,
+      accessibilityStatus: String(status).trim() as any
+    };
+
+    (uCopy.locations as Record<string, LocationEntity>)[locId] = updatedLoc;
+    commitUniverseMutation(current, mounted.universeScope, uCopy);
+    return res.json({ success: true, location: updatedLoc });
+  } catch (error) {
+    return res.status(400).json({ error: error instanceof Error ? error.message : String(error) });
+  }
+});
+
 // Object creation
 function handleObjectCreation(req: any, res: any) {
   try {
@@ -1627,6 +1879,90 @@ function handleObjectCreation(req: any, res: any) {
 controlRouter.post('/universe/entity/object', handleObjectCreation);
 controlRouter.post('/object/add', handleObjectCreation);
 
+// Object Edit & Lifecycle Mutations
+controlRouter.post('/universe/object/:objectId/edit', (req, res) => {
+  try {
+    const current = getRuntime();
+    const mounted = current.universeAuthority.get();
+    if (!mounted) return res.status(409).json({ error: 'UNIVERSE_NOT_MOUNTED' });
+
+    const objId = req.params.objectId;
+    const uCopy = JSON.parse(JSON.stringify(mounted.universe)) as UniverseModel;
+    const existing = (uCopy.objects as Record<string, ObjectEntity>)[objId];
+    if (!existing) return res.status(404).json({ error: 'OBJECT_NOT_FOUND' });
+
+    const { displayName, objectType, condition, ownershipRef, possessionRef, locationRef, accessStatus } = req.body ?? {};
+    const updatedObj: ObjectEntity = {
+      ...existing,
+      identity: displayName ? { ...existing.identity, displayName: String(displayName).trim() } : existing.identity,
+      objectName: displayName ? String(displayName).trim() : existing.objectName,
+      objectType: objectType ? String(objectType).trim() as any : existing.objectType,
+      condition: condition ? String(condition).trim() as any : existing.condition,
+      ownershipRef: ownershipRef !== undefined ? (ownershipRef ? makeEntityID(String(ownershipRef)) : null) : existing.ownershipRef,
+      possessionRef: possessionRef !== undefined ? (possessionRef ? makeEntityID(String(possessionRef)) : null) : existing.possessionRef,
+      locationRef: locationRef !== undefined ? (locationRef ? String(locationRef) : existing.locationRef) : existing.locationRef,
+      accessStatus: accessStatus ? String(accessStatus).trim() as any : existing.accessStatus
+    };
+
+    (uCopy.objects as Record<string, ObjectEntity>)[objId] = updatedObj;
+    commitUniverseMutation(current, mounted.universeScope, uCopy);
+    return res.json({ success: true, object: updatedObj });
+  } catch (error) {
+    return res.status(400).json({ error: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+controlRouter.post('/universe/object/:objectId/transfer-ownership', (req, res) => {
+  try {
+    const current = getRuntime();
+    const mounted = current.universeAuthority.get();
+    if (!mounted) return res.status(409).json({ error: 'UNIVERSE_NOT_MOUNTED' });
+
+    const objId = req.params.objectId;
+    const uCopy = JSON.parse(JSON.stringify(mounted.universe)) as UniverseModel;
+    const existing = (uCopy.objects as Record<string, ObjectEntity>)[objId];
+    if (!existing) return res.status(404).json({ error: 'OBJECT_NOT_FOUND' });
+
+    const { newOwnerRef } = req.body ?? {};
+    const updatedObj: ObjectEntity = {
+      ...existing,
+      ownershipRef: newOwnerRef ? makeEntityID(String(newOwnerRef)) : null
+    };
+
+    (uCopy.objects as Record<string, ObjectEntity>)[objId] = updatedObj;
+    commitUniverseMutation(current, mounted.universeScope, uCopy);
+    return res.json({ success: true, object: updatedObj });
+  } catch (error) {
+    return res.status(400).json({ error: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+controlRouter.post('/universe/object/:objectId/transfer-possession', (req, res) => {
+  try {
+    const current = getRuntime();
+    const mounted = current.universeAuthority.get();
+    if (!mounted) return res.status(409).json({ error: 'UNIVERSE_NOT_MOUNTED' });
+
+    const objId = req.params.objectId;
+    const uCopy = JSON.parse(JSON.stringify(mounted.universe)) as UniverseModel;
+    const existing = (uCopy.objects as Record<string, ObjectEntity>)[objId];
+    if (!existing) return res.status(404).json({ error: 'OBJECT_NOT_FOUND' });
+
+    const { newPossessorRef } = req.body ?? {};
+    const updatedObj: ObjectEntity = {
+      ...existing,
+      possessionRef: newPossessorRef ? makeEntityID(String(newPossessorRef)) : null,
+      possessionStatus: (newPossessorRef ? 'HELD' : 'UNCLAIMED') as any
+    };
+
+    (uCopy.objects as Record<string, ObjectEntity>)[objId] = updatedObj;
+    commitUniverseMutation(current, mounted.universeScope, uCopy);
+    return res.json({ success: true, object: updatedObj });
+  } catch (error) {
+    return res.status(400).json({ error: error instanceof Error ? error.message : String(error) });
+  }
+});
+
 // Relationship creation
 function handleRelationshipCreation(req: any, res: any) {
   try {
@@ -1665,8 +2001,79 @@ function handleRelationshipCreation(req: any, res: any) {
   }
 }
 
+// Relationship edit & dynamic changes
 controlRouter.post('/universe/entity/relationship', handleRelationshipCreation);
 controlRouter.post('/relationship/add', handleRelationshipCreation);
+
+controlRouter.post('/universe/relationship/:relationshipId/edit', (req, res) => {
+  try {
+    const current = getRuntime();
+    const mounted = current.universeAuthority.get();
+    if (!mounted) return res.status(409).json({ error: 'UNIVERSE_NOT_MOUNTED' });
+
+    const relId = req.params.relationshipId;
+    const uCopy = JSON.parse(JSON.stringify(mounted.universe)) as UniverseModel;
+    const existing = (uCopy.relationships as Record<string, RelationshipEntity>)[relId];
+    if (!existing) return res.status(404).json({ error: 'RELATIONSHIP_NOT_FOUND' });
+
+    const { relationshipType, direction, strength, dynamic, narrativeBasis } = req.body ?? {};
+    const updatedRel: RelationshipEntity = {
+      ...existing,
+      relationshipType: relationshipType ? String(relationshipType) : existing.relationshipType,
+      direction: direction ? String(direction) as any : existing.direction,
+      strength: typeof strength === 'number' ? strength : existing.strength
+    };
+    if (dynamic !== undefined) (updatedRel as any).dynamic = String(dynamic);
+    if (narrativeBasis !== undefined) (updatedRel as any).narrativeBasis = String(narrativeBasis);
+
+    (uCopy.relationships as Record<string, RelationshipEntity>)[relId] = updatedRel;
+    commitUniverseMutation(current, mounted.universeScope, uCopy);
+    return res.json({ success: true, relationship: updatedRel });
+  } catch (error) {
+    return res.status(400).json({ error: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+controlRouter.post('/universe/relationship/:relationshipId/record-change', (req, res) => {
+  try {
+    const current = getRuntime();
+    const mounted = current.universeAuthority.get();
+    if (!mounted) return res.status(409).json({ error: 'UNIVERSE_NOT_MOUNTED' });
+
+    const relId = req.params.relationshipId;
+    const uCopy = JSON.parse(JSON.stringify(mounted.universe)) as UniverseModel;
+    const existing = (uCopy.relationships as Record<string, RelationshipEntity>)[relId];
+    if (!existing) return res.status(404).json({ error: 'RELATIONSHIP_NOT_FOUND' });
+
+    const { newType, trigger, notes } = req.body ?? {};
+    if (!newType) return res.status(400).json({ error: 'TIPE_RELASI_BARU_DIBUTUHKAN' });
+
+    const prevType = existing.relationshipType;
+    const existingChanges = Array.from(existing.changes || []);
+    existingChanges.push({
+      changeId: `CHG_${Date.now().toString(36)}`,
+      date: uCopy.temporalContext.currentUniverseDate,
+      previousType: prevType,
+      newType: String(newType),
+      previousDirection: existing.direction,
+      newDirection: existing.direction,
+      trigger: trigger ? String(trigger) : 'Perkembangan alur',
+      source: ActorDataSource.USER_DEFINED
+    });
+
+    const updatedRel: RelationshipEntity = {
+      ...existing,
+      relationshipType: String(newType),
+      changes: existingChanges
+    };
+
+    (uCopy.relationships as Record<string, RelationshipEntity>)[relId] = updatedRel;
+    commitUniverseMutation(current, mounted.universeScope, uCopy);
+    return res.json({ success: true, relationship: updatedRel });
+  } catch (error) {
+    return res.status(400).json({ error: error instanceof Error ? error.message : String(error) });
+  }
+});
 
 // Unresolved Condition / Mystery creation
 function handleMysteryCreation(req: any, res: any) {
