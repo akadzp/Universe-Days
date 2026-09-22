@@ -18,5 +18,6 @@ export * from './architecture/protocol.ts';
 
 export * from './domains/index.ts';
 export * from './engine/index.ts';
+export * from './rules/index.ts';
 export * from './temporal/index.ts';
 export * from './universe/index.ts';
