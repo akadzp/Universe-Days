@@ -1,9 +1,12 @@
-/** Phase 31 — durable scheduled job state. */
+/** Phase 34 — hardened durable scheduler job state. */
 
 import * as fs from 'fs';
 import * as path from 'path';
 import { freezeDeep } from '../shared.ts';
 import type { ScheduledJob, ScheduledJobStatus } from '../scheduler/types.ts';
+import { PersistenceError } from './file.ts';
+
+let atomicWriteCounter = 0;
 
 export interface ScheduledJobRecord {
   readonly jobId: string;
@@ -28,63 +31,103 @@ export interface FileScheduledJobStoreOptions {
   readonly rootDir?: string;
 }
 
+const VALID_STATUSES: readonly ScheduledJobRecord['status'][] = ['DISPATCHED', 'COMPLETED', 'BLOCKED', 'FAILED', 'SKIPPED'];
+
+function validateRecord(record: ScheduledJobRecord): void {
+  if (!record.jobId || !/^[A-Za-z0-9_.:-]+$/.test(record.jobId)) throw new PersistenceError(`Invalid scheduled job ID '${record.jobId}'.`);
+  if (!record.scheduleId || !record.pageDefinitionId || !record.universeDate || !record.universeTime) throw new PersistenceError(`Incomplete scheduled job record '${record.jobId}'.`);
+  if (!VALID_STATUSES.includes(record.status)) throw new PersistenceError(`Invalid scheduled job status '${record.status}'.`);
+  if (!Number.isInteger(record.attempt) || record.attempt < 1) throw new PersistenceError(`Invalid scheduled job attempt for '${record.jobId}'.`);
+}
+
+function isNotFound(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && (error as { code?: unknown }).code === 'ENOENT';
+}
+
 export class FileScheduledJobStore {
   private readonly rootDir: string;
   private ready = false;
   private readonly memory = new Map<string, ScheduledJobRecord>();
 
   public constructor(options?: FileScheduledJobStoreOptions) {
-    this.rootDir = path.resolve(
-      options?.rootDir ||
-      process.env.POCER_SCHEDULE_DATA_DIR ||
-      './data/runtime/scheduled-jobs'
-    );
+    this.rootDir = path.resolve(options?.rootDir || process.env.POCER_SCHEDULE_DATA_DIR || './data/runtime/scheduled-jobs');
   }
 
   public getRootDir(): string { return this.rootDir; }
 
-  private async ensureDir(): Promise<void> {
+  private ensureDir(): void {
     if (this.ready) return;
-    await fs.promises.mkdir(this.rootDir, { recursive: true });
-    this.ready = true;
+    try {
+      fs.mkdirSync(this.rootDir, { recursive: true });
+      this.ready = true;
+    } catch (error) {
+      throw new PersistenceError(`Scheduler persistence directory could not be prepared: ${this.rootDir}`, { cause: error });
+    }
+  }
+
+  private filePath(jobId: string): string {
+    if (!/^[A-Za-z0-9_.:-]+$/.test(jobId)) throw new PersistenceError(`Unsafe scheduled job ID '${jobId}'.`);
+    return path.join(this.rootDir, `${jobId}.json`);
+  }
+
+  private atomicWrite(filePath: string, serialized: string): void {
+    const tempPath = `${filePath}.tmp.${process.pid}.${++atomicWriteCounter}`;
+    try {
+      fs.writeFileSync(tempPath, serialized, 'utf8');
+      fs.renameSync(tempPath, filePath);
+    } catch (error) {
+      try { fs.rmSync(tempPath, { force: true }); } catch { /* best effort cleanup */ }
+      throw new PersistenceError(`Scheduler persistence write failed: ${filePath}`, { cause: error });
+    }
   }
 
   public async get(jobId: string): Promise<ScheduledJobRecord | null> {
     const cached = this.memory.get(jobId);
     if (cached) return cached;
-    await this.ensureDir();
+    this.ensureDir();
+    const filePath = this.filePath(jobId);
     try {
-      const raw = await fs.promises.readFile(path.join(this.rootDir, `${jobId}.json`), 'utf8');
-      const record = freezeDeep(JSON.parse(raw) as ScheduledJobRecord);
+      const record = freezeDeep(JSON.parse(await fs.promises.readFile(filePath, 'utf8')) as ScheduledJobRecord);
+      validateRecord(record);
       this.memory.set(jobId, record);
       return record;
-    } catch {
-      return null;
+    } catch (error) {
+      if (isNotFound(error)) return null;
+      if (error instanceof PersistenceError) throw error;
+      throw new PersistenceError(`Scheduler persistence read failed: ${filePath}`, { cause: error });
     }
   }
 
   public async save(record: ScheduledJobRecord): Promise<void> {
+    validateRecord(record);
+    this.ensureDir();
     const frozen = freezeDeep({ ...record });
+    const target = this.filePath(record.jobId);
+    this.atomicWrite(target, JSON.stringify(frozen, null, 2));
     this.memory.set(record.jobId, frozen);
-    await this.ensureDir();
-    const target = path.join(this.rootDir, `${record.jobId}.json`);
-    const temp = `${target}.tmp.${process.pid}`;
-    await fs.promises.writeFile(temp, JSON.stringify(frozen, null, 2), 'utf8');
-    await fs.promises.rename(temp, target);
   }
 
   public async list(options?: ListScheduledJobsOptions): Promise<readonly ScheduledJobRecord[]> {
-    await this.ensureDir();
-    let files: string[] = [];
-    try { files = await fs.promises.readdir(this.rootDir); } catch { files = []; }
+    this.ensureDir();
+    let files: string[];
+    try {
+      files = (await fs.promises.readdir(this.rootDir)).filter(item => item.endsWith('.json'));
+    } catch (error) {
+      throw new PersistenceError(`Scheduler persistence directory could not be listed: ${this.rootDir}`, { cause: error });
+    }
 
-    for (const file of files.filter(item => item.endsWith('.json'))) {
+    for (const file of files) {
       const jobId = file.slice(0, -5);
       if (this.memory.has(jobId)) continue;
+      const filePath = path.join(this.rootDir, file);
       try {
-        const raw = await fs.promises.readFile(path.join(this.rootDir, file), 'utf8');
-        this.memory.set(jobId, freezeDeep(JSON.parse(raw) as ScheduledJobRecord));
-      } catch { /* ignore malformed record */ }
+        const record = freezeDeep(JSON.parse(await fs.promises.readFile(filePath, 'utf8')) as ScheduledJobRecord);
+        validateRecord(record);
+        this.memory.set(jobId, record);
+      } catch (error) {
+        if (error instanceof PersistenceError) throw error;
+        throw new PersistenceError(`Scheduler persistence read failed: ${filePath}`, { cause: error });
+      }
     }
 
     let records = [...this.memory.values()];
