@@ -55,7 +55,27 @@ export class UniverseModelValidator {
     }
 
     const knownEntityIds = new Set<string>();
+    const characterIds = new Set<string>();
     const locationIds = new Set<string>();
+    const objectIds = new Set<string>();
+    const stateIds = new Set<string>();
+
+    for (const id of Object.keys(universe.characters || {})) {
+      knownEntityIds.add(id);
+      characterIds.add(id);
+    }
+    for (const id of Object.keys(universe.locations || {})) {
+      knownEntityIds.add(id);
+      locationIds.add(id);
+    }
+    for (const id of Object.keys(universe.objects || {})) {
+      knownEntityIds.add(id);
+      objectIds.add(id);
+    }
+    for (const id of Object.keys(universe.states || {})) {
+      knownEntityIds.add(id);
+      stateIds.add(id);
+    }
 
     for (const [id, char] of Object.entries(universe.characters || {})) {
       knownEntityIds.add(id);
@@ -129,13 +149,22 @@ export class UniverseModelValidator {
         }
       }
 
-      if (char.locationReference && char.locationReference !== 'UNKNOWN' && (!universe.locations || !universe.locations[char.locationReference])) {
-        issues.push({
-          code: 'DANGLING_LOCATION_REFERENCE',
-          path: `characters.${id}.locationReference`,
-          message: `Character location '${char.locationReference}' not found in locations`,
-          severity: 'ERROR'
-        });
+      if (char.locationReference && char.locationReference !== 'UNKNOWN') {
+        if (objectIds.has(char.locationReference) || characterIds.has(char.locationReference) || stateIds.has(char.locationReference)) {
+          issues.push({
+            code: 'INVALID_ENTITY_REFERENCE_TYPE',
+            path: `characters.${id}.locationReference`,
+            message: `Character location reference '${char.locationReference}' points to a non-location entity`,
+            severity: 'ERROR'
+          });
+        } else if (!locationIds.has(char.locationReference)) {
+          issues.push({
+            code: 'DANGLING_LOCATION_REFERENCE',
+            path: `characters.${id}.locationReference`,
+            message: `Character location '${char.locationReference}' not found in locations`,
+            severity: 'ERROR'
+          });
+        }
       }
 
       if (char.stateReference && (!universe.states || !universe.states[char.stateReference])) {
@@ -179,13 +208,22 @@ export class UniverseModelValidator {
       if (state.stateType === 'CHARACTER') {
         const charState = state as CharacterStateEntity;
         const charLoc = charState.currentValue?.currentLocationReference;
-        if (charLoc && charLoc !== 'UNKNOWN' && (!universe.locations || !universe.locations[charLoc])) {
-          issues.push({
-            code: 'DANGLING_LOCATION_REFERENCE',
-            path: `states.${id}.currentValue.currentLocationReference`,
-            message: `Character state location '${charLoc}' not found in locations`,
-            severity: 'ERROR'
-          });
+        if (charLoc && charLoc !== 'UNKNOWN') {
+          if (objectIds.has(charLoc) || characterIds.has(charLoc) || stateIds.has(charLoc)) {
+            issues.push({
+              code: 'INVALID_ENTITY_REFERENCE_TYPE',
+              path: `states.${id}.currentValue.currentLocationReference`,
+              message: `Character state location reference '${charLoc}' points to a non-location entity`,
+              severity: 'ERROR'
+            });
+          } else if (!locationIds.has(charLoc)) {
+            issues.push({
+              code: 'DANGLING_LOCATION_REFERENCE',
+              path: `states.${id}.currentValue.currentLocationReference`,
+              message: `Character state location '${charLoc}' not found in locations`,
+              severity: 'ERROR'
+            });
+          }
         }
 
         const stateValidation = validateCharacterState(charState);
@@ -346,13 +384,22 @@ export class UniverseModelValidator {
       }
 
       // Validate Location
-      if (obj.locationRef && obj.locationRef !== 'UNKNOWN' && !locationIds.has(obj.locationRef)) {
-        issues.push({
-          code: 'DANGLING_LOCATION_REFERENCE',
-          path: `objects.${objId}.locationRef`,
-          message: `Object location '${obj.locationRef}' not found in locations`,
-          severity: 'ERROR'
-        });
+      if (obj.locationRef && obj.locationRef !== 'UNKNOWN') {
+        if (objectIds.has(obj.locationRef) || characterIds.has(obj.locationRef) || stateIds.has(obj.locationRef)) {
+          issues.push({
+            code: 'INVALID_ENTITY_REFERENCE_TYPE',
+            path: `objects.${objId}.locationRef`,
+            message: `Object location reference '${obj.locationRef}' points to a non-location entity`,
+            severity: 'ERROR'
+          });
+        } else if (!locationIds.has(obj.locationRef)) {
+          issues.push({
+            code: 'DANGLING_LOCATION_REFERENCE',
+            path: `objects.${objId}.locationRef`,
+            message: `Object location '${obj.locationRef}' not found in locations`,
+            severity: 'ERROR'
+          });
+        }
       }
 
       // Validate Container Reference
@@ -362,6 +409,13 @@ export class UniverseModelValidator {
             code: 'ILLEGAL_SELF_CONTAINMENT',
             path: `objects.${objId}.containedWithinObjectRef`,
             message: `Object '${objId}' cannot contain itself`,
+            severity: 'ERROR'
+          });
+        } else if (locationIds.has(obj.containedWithinObjectRef)) {
+          issues.push({
+            code: 'INVALID_CONTAINER_ENTITY_TYPE',
+            path: `objects.${objId}.containedWithinObjectRef`,
+            message: `Container reference '${obj.containedWithinObjectRef}' points to a Location, not an Object. Use locationRef instead.`,
             severity: 'ERROR'
           });
         } else if (!universe.objects?.[obj.containedWithinObjectRef]) {
@@ -537,6 +591,13 @@ export class UniverseModelValidator {
             message: `Location '${locId}' cannot be its own parent`,
             severity: 'ERROR'
           });
+        } else if (characterIds.has(loc.parentLocationRef) || objectIds.has(loc.parentLocationRef) || stateIds.has(loc.parentLocationRef)) {
+          issues.push({
+            code: 'INVALID_ENTITY_REFERENCE_TYPE',
+            path: `locations.${locId}.parentLocationRef`,
+            message: `Parent location reference '${loc.parentLocationRef}' points to a non-location entity`,
+            severity: 'ERROR'
+          });
         } else if (!universe.locations[loc.parentLocationRef]) {
           issues.push({
             code: 'DANGLING_PARENT_LOCATION_REFERENCE',
@@ -574,6 +635,13 @@ export class UniverseModelValidator {
             message: `Location '${locId}' cannot contain itself`,
             severity: 'ERROR'
           });
+        } else if (characterIds.has(childRef) || objectIds.has(childRef) || stateIds.has(childRef)) {
+          issues.push({
+            code: 'INVALID_ENTITY_REFERENCE_TYPE',
+            path: `locations.${locId}.containedLocationRefs`,
+            message: `Contained location reference '${childRef}' points to a non-location entity`,
+            severity: 'ERROR'
+          });
         } else if (!universe.locations[childRef]) {
           issues.push({
             code: 'DANGLING_CHILD_LOCATION_REFERENCE',
@@ -601,6 +669,13 @@ export class UniverseModelValidator {
             code: 'SELF_ADJACENT_LOCATION',
             path: `locations.${locId}.adjacentLocationRefs`,
             message: `Location '${locId}' cannot be adjacent to itself`,
+            severity: 'ERROR'
+          });
+        } else if (characterIds.has(adjRef) || objectIds.has(adjRef) || stateIds.has(adjRef)) {
+          issues.push({
+            code: 'INVALID_ENTITY_REFERENCE_TYPE',
+            path: `locations.${locId}.adjacentLocationRefs`,
+            message: `Adjacent location reference '${adjRef}' points to a non-location entity`,
             severity: 'ERROR'
           });
         } else if (!universe.locations[adjRef]) {
@@ -717,6 +792,26 @@ export class UniverseModelValidator {
       }
     }
 
+    for (const [eventId, evt] of Object.entries(universe.events || {})) {
+      if (evt.locationRef && evt.locationRef !== 'UNKNOWN') {
+        if (objectIds.has(evt.locationRef) || characterIds.has(evt.locationRef) || stateIds.has(evt.locationRef)) {
+          issues.push({
+            code: 'INVALID_ENTITY_REFERENCE_TYPE',
+            path: `events.${eventId}.locationRef`,
+            message: `Event location reference '${evt.locationRef}' points to a non-location entity`,
+            severity: 'ERROR'
+          });
+        } else if (!locationIds.has(evt.locationRef)) {
+          issues.push({
+            code: 'DANGLING_LOCATION_REFERENCE',
+            path: `events.${eventId}.locationRef`,
+            message: `Event location '${evt.locationRef}' not found in locations`,
+            severity: 'ERROR'
+          });
+        }
+      }
+    }
+
     for (const [procId] of Object.entries(universe.processes || {})) {
       const checkCycles = (currId: string, path: string[]): boolean => {
         if (path.includes(currId)) {
@@ -745,6 +840,54 @@ export class UniverseModelValidator {
           code: 'UNKNOWN_DOMAIN_BINDING',
           path: `domainBindings.${binding.domainId}`,
           message: `Domain '${binding.domainId}' is not registered in CoreDomain`,
+          severity: 'ERROR'
+        });
+      }
+    }
+
+    if (universe.periods) {
+      for (const [periodId, p] of Object.entries(universe.periods)) {
+        if (p.periodId !== periodId) {
+          issues.push({
+            code: 'ID_KEY_MISMATCH',
+            path: `periods.${periodId}`,
+            message: `Period map key '${periodId}' does not match periodId '${p.periodId}'`,
+            severity: 'ERROR'
+          });
+        }
+        if (typeof p.sequenceNumber !== 'number' || p.sequenceNumber < 1) {
+          issues.push({
+            code: 'INVALID_PERIOD_SEQUENCE',
+            path: `periods.${periodId}.sequenceNumber`,
+            message: `Period '${periodId}' must have sequenceNumber >= 1`,
+            severity: 'ERROR'
+          });
+        }
+        if (p.previousPeriodRef === periodId) {
+          issues.push({
+            code: 'SELF_PREDECESSOR_PERIOD',
+            path: `periods.${periodId}.previousPeriodRef`,
+            message: `Period '${periodId}' cannot be its own predecessor`,
+            severity: 'ERROR'
+          });
+        }
+        if (p.startTime && isNaN(Date.parse(p.startTime))) {
+          issues.push({
+            code: 'INVALID_TEMPORAL_DATE',
+            path: `periods.${periodId}.startTime`,
+            message: `Period '${periodId}' startTime '${p.startTime}' is not a valid date`,
+            severity: 'ERROR'
+          });
+        }
+      }
+    }
+
+    if (universe.temporalContext?.currentPeriodRef && universe.periods && Object.keys(universe.periods).length > 0) {
+      if (!universe.periods[universe.temporalContext.currentPeriodRef]) {
+        issues.push({
+          code: 'DANGLING_PERIOD_REFERENCE',
+          path: 'temporalContext.currentPeriodRef',
+          message: `Current period reference '${universe.temporalContext.currentPeriodRef}' not found in periods map`,
           severity: 'ERROR'
         });
       }

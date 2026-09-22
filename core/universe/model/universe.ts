@@ -39,7 +39,23 @@ export interface UniverseTemporalContext {
   readonly currentUniverseDate: string;
   readonly currentUniverseTime: string;
   readonly currentPeriodRef?: string;
+  readonly previousPeriodRef?: string;
+  readonly periodSequence?: number;
+  readonly periodLifecycleState?: string;
   readonly activeTimezoneOrEra?: string;
+}
+
+export interface UniversePeriodRecord {
+  readonly periodId: string;
+  readonly universeScope: string;
+  readonly startTime: string;
+  readonly endTime?: string;
+  readonly sequenceNumber: number;
+  readonly status: string;
+  readonly previousPeriodRef?: string;
+  readonly isFirstPeriod: boolean;
+  readonly openUnresolvedCount?: number;
+  readonly activeProcessCount?: number;
 }
 
 export interface UniverseModel {
@@ -59,6 +75,7 @@ export interface UniverseModel {
   readonly events: Readonly<Record<string, EventEntity>>;
   readonly processes: Readonly<Record<string, ProcessEntity>>;
   readonly unresolvedConditions: Readonly<Record<string, UnresolvedConditionEntity>>;
+  readonly periods?: Readonly<Record<string, UniversePeriodRecord>>;
 
   readonly continuityContext: UniverseContinuityContext;
   readonly domainBindings: readonly UniverseDomainBinding[];
@@ -71,6 +88,10 @@ export interface CreateUniverseModelParams {
   universeDate: string;
   universeTime?: string;
   periodRef?: string;
+  previousPeriodRef?: string;
+  periodSequence?: number;
+  periodLifecycleState?: string;
+  activeTimezoneOrEra?: string;
   characters?: Record<string, CharacterEntity>;
   relationships?: Record<string, RelationshipEntity>;
   objects?: Record<string, ObjectEntity>;
@@ -83,6 +104,7 @@ export interface CreateUniverseModelParams {
   events?: Record<string, EventEntity>;
   processes?: Record<string, ProcessEntity>;
   unresolvedConditions?: Record<string, UnresolvedConditionEntity>;
+  periods?: Record<string, UniversePeriodRecord>;
   continuityContext?: UniverseContinuityContext;
   domainBindings?: UniverseDomainBinding[];
   sourceSystem?: SystemID;
@@ -128,7 +150,11 @@ export class UniverseModelFactory {
       temporalContext: Object.freeze({
         currentUniverseDate: params.universeDate,
         currentUniverseTime: universeTime,
-        currentPeriodRef: params.periodRef
+        currentPeriodRef: params.periodRef,
+        previousPeriodRef: params.previousPeriodRef,
+        periodSequence: params.periodSequence,
+        periodLifecycleState: params.periodLifecycleState,
+        activeTimezoneOrEra: params.activeTimezoneOrEra
       }),
       characters: freezeMap(params.characters),
       relationships: freezeMap(params.relationships),
@@ -142,6 +168,7 @@ export class UniverseModelFactory {
       events: freezeMap(params.events),
       processes: freezeMap(params.processes),
       unresolvedConditions: freezeMap(params.unresolvedConditions),
+      periods: freezeMap(params.periods),
       continuityContext: Object.freeze({
         activeConditionRefs: Object.freeze([...(params.continuityContext?.activeConditionRefs ?? [])]),
         activeChainRefs: Object.freeze([...(params.continuityContext?.activeChainRefs ?? [])])

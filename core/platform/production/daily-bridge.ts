@@ -71,7 +71,7 @@ export interface DailyProductionBridgeResult {
   readonly universeScope: string;
   readonly universeDate: string;
   readonly periodId: string;
-  readonly initializationMode: 'OWNER_CONTEXT' | 'FIRST_PERIOD';
+  readonly initializationMode: 'OWNER_CONTEXT' | 'FIRST_PERIOD' | 'NORMAL_CONTINUATION';
   readonly dailyContext?: UniversePeriodContext;
   readonly storyPackage?: StoryProductionPackage;
   readonly storyProduction?: ProductionRunResult;
@@ -313,7 +313,7 @@ export class DailyProductionBridge {
   }
 
   private initializeDailyContext(input: DailyProductionBridgeInput):
-    | { readonly context: UniversePeriodContext; readonly initializationMode: 'FIRST_PERIOD' }
+    | { readonly context: UniversePeriodContext; readonly initializationMode: 'FIRST_PERIOD' | 'NORMAL_CONTINUATION' }
     | { readonly context: null; readonly reason: string } {
     const canonical = input.universe.temporalContext.currentUniverseTime || input.universe.temporalContext.currentUniverseDate;
     const startTime = TimePoint.parse(canonical);
@@ -322,6 +322,7 @@ export class DailyProductionBridge {
     }
 
     const init = PeriodInitializer.initialize({
+      universe: input.universe,
       startTime: startTime.data,
       universeScope: input.universeScope,
       previousPeriodRef: input.previousPeriodRef,
@@ -347,7 +348,7 @@ export class DailyProductionBridge {
       };
     }
 
-    return { context: init.data, initializationMode: 'FIRST_PERIOD' };
+    return { context: init.data, initializationMode: init.data.initializationMode };
   }
 
   private createDefaultStoryTrigger(

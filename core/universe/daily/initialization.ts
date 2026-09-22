@@ -17,11 +17,13 @@ import { UniverseProcess } from './process.ts';
 import { UnresolvedCondition } from './unresolved.ts';
 import { FutureInformation } from './decision-action.ts';
 import { PeriodTraceRecorder } from './trace.ts';
+import type { UniverseModel } from '../model/universe.ts';
+import { DailyUniverseContinuation } from './continuation.ts';
 
 export type PeriodInitializationMode = 'FIRST_PERIOD' | 'NORMAL_CONTINUATION';
 
 export interface InitializePeriodParams {
-  startTime: TimePoint;
+  startTime?: TimePoint;
   endTime?: TimePoint;
   previousPeriodRef?: string;
   sequenceNumber?: number;
@@ -31,6 +33,8 @@ export interface InitializePeriodParams {
   previousProcesses?: UniverseProcess[];
   previousFutureInfo?: FutureInformation[];
   initialEvents?: UniverseEvent[];
+  universe?: UniverseModel;
+  isFirstPeriod?: boolean;
 }
 
 export interface UniversePeriodContext {
@@ -55,6 +59,18 @@ export class PeriodInitializer {
    * Invariants: never invents previous state, characters, stories, or events.
    */
   public static initialize(params: InitializePeriodParams): Result<UniversePeriodContext, { code: EngineErrorCode; message: string }> {
+    if (params.universe) {
+      return DailyUniverseContinuation.initializeAuthoritativePeriod(params.universe, params);
+    }
+
+    if (!params.startTime) {
+      const msg = 'Period initialization requires a valid startTime when not initialized from a UniverseModel.';
+      return failure(
+        { code: EngineErrorCode.INVALID_TIME_POINT, message: msg },
+        msg
+      );
+    }
+
     const isFirstPeriod = !params.previousPeriodRef;
     const mode: PeriodInitializationMode = isFirstPeriod ? 'FIRST_PERIOD' : 'NORMAL_CONTINUATION';
 

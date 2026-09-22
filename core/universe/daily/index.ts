@@ -16,6 +16,7 @@ export * from './next-period.ts';
 export * from './finalization.ts';
 export * from './gate.ts';
 export * from './validation.ts';
+export * from './continuation.ts';
 export * from './trace.ts';
 export * from './handoff-placeholder.ts';
 export { TimePoint } from '../../temporal/time-point.ts';

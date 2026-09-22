@@ -14,6 +14,13 @@ export type LocationReferenceStatus =
   | 'NOT_FOUND'
   | 'INVALID_REFERENCE';
 
+export type LocationMatchType =
+  | 'EXACT_ID'
+  | 'EXACT_NAME'
+  | 'ALIAS'
+  | 'SUBSTRING'
+  | 'CONTEXTUAL';
+
 export interface LocationReferenceQuery {
   readonly locationId?: string;
   readonly mentionOrName?: string;
@@ -34,11 +41,26 @@ export interface LocationReferenceResolution {
   readonly status: LocationReferenceStatus;
   readonly matchedLocationId?: string;
   readonly matchedLocation?: LocationEntity;
+  readonly matchType?: LocationMatchType;
   readonly candidates: readonly LocationReferenceCandidate[];
   readonly reason: string;
 }
 
 export class LocationReferenceResolver {
+  /**
+   * Deterministically resolves a location reference against a UniverseModel snapshot.
+   * Zero mutations.
+   */
+  public static resolveFromUniverse(
+    universe: { readonly locations?: Readonly<Record<string, LocationEntity>> },
+    query: Omit<LocationReferenceQuery, 'knownLocations'>
+  ): LocationReferenceResolution {
+    return this.resolve({
+      ...query,
+      knownLocations: universe.locations || {}
+    });
+  }
+
   /**
    * Deterministically resolves a location reference against a given set of known locations.
    * Zero mutations. If multiple candidates tie for highest score, returns 'AMBIGUOUS'.
@@ -54,6 +76,7 @@ export class LocationReferenceResolver {
           status: 'RESOLVED',
           matchedLocationId: directMatch.identity.id,
           matchedLocation: directMatch,
+          matchType: 'EXACT_ID',
           candidates: [
             {
               locationId: directMatch.identity.id,
@@ -185,10 +208,25 @@ export class LocationReferenceResolver {
     }
 
     const matchedLocation = query.knownLocations[topCandidate.locationId];
+    let matchType: LocationMatchType = 'CONTEXTUAL';
+    if (topCandidate.matchedCriteria.includes('EXACT_DISPLAY_NAME')) {
+      matchType = 'EXACT_NAME';
+    } else if (
+      topCandidate.matchedCriteria.includes('EXACT_ALIAS') ||
+      topCandidate.matchedCriteria.some(c => c.startsWith('QUERY_ALIAS_MATCH:'))
+    ) {
+      matchType = 'ALIAS';
+    } else if (
+      topCandidate.matchedCriteria.some(c => c.startsWith('SUBSTRING_'))
+    ) {
+      matchType = 'SUBSTRING';
+    }
+
     return {
       status: 'RESOLVED',
       matchedLocationId: topCandidate.locationId,
       matchedLocation,
+      matchType,
       candidates: Object.freeze(scoredCandidates),
       reason: `Deterministically resolved to "${topCandidate.locationId}" with score ${topCandidate.matchScore}.`
     };
