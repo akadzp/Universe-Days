@@ -24,6 +24,14 @@ export interface ControlOverview {
     storageRoot?: string;
     startupLoadError?: string | null;
     message: string;
+    storyMetadata?: {
+      title?: string;
+      premise?: string;
+      synopsis?: string;
+      genre?: string;
+      theme?: string;
+      initialConflict?: string;
+    };
   };
   daily: { status: string; message: string };
   story: { status: string; storyId: string | null; message: string };
@@ -65,6 +73,7 @@ export interface ProductionRunRecord {
   status: 'COMPLETED' | 'BLOCKED' | 'FAILED' | 'CACHED' | string;
   universeId?: string;
   universeScope?: string;
+  universeDate?: string;
   purpose: string;
   timestamp: string;
   inputTokens: number;
@@ -161,24 +170,32 @@ export interface UniverseCharacter {
   displayName: string;
   status: string;
   background?: string;
+  personalityType?: string;
   traits: string[];
+  flaws?: string[];
   role: string;
+  occupation?: string;
+  locationReference?: string | null;
   alive: boolean;
+  profile?: any;
 }
 
 export interface UniverseLocation {
   id: string;
   displayName: string;
+  description?: string;
   locationType: string;
   accessibilityStatus: string;
   parentLocationRef?: string | null;
   containedLocationRefs?: string[];
+  adjacentLocationRefs?: string[];
 }
 
 export interface UniverseObject {
   id: string;
   displayName: string;
   objectType: string;
+  category?: string;
   possessionStatus: string;
   condition: string;
   currentLocationRef?: string | null;
@@ -191,7 +208,10 @@ export interface UniverseRelationship {
   sourceActorRef: string;
   targetActorRef: string;
   relationshipType: string;
+  direction?: string;
   strength?: number;
+  status?: string;
+  dynamic?: string;
 }
 
 export interface UniverseUnresolvedCondition {
@@ -206,6 +226,14 @@ export interface UniverseDetails {
   mounted: boolean;
   universeId?: string;
   universeScope?: string;
+  storyMetadata?: {
+    title?: string;
+    premise?: string;
+    synopsis?: string;
+    genre?: string;
+    theme?: string;
+    initialConflict?: string;
+  };
   temporal?: {
     currentUniverseDate: string;
     currentUniverseTime: string;
@@ -219,13 +247,175 @@ export interface UniverseDetails {
   unresolvedConditions: UniverseUnresolvedCondition[];
 }
 
+export interface CharacterWorkspaceData {
+  id: string;
+  identity: {
+    id: string;
+    displayName: string;
+    nickname?: string;
+    status: string;
+    tags: string[];
+    age?: number;
+    birthDate?: string;
+    zodiac?: string;
+    shio?: string;
+  };
+  appearance: {
+    distinctFeatures?: string;
+    physicalBuild?: string;
+    clothingStyle?: string;
+  };
+  personality: {
+    personalityType: string;
+    traits: string[];
+    flaws: string[];
+    habits?: string[];
+    fears?: string[];
+    values?: string[];
+  };
+  life: {
+    occupation: string;
+    hobbies: string[];
+    interests: string[];
+    skills: string[];
+    dailyRoutine?: string;
+  };
+  social: {
+    socialOrientation: string;
+  };
+  narrative: {
+    innerWound?: string;
+    primaryGoal?: string;
+    aspiration?: string;
+    secretBackstory?: string;
+    notes?: string;
+  };
+  actor: {
+    role: string;
+    level?: string;
+    group?: string;
+    gender?: string;
+    entityType: string;
+  };
+  currentState: {
+    vitality: string;
+    mood: string;
+    status: string;
+  };
+  location: {
+    id: string;
+    displayName: string;
+    locationType: string;
+  } | null;
+  relationships: Array<{
+    id: string;
+    otherCharacterId: string;
+    otherCharacterName: string;
+    relationshipType: string;
+    direction: string;
+    strength: number;
+    status: string;
+    dynamic: string;
+    narrativeBasis: string;
+  }>;
+  knowledge: Array<{
+    id: string;
+    statement: string;
+    subject?: string;
+    certainty: number;
+    acquisitionSource?: string;
+  }>;
+  possessions: Array<{
+    id: string;
+    displayName: string;
+    objectType: string;
+    isOwner: boolean;
+    isHolder: boolean;
+    condition: string;
+    possessionStatus: string;
+  }>;
+  continuity: {
+    status: string;
+    lastCheckedDate: string;
+    invariantsPassed: boolean;
+  };
+  timeline: Array<{
+    date: string;
+    event: string;
+  }>;
+}
+
+export interface DailyContextData {
+  universeDate: string;
+  universeTime: string;
+  periodRef: string;
+  initialConditions: string[];
+  activeCharactersCount: number;
+  activeLocationsCount: number;
+  activeObjectsCount: number;
+  openMysteriesCount: number;
+  availableDevelopments: string[];
+}
+
+export interface DevelopmentData {
+  currentDate: string;
+  storyDevelopments: Array<{
+    runId: string;
+    date: string;
+    purpose: string;
+    status: string;
+    summary: string;
+  }>;
+  characterDevelopments: Array<{
+    characterId: string;
+    name: string;
+    role: string;
+    currentGoal: string;
+    personality: string;
+  }>;
+  relationshipDevelopments: Array<{
+    id: string;
+    pair: string;
+    status: string;
+    dynamic: string;
+  }>;
+  worldDevelopments: Array<{
+    id: string;
+    name: string;
+    type: string;
+    condition: string;
+    status: string;
+  }>;
+  mysteryDevelopments: Array<{
+    id: string;
+    type: string;
+    description: string;
+    status: string;
+  }>;
+}
+
+export interface TimelineData {
+  universeId: string;
+  currentDate: string;
+  items: Array<{
+    date: string;
+    title: string;
+    category: string;
+    description: string;
+  }>;
+}
+
 export type View =
-  | 'home'
+  | 'story'
   | 'universe'
+  | 'character'
+  | 'sandbox'
+  | 'history'
+  | 'studio'
+  // Legacy mappings for backwards compatibility
+  | 'home'
   | 'production'
   | 'pages'
   | 'scheduler'
-  | 'history'
-  | 'sandbox'
   | 'ai'
   | 'system';

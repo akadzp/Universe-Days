@@ -1,484 +1,757 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  BookOpen,
-  Calendar,
-  Layers,
-  FolderArchive,
-  TestTube,
-  CheckCircle2,
-  AlertCircle,
-  HelpCircle,
   Users,
   MapPin,
+  Package,
+  Heart,
+  HelpCircle,
+  PlusCircle,
   Sparkles,
-  ShieldAlert,
-  Plus,
-  Compass,
-  ArrowRight,
+  ChevronRight,
+  Eye,
+  Wand2,
+  Shield,
+  Layers
 } from 'lucide-react';
-import { ControlOverview, UniverseStorage, UniverseDetails } from '../types.ts';
-import { Card, Button, StatusBadge, ModeBadge, InfoCallout } from '../components/UIElements.tsx';
-import {
-  formatFriendlyDate,
-  getFriendlyScope,
-  getFriendlyLocationType,
-  getFriendlyLocationAccessibility,
-  getFriendlyObjectType,
-  getFriendlyObjectCondition,
-  getFriendlyPossessionStatus,
-} from '../translations.ts';
+import { Card, StatusBadge, Button, Modal, InfoCallout } from '../components/UIElements.tsx';
+import type {
+  UniverseDetails,
+  UniverseCharacter,
+  UniverseLocation,
+  UniverseObject,
+  UniverseRelationship,
+  UniverseUnresolvedCondition,
+} from '../types.ts';
 
 export function UniverseView({
-  overview,
-  storage,
-  onLoadCurrentUniverse,
-  onLoadSandbox,
-  onUnmount,
-  onNavigateToSandbox,
-  busy,
+  universe,
+  onOpenCharacterWorkspace,
+  onAddCharacter,
+  onAddLocation,
+  onAddObject,
+  onAddRelationship,
+  onAddMystery,
+  onAiAssist,
 }: {
-  overview: ControlOverview;
-  storage: UniverseStorage | null;
-  onLoadCurrentUniverse: () => Promise<void>;
-  onLoadSandbox: () => Promise<void>;
-  onUnmount: () => Promise<void>;
-  onNavigateToSandbox: () => void;
-  busy: boolean;
+  universe: UniverseDetails | null;
+  onOpenCharacterWorkspace: (characterId: string) => void;
+  onAddCharacter: (data: any) => Promise<void>;
+  onAddLocation: (data: any) => Promise<void>;
+  onAddObject: (data: any) => Promise<void>;
+  onAddRelationship: (data: any) => Promise<void>;
+  onAddMystery: (data: any) => Promise<void>;
+  onAiAssist: (capability: string, input: any) => Promise<any>;
 }) {
-  const isMounted = overview.universe.status === 'READY';
-  const universeDate = overview.universe.universeDate;
-  const isSandbox = overview.universe.universeScope === 'SANDBOX';
+  const [activeTab, setActiveTab] = useState<'characters' | 'locations' | 'objects' | 'relationships' | 'mysteries'>('characters');
 
-  const [activeTab, setActiveTab] = useState<'characters' | 'locations' | 'objects' | 'mysteries'>('characters');
-  const [details, setDetails] = useState<UniverseDetails | null>(null);
-  const [loadingDetails, setLoadingDetails] = useState(false);
+  // Modals state
+  const [isCharModalOpen, setIsCharModalOpen] = useState(false);
+  const [isLocModalOpen, setIsLocModalOpen] = useState(false);
+  const [isObjModalOpen, setIsObjModalOpen] = useState(false);
+  const [isRelModalOpen, setIsRelModalOpen] = useState(false);
+  const [isMysteryModalOpen, setIsMysteryModalOpen] = useState(false);
 
-  // Fetch universe details when mounted
-  useEffect(() => {
-    if (isMounted) {
-      setLoadingDetails(true);
-      fetch('/api/control/universe/details')
-        .then(async res => {
-          if (!res.ok) return null;
-          const contentType = res.headers.get('content-type') ?? '';
-          if (contentType.includes('application/json')) {
-            return await res.json();
-          }
-          return null;
-        })
-        .then(data => {
-          if (data) {
-            setDetails(data);
-          }
-          setLoadingDetails(false);
-        })
-        .catch(() => setLoadingDetails(false));
-    } else {
-      setDetails(null);
+  // Form states
+  const [charName, setCharName] = useState('');
+  const [charRole, setCharRole] = useState('Tokoh Utama');
+  const [charTraits, setCharTraits] = useState('Pemberani, Cerdas, Setia');
+  const [charPersonality, setCharPersonality] = useState('Visioner & Tangguh');
+  const [charOccupation, setCharOccupation] = useState('Penjelajah');
+  const [charGoal, setCharGoal] = useState('Menemukan kebenaran masa lalu');
+  const [charWound, setCharWound] = useState('Rasa bersalah masa kecil');
+
+  const [locName, setLocName] = useState('');
+  const [locType, setLocType] = useState('SETTLEMENT');
+  const [locDesc, setLocDesc] = useState('');
+
+  const [objName, setObjName] = useState('');
+  const [objType, setObjType] = useState('PHYSICAL');
+  const [objCondition, setObjCondition] = useState('INTACT');
+
+  const [relSub, setRelSub] = useState('');
+  const [relTar, setRelTar] = useState('');
+  const [relType, setRelType] = useState('ALLY');
+  const [relDynamic, setRelDynamic] = useState('Saling Mendukung');
+
+  const [mysteryDesc, setMysteryDesc] = useState('');
+  const [mysteryType, setMysteryType] = useState('NARRATIVE_MYSTERY');
+
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
+  if (!universe || !universe.mounted) {
+    return (
+      <Card className="p-12 text-center text-slate-500 text-xs">
+        Buka atau buat dunia cerita terlebih dahulu untuk menjelajah entitas.
+      </Card>
+    );
+  }
+
+  // AI Assist Handlers
+  const handleCharAiAssist = async () => {
+    setIsAiLoading(true);
+    try {
+      const res = await onAiAssist('CHARACTER_PROFILE', {
+        name: charName || 'Kaelen',
+        archetype: charRole,
+      });
+      if (res?.proposal) {
+        if (!charName) setCharName(res.proposal.displayName);
+        setCharPersonality(res.proposal.personalityType);
+        setCharTraits(res.proposal.traits.join(', '));
+        setCharOccupation(res.proposal.occupation);
+        setCharGoal(res.proposal.primaryGoal);
+        setCharWound(res.proposal.innerWound);
+      }
+    } finally {
+      setIsAiLoading(false);
     }
-  }, [isMounted, overview.universe.universeId]);
+  };
+
+  const handleLocAiAssist = async () => {
+    setIsAiLoading(true);
+    try {
+      const res = await onAiAssist('LOCATION', { name: locName || 'Lembah Kabut' });
+      if (res?.proposal) {
+        if (!locName) setLocName(res.proposal.displayName);
+        setLocDesc(res.proposal.description);
+        setLocType(res.proposal.locationType);
+      }
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const handleObjAiAssist = async () => {
+    setIsAiLoading(true);
+    try {
+      const res = await onAiAssist('OBJECT', { name: objName || 'Pusaka Kuno' });
+      if (res?.proposal) {
+        if (!objName) setObjName(res.proposal.displayName);
+        setObjCondition(res.proposal.condition);
+      }
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
   return (
-    <div id="view-universe" className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black tracking-tight text-slate-900">
-            Ensiklopedia Dunia Cerita
+          <h2 className="text-xl font-black text-slate-900 tracking-tight">
+            Ensiklopedia Semesta Cerita
           </h2>
-          <p className="mt-1 text-xs sm:text-sm text-slate-600">
-            Panggung utama semesta cerita Anda. Memuat seluruh tokoh, wilayah, benda pusaka, dan misteri yang sedang berlangsung.
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            Kelola tokoh, wilayah, pusaka kuno, relasi, dan misteri yang membangun kedalaman dunia Anda.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <ModeBadge isSandbox={isSandbox} />
+        {/* Dynamic Action Button */}
+        <div>
+          {activeTab === 'characters' && (
+            <Button kind="clay" size="sm" onClick={() => setIsCharModalOpen(true)}>
+              <PlusCircle className="h-4 w-4" />
+              <span>+ Tokoh Baru</span>
+            </Button>
+          )}
+          {activeTab === 'locations' && (
+            <Button kind="clay" size="sm" onClick={() => setIsLocModalOpen(true)}>
+              <PlusCircle className="h-4 w-4" />
+              <span>+ Wilayah Baru</span>
+            </Button>
+          )}
+          {activeTab === 'objects' && (
+            <Button kind="clay" size="sm" onClick={() => setIsObjModalOpen(true)}>
+              <PlusCircle className="h-4 w-4" />
+              <span>+ Benda Pusaka Baru</span>
+            </Button>
+          )}
+          {activeTab === 'relationships' && (
+            <Button kind="clay" size="sm" onClick={() => setIsRelModalOpen(true)}>
+              <PlusCircle className="h-4 w-4" />
+              <span>+ Ikatan Relasi Baru</span>
+            </Button>
+          )}
+          {activeTab === 'mysteries' && (
+            <Button kind="clay" size="sm" onClick={() => setIsMysteryModalOpen(true)}>
+              <PlusCircle className="h-4 w-4" />
+              <span>+ Catat Misteri Baru</span>
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Active Story Card */}
-      <Card variant={isSandbox ? 'sandbox' : 'production'} className="p-6 sm:p-7">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="text-xs font-bold text-slate-600">Status Dunia:</span>
-              <StatusBadge status={overview.universe.status} />
-              {isMounted && (
-                <span className="inline-flex items-center rounded-full bg-white/90 border border-slate-200 px-3 py-0.5 text-xs font-semibold text-slate-700 shadow-sm">
-                  {getFriendlyScope(overview.universe.universeScope)}
-                </span>
-              )}
-            </div>
-
-            <div>
-              <h3 className="text-2xl font-black text-slate-900">
-                {overview.universe.universeId
-                  ? overview.universe.universeId.replace(/_/g, ' ')
-                  : 'Belum Ada Cerita yang Dibuka'}
-              </h3>
-              <p className="mt-1 text-xs sm:text-sm text-slate-600 leading-relaxed max-w-xl">
-                {isMounted
-                  ? 'Dunia cerita ini sedang aktif menjadi acuan latar, kepribadian tokoh, dan konsistensi naskah yang ditulis asisten AI.'
-                  : 'Buka dunia cerita yang tersimpan agar asisten AI memiliki konteks lengkap sebelum mulai menulis.'}
-              </p>
-            </div>
-
-            {isMounted && (
-              <div className="flex flex-wrap items-center gap-4 pt-2 text-xs text-slate-700 font-medium">
-                <div className="flex items-center gap-2 bg-white/80 px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
-                  <Calendar className="h-4 w-4 text-amber-500" />
-                  <span>Tanggal Alur: <strong className="text-slate-900 font-bold">{formatFriendlyDate(universeDate)}</strong></span>
-                </div>
-                <div className="flex items-center gap-2 bg-white/80 px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
-                  <Layers className="h-4 w-4 text-sky-500" />
-                  <span>Kategori: <strong className="text-slate-900 font-bold">{isSandbox ? 'Uji Coba Draf (Sandbox)' : 'Arsip Resmi (Canon)'}</strong></span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            {!isMounted ? (
-              <Button
-                id="universe-load-btn"
-                kind="primary"
-                size="md"
-                onClick={() => void onLoadCurrentUniverse()}
-                disabled={busy}
-              >
-                <BookOpen className="h-4 w-4" />
-                Buka Cerita Terakhir
-              </Button>
-            ) : (
-              <>
-                {!isSandbox && (
-                  <Button
-                    id="universe-open-sandbox-btn"
-                    kind="indigo"
-                    size="md"
-                    onClick={onNavigateToSandbox}
-                    disabled={busy}
-                  >
-                    <TestTube className="h-4 w-4" />
-                    Uji di Lab Sandbox
-                  </Button>
-                )}
-                <Button
-                  id="universe-unmount-btn"
-                  kind="danger"
-                  size="md"
-                  onClick={() => void onUnmount()}
-                  disabled={busy}
-                >
-                  Tutup Cerita Sementara
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      {/* Ensiklopedia Sub-Tabs if Mounted */}
-      {isMounted && (
-        <div className="space-y-4">
-          {/* Tab Navigation */}
-          <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-200/60 rounded-2xl border border-slate-300/60">
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto no-scrollbar">
+        {[
+          { id: 'characters', label: `Tokoh & Karakter (${universe.characters.length})`, icon: Users },
+          { id: 'locations', label: `Wilayah & Lokasi (${universe.locations.length})`, icon: MapPin },
+          { id: 'objects', label: `Pusaka & Benda (${universe.objects.length})`, icon: Package },
+          { id: 'relationships', label: `Ikatan Relasi (${universe.relationships.length})`, icon: Heart },
+          { id: 'mysteries', label: `Misteri Terbuka (${universe.unresolvedConditions.length})`, icon: HelpCircle },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
             <button
-              type="button"
-              onClick={() => setActiveTab('characters')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'characters'
-                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 ${
+                isActive
+                  ? 'bg-amber-400 text-slate-950 shadow-sm border border-amber-300'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
-              <Users className="h-4 w-4 text-amber-500" />
-              <span>Tokoh & Karakter ({details?.characters.length ?? 0})</span>
+              <Icon className="h-4 w-4" />
+              <span>{tab.label}</span>
             </button>
+          );
+        })}
+      </div>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('locations')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'locations'
-                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+      {/* Characters Tab */}
+      {activeTab === 'characters' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
+          {universe.characters.map((c) => (
+            <Card
+              key={c.id}
+              className="p-5 cursor-pointer hover:border-amber-400 hover:shadow-md transition group"
             >
-              <MapPin className="h-4 w-4 text-emerald-500" />
-              <span>Wilayah & Peta ({details?.locations.length ?? 0})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('objects')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'objects'
-                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Sparkles className="h-4 w-4 text-violet-500" />
-              <span>Benda & Pusaka ({details?.objects.length ?? 0})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('mysteries')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'mysteries'
-                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <ShieldAlert className="h-4 w-4 text-rose-500" />
-              <span>Misteri & Kondisi Terbuka ({details?.unresolvedConditions.length ?? 0})</span>
-            </button>
-          </div>
-
-          {/* Tab 1: Characters */}
-          {activeTab === 'characters' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Daftar Tokoh Cerita</h3>
-                  <p className="text-xs text-slate-600">Tokoh-tokoh yang hidup dan berperan dalam alur kisah Anda.</p>
-                </div>
-                {isSandbox && (
-                  <Button size="sm" kind="indigo" onClick={onNavigateToSandbox}>
-                    <Plus className="h-3.5 w-3.5" />
-                    Tambah Tokoh di Sandbox
-                  </Button>
-                )}
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {details?.characters.map(char => (
-                  <Card key={char.id} className="p-5 flex flex-col justify-between">
+              <div onClick={() => onOpenCharacterWorkspace(c.id)} className="space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 border-2 border-amber-300 text-amber-900 font-black text-lg shadow-inner">
+                      {c.displayName.charAt(0)}
+                    </div>
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-800 font-bold text-xs">
-                          {char.displayName.slice(0, 2).toUpperCase()}
-                        </div>
-                        <StatusBadge status={char.alive ? 'ALIVE' : 'DECEASED'} customLabel={char.alive ? 'Hidup' : 'Gugur'} />
-                      </div>
-
-                      <h4 className="text-sm font-bold text-slate-900">{char.displayName}</h4>
-                      <div className="text-[11px] font-semibold text-amber-700 mb-2">{char.role}</div>
-
-                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-3 mb-3">
-                        {char.background || 'Karakter utama yang berpetualang dalam dunia ini.'}
-                      </p>
+                      <h4 className="text-sm font-bold text-slate-900 group-hover:text-amber-800 transition">
+                        {c.displayName}
+                      </h4>
+                      <p className="text-xs text-slate-500 font-medium">{c.role || 'Tokoh Utama'}</p>
                     </div>
-
-                    <div className="pt-3 border-t border-slate-200">
-                      <div className="flex flex-wrap gap-1">
-                        {char.traits.map((trait, idx) => (
-                          <span key={idx} className="rounded-lg bg-slate-100 border border-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
-                            {trait}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-
-                {(!details?.characters || details.characters.length === 0) && (
-                  <div className="col-span-full clay-inset p-8 text-center text-slate-600 text-xs">
-                    Belum ada tokoh terdaftar dalam dunia cerita ini.
                   </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Tab 2: Locations */}
-          {activeTab === 'locations' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Peta & Wilayah Dunia</h3>
-                  <p className="text-xs text-slate-600">Lokasi-lokasi penting tempat peristiwa dan kisah berlangsung.</p>
+                  <StatusBadge status={c.status} />
                 </div>
-                {isSandbox && (
-                  <Button size="sm" kind="indigo" onClick={onNavigateToSandbox}>
-                    <Plus className="h-3.5 w-3.5" />
-                    Tambah Lokasi di Sandbox
-                  </Button>
-                )}
-              </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {details?.locations.map(loc => (
-                  <Card key={loc.id} className="p-5 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 font-bold">
-                          <MapPin className="h-4 w-4" />
-                        </div>
-                        <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                          {getFriendlyLocationAccessibility(loc.accessibilityStatus)}
-                        </span>
-                      </div>
-
-                      <h4 className="text-sm font-bold text-slate-900">{loc.displayName}</h4>
-                      <div className="text-[11px] font-semibold text-emerald-700 mb-2">
-                        {getFriendlyLocationType(loc.locationType)}
-                      </div>
-
-                      <p className="text-xs text-slate-600 leading-relaxed mb-3">
-                        {loc.parentLocationRef
-                          ? `Bagian dari wilayah: ${loc.parentLocationRef.replace(/_/g, ' ')}`
-                          : 'Wilayah utama dalam semesta cerita.'}
-                      </p>
-                    </div>
-
-                    <div className="pt-3 border-t border-slate-200 text-[11px] text-slate-600">
-                      Sub-lokasi: <strong className="text-slate-800">{loc.containedLocationRefs?.length ?? 0} area</strong>
-                    </div>
-                  </Card>
-                ))}
-
-                {(!details?.locations || details.locations.length === 0) && (
-                  <div className="col-span-full clay-inset p-8 text-center text-slate-600 text-xs">
-                    Belum ada lokasi terdaftar dalam dunia cerita ini.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Tab 3: Objects */}
-          {activeTab === 'objects' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Benda & Artefak Pusaka</h3>
-                  <p className="text-xs text-slate-600">Barang peninggalan, senjata legenda, dan benda berharga dalam cerita.</p>
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-600">
+                  <span className="font-bold text-slate-800">Tipe: </span>
+                  {c.personalityType || 'Pemberani & Visioner'}
                 </div>
-                {isSandbox && (
-                  <Button size="sm" kind="indigo" onClick={onNavigateToSandbox}>
-                    <Plus className="h-3.5 w-3.5" />
-                    Tambah Benda di Sandbox
-                  </Button>
-                )}
+
+                <div className="flex flex-wrap gap-1.5">
+                  {c.traits?.slice(0, 3).map((t, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2 py-0.5 bg-amber-50 text-amber-800 text-[11px] font-semibold rounded-lg border border-amber-200"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="pt-2 flex items-center justify-between text-xs font-bold text-amber-700">
+                  <span>Buka Ruang Kerja Tokoh (9 Tab)</span>
+                  <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition" />
+                </div>
               </div>
-
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {details?.objects.map(obj => (
-                  <Card key={obj.id} className="p-5 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100 text-violet-800 font-bold">
-                          <Sparkles className="h-4 w-4" />
-                        </div>
-                        <span className="rounded-full bg-violet-50 border border-violet-200 px-2 py-0.5 text-[10px] font-bold text-violet-700">
-                          {getFriendlyPossessionStatus(obj.possessionStatus)}
-                        </span>
-                      </div>
-
-                      <h4 className="text-sm font-bold text-slate-900">{obj.displayName}</h4>
-                      <div className="text-[11px] font-semibold text-violet-700 mb-2">
-                        {getFriendlyObjectType(obj.objectType)}
-                      </div>
-
-                      <p className="text-xs text-slate-600 leading-relaxed mb-3">
-                        Kondisi: <strong className="text-slate-800 font-semibold">{getFriendlyObjectCondition(obj.condition)}</strong>
-                      </p>
-                    </div>
-
-                    <div className="pt-3 border-t border-slate-200 text-[11px] text-slate-600">
-                      Pemilik: <strong className="text-slate-800">{obj.holderActorRef?.replace(/_/g, ' ') ?? 'Belum dimiliki'}</strong>
-                    </div>
-                  </Card>
-                ))}
-
-                {(!details?.objects || details.objects.length === 0) && (
-                  <div className="col-span-full clay-inset p-8 text-center text-slate-600 text-xs">
-                    Belum ada benda atau artefak terdaftar dalam dunia cerita ini.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Tab 4: Mysteries */}
-          {activeTab === 'mysteries' && (
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">Misteri & Peristiwa yang Belum Usai</h3>
-                <p className="text-xs text-slate-600">Ketegangan alur cerita yang sedang berlangsung dan membutuhkan kelanjutan bab cerita.</p>
-              </div>
-
-              <div className="space-y-3">
-                {details?.unresolvedConditions.map(uc => (
-                  <Card key={uc.id} className="p-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-bold text-slate-900">{uc.title}</h4>
-                          <span className="rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-700">
-                            Tingkat Ketegangan: {uc.severity}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-600 leading-relaxed">{uc.description}</p>
-                      </div>
-                      <StatusBadge status={uc.status} />
-                    </div>
-                  </Card>
-                ))}
-
-                {(!details?.unresolvedConditions || details.unresolvedConditions.length === 0) && (
-                  <div className="clay-inset p-8 text-center text-slate-600 text-xs">
-                    Semua peristiwa saat ini berjalan damai tanpa ketegangan misteri yang terbuka.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+            </Card>
+          ))}
         </div>
       )}
 
-      {/* Storage & Archive Summary */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card className="p-5">
-          <div className="flex items-center gap-2.5 text-xs font-bold text-slate-700 mb-3">
-            <FolderArchive className="h-4 w-4 text-amber-500" />
-            <span>Koleksi Arsip Dokumen Cerita</span>
-          </div>
-          <div className="text-2xl font-black text-slate-900">
-            {storage?.storedUniverseIds?.length ?? overview.universe.storedCount ?? 1} Dokumen Tersimpan
-          </div>
-          <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-            Semua naskah, karakter, dan peristiwa tersimpan aman secara permanen di komputer lokal Anda.
-          </p>
-        </Card>
+      {/* Locations Tab */}
+      {activeTab === 'locations' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
+          {universe.locations.map((loc) => (
+            <Card key={loc.id} className="p-5 space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">{loc.displayName}</h4>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">{loc.locationType}</span>
+                </div>
+                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-[10px] font-bold">
+                  {loc.accessibilityStatus}
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 line-clamp-2">
+                {loc.description || 'Pusat pemukiman dan interaksi antar tokoh.'}
+              </p>
+            </Card>
+          ))}
+        </div>
+      )}
 
-        {/* Sandbox Quick Access */}
-        <Card variant="sandbox" className="p-5">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-indigo-700">
-              <TestTube className="h-4 w-4 text-indigo-600" />
-              <span>Laboratorium Eksperimen & Draf Bebas</span>
-            </div>
-          </div>
-          <p className="text-xs leading-relaxed text-slate-600">
-            Ingin mencoba ide alur baru atau memajukan hari cerita tanpa memengaruhi arsip resmi? Masuk ke Laboratorium Sandbox.
-          </p>
-          <div className="mt-4">
-            <Button
-              id="universe-sandbox-btn"
-              size="sm"
-              kind="indigo"
-              onClick={onNavigateToSandbox}
-              disabled={busy}
-            >
-              Buka Laboratorium Sandbox
+      {/* Objects Tab */}
+      {activeTab === 'objects' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
+          {universe.objects.map((obj) => (
+            <Card key={obj.id} className="p-5 space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">{obj.displayName}</h4>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">{obj.objectType}</span>
+                </div>
+                <span className="px-2 py-0.5 bg-amber-50 text-amber-900 border border-amber-200 rounded-lg text-[10px] font-bold">
+                  {obj.condition}
+                </span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-600 flex items-center justify-between">
+                <span>Status Pemilikan:</span>
+                <strong className="text-slate-800">{obj.possessionStatus}</strong>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Relationships Tab */}
+      {activeTab === 'relationships' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-in">
+          {universe.relationships.map((r) => {
+            const charA = universe.characters.find((c) => c.id === r.sourceActorRef)?.displayName || r.sourceActorRef;
+            const charB = universe.characters.find((c) => c.id === r.targetActorRef)?.displayName || r.targetActorRef;
+            return (
+              <Card key={r.id} className="p-5 space-y-3">
+                <div className="flex items-center justify-between font-bold text-slate-900">
+                  <span>{charA} ↔ {charB}</span>
+                  <span className="px-2.5 py-0.5 bg-amber-100 text-amber-900 text-xs rounded-xl font-bold">
+                    {r.relationshipType}
+                  </span>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-xl text-xs text-slate-600">
+                  <span className="font-bold text-slate-800">Dinamika: </span>
+                  {r.dynamic || 'Hubungan Saling Percaya'}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Mysteries Tab */}
+      {activeTab === 'mysteries' && (
+        <div className="space-y-4 animate-fade-in">
+          {universe.unresolvedConditions.map((uc) => (
+            <Card key={uc.id} className="p-5 space-y-2 bg-rose-50/30 border border-rose-200">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-rose-900 uppercase">{uc.title}</span>
+                <span className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-lg text-[10px] font-bold">
+                  {uc.status}
+                </span>
+              </div>
+              <p className="text-xs text-slate-800 font-medium">{uc.description}</p>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Character Builder Modal */}
+      <Modal
+        isOpen={isCharModalOpen}
+        onClose={() => setIsCharModalOpen(false)}
+        title="Daftarkan Tokoh Baru"
+        subtitle="Lengkapi data profil karakter untuk memperkaya dunia cerita."
+      >
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            await onAddCharacter({
+              displayName: charName,
+              role: charRole,
+              personalityType: charPersonality,
+              traits: charTraits.split(',').map((t) => t.trim()).filter(Boolean),
+              occupation: charOccupation,
+              primaryGoal: charGoal,
+              innerWound: charWound,
+            });
+            setIsCharModalOpen(false);
+          }}
+          className="space-y-4"
+        >
+          <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-between">
+            <span className="text-xs font-bold text-amber-900">Bantuan AI:</span>
+            <Button kind="clay" size="sm" onClick={handleCharAiAssist} disabled={isAiLoading}>
+              <Wand2 className={`h-4 w-4 ${isAiLoading ? 'animate-spin' : ''}`} />
+              <span>{isAiLoading ? 'Menyusun...' : 'Saran Profil AI'}</span>
             </Button>
           </div>
-        </Card>
-      </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Nama Tokoh *</label>
+            <input
+              type="text"
+              required
+              value={charName}
+              onChange={(e) => setCharName(e.target.value)}
+              placeholder="cth. Lyra Valen"
+              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Peran / Profesi</label>
+              <input
+                type="text"
+                value={charOccupation}
+                onChange={(e) => setCharOccupation(e.target.value)}
+                placeholder="cth. Peneliti Pusaka"
+                className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Tipe Kepribadian</label>
+              <input
+                type="text"
+                value={charPersonality}
+                onChange={(e) => setCharPersonality(e.target.value)}
+                placeholder="cth. Analitis & Waspada"
+                className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Sifat Utama (pisahkan dengan koma)</label>
+            <input
+              type="text"
+              value={charTraits}
+              onChange={(e) => setCharTraits(e.target.value)}
+              placeholder="cth. Teliti, Tenang, Protektif"
+              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Tujuan Utama (Goal)</label>
+            <input
+              type="text"
+              value={charGoal}
+              onChange={(e) => setCharGoal(e.target.value)}
+              placeholder="cth. Membuka segel gerbang utara"
+              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Luka Batin (Inner Wound)</label>
+            <input
+              type="text"
+              value={charWound}
+              onChange={(e) => setCharWound(e.target.value)}
+              placeholder="cth. Kehilangan rekan tim dalam ekspedisi lama"
+              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <Button kind="secondary" size="md" onClick={() => setIsCharModalOpen(false)}>
+              Batal
+            </Button>
+            <Button kind="clay" size="md" onClick={() => {}}>
+              <span>Simpan Tokoh</span>
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Location Builder Modal */}
+      <Modal
+        isOpen={isLocModalOpen}
+        onClose={() => setIsLocModalOpen(false)}
+        title="Daftarkan Wilayah / Lokasi Baru"
+        subtitle="Tambahkan area penting untuk petualangan tokoh."
+      >
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            await onAddLocation({
+              displayName: locName,
+              locationType: locType,
+              description: locDesc,
+            });
+            setIsLocModalOpen(false);
+          }}
+          className="space-y-4"
+        >
+          <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-between">
+            <span className="text-xs font-bold text-amber-900">Bantuan AI:</span>
+            <Button kind="clay" size="sm" onClick={handleLocAiAssist} disabled={isAiLoading}>
+              <Wand2 className={`h-4 w-4 ${isAiLoading ? 'animate-spin' : ''}`} />
+              <span>{isAiLoading ? 'Menyusun...' : 'Saran Wilayah AI'}</span>
+            </Button>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Nama Wilayah *</label>
+            <input
+              type="text"
+              required
+              value={locName}
+              onChange={(e) => setLocName(e.target.value)}
+              placeholder="cth. Menara Obsidian"
+              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Tipe Lokasi</label>
+            <select
+              value={locType}
+              onChange={(e) => setLocType(e.target.value)}
+              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+            >
+              <option value="SETTLEMENT">Pemukiman / Kota</option>
+              <option value="STRUCTURE">Bangunan / Kuil</option>
+              <option value="WILDERNESS">Alam Liar / Hutan</option>
+              <option value="DUNGEON">Reruntuhan / Bawah Tanah</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Deskripsi Suasana</label>
+            <textarea
+              rows={3}
+              value={locDesc}
+              onChange={(e) => setLocDesc(e.target.value)}
+              placeholder="Keadaan atmosfer dan karakteristik area..."
+              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <Button kind="secondary" size="md" onClick={() => setIsLocModalOpen(false)}>
+              Batal
+            </Button>
+            <Button kind="clay" size="md" onClick={() => {}}>
+              <span>Simpan Wilayah</span>
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Object Builder Modal */}
+      <Modal
+        isOpen={isObjModalOpen}
+        onClose={() => setIsObjModalOpen(false)}
+        title="Daftarkan Pusaka / Benda Baru"
+        subtitle="Tambahkan relik, artefak, atau senjata naratif."
+      >
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            await onAddObject({
+              displayName: objName,
+              objectType: objType,
+              condition: objCondition,
+            });
+            setIsObjModalOpen(false);
+          }}
+          className="space-y-4"
+        >
+          <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-between">
+            <span className="text-xs font-bold text-amber-900">Bantuan AI:</span>
+            <Button kind="clay" size="sm" onClick={handleObjAiAssist} disabled={isAiLoading}>
+              <Wand2 className={`h-4 w-4 ${isAiLoading ? 'animate-spin' : ''}`} />
+              <span>{isAiLoading ? 'Menyusun...' : 'Saran Benda AI'}</span>
+            </Button>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Nama Benda *</label>
+            <input
+              type="text"
+              required
+              value={objName}
+              onChange={(e) => setObjName(e.target.value)}
+              placeholder="cth. Cincin Surya Abadi"
+              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Tipe Benda</label>
+              <select
+                value={objType}
+                onChange={(e) => setObjType(e.target.value)}
+                className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+              >
+                <option value="PHYSICAL">Fisik / Artefak</option>
+                <option value="MAGICAL">Magis / Pusaka</option>
+                <option value="DOCUMENT">Dokumen / Peta Kuno</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Kondisi</label>
+              <select
+                value={objCondition}
+                onChange={(e) => setObjCondition(e.target.value)}
+                className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+              >
+                <option value="INTACT">Utuh & Berkilau</option>
+                <option value="DAMAGED">Retak Sebagian</option>
+                <option value="ANCIENT">Kuno & Aus</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <Button kind="secondary" size="md" onClick={() => setIsObjModalOpen(false)}>
+              Batal
+            </Button>
+            <Button kind="clay" size="md" onClick={() => {}}>
+              <span>Simpan Benda</span>
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Relationship Builder Modal */}
+      <Modal
+        isOpen={isRelModalOpen}
+        onClose={() => setIsRelModalOpen(false)}
+        title="Daftarkan Ikatan Relasi Baru"
+        subtitle="Tentukan dinamika hubungan antara dua tokoh."
+      >
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!relSub || !relTar) return;
+            await onAddRelationship({
+              subjectRef: relSub,
+              targetRef: relTar,
+              relationshipType: relType,
+              dynamic: relDynamic,
+            });
+            setIsRelModalOpen(false);
+          }}
+          className="space-y-4"
+        >
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Tokoh Pertama *</label>
+              <select
+                required
+                value={relSub}
+                onChange={(e) => setRelSub(e.target.value)}
+                className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+              >
+                <option value="">-- Pilih Tokoh --</option>
+                {universe.characters.map((c) => (
+                  <option key={c.id} value={c.id}>{c.displayName}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Tokoh Kedua *</label>
+              <select
+                required
+                value={relTar}
+                onChange={(e) => setRelTar(e.target.value)}
+                className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+              >
+                <option value="">-- Pilih Tokoh --</option>
+                {universe.characters.map((c) => (
+                  <option key={c.id} value={c.id}>{c.displayName}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Tipe Ikatan</label>
+            <select
+              value={relType}
+              onChange={(e) => setRelType(e.target.value)}
+              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+            >
+              <option value="ALLY">Sekutu / Rekan</option>
+              <option value="RIVAL">Rival / Pesaing</option>
+              <option value="MENTOR">Mentor & Murid</option>
+              <option value="FAMILY">Keluarga</option>
+              <option value="ENEMY">Musuh Bebuyutan</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Dinamika Hubungan</label>
+            <input
+              type="text"
+              value={relDynamic}
+              onChange={(e) => setRelDynamic(e.target.value)}
+              placeholder="cth. Saling menghormati namun bersaing"
+              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <Button kind="secondary" size="md" onClick={() => setIsRelModalOpen(false)}>
+              Batal
+            </Button>
+            <Button kind="clay" size="md" onClick={() => {}}>
+              <span>Simpan Ikatan</span>
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Mystery Builder Modal */}
+      <Modal
+        isOpen={isMysteryModalOpen}
+        onClose={() => setIsMysteryModalOpen(false)}
+        title="Catat Misteri / Ketegangan Baru"
+        subtitle="Misteri akan diteruskan dan diselesaikan sepanjang alur cerita."
+      >
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            await onAddMystery({
+              conditionType: mysteryType,
+              description: mysteryDesc,
+            });
+            setIsMysteryModalOpen(false);
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Tipe Misteri</label>
+            <select
+              value={mysteryType}
+              onChange={(e) => setMysteryType(e.target.value)}
+              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+            >
+              <option value="NARRATIVE_MYSTERY">Misteri Rahasia Kuno</option>
+              <option value="POLITICAL_TENSION">Ketegangan Politik Antar Faksi</option>
+              <option value="MISSING_ARTIFACT">Pusaka yang Hilang</option>
+              <option value="PROPHECY">Ramalan Masa Depan</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Deskripsi Misteri *</label>
+            <textarea
+              required
+              rows={3}
+              value={mysteryDesc}
+              onChange={(e) => setMysteryDesc(e.target.value)}
+              placeholder="Jelaskan teka-teki naratif yang belum terpecahkan..."
+              className="clay-input w-full px-3 py-2 text-xs rounded-xl"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <Button kind="secondary" size="md" onClick={() => setIsMysteryModalOpen(false)}>
+              Batal
+            </Button>
+            <Button kind="clay" size="md" onClick={() => {}}>
+              <span>Simpan Misteri</span>
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

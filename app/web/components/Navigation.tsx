@@ -1,22 +1,22 @@
 import React from 'react';
 import {
-  Sparkles,
   BookOpen,
   Compass,
-  CalendarCheck,
-  FileText,
-  Clock,
-  Bot,
-  Sliders,
-  HelpCircle,
-  ChevronRight,
-  ShieldCheck,
+  Users,
   TestTube,
-  Flame,
+  Clock,
+  Sliders,
+  Sparkles,
+  ChevronRight,
+  PlusCircle,
+  HelpCircle,
+  FolderPlus,
+  Play,
   Layers,
+  ArrowRightLeft
 } from 'lucide-react';
 import { View } from '../types.ts';
-import { Card, StatusBadge, ModeBadge } from './UIElements.tsx';
+import { Card, StatusBadge, ModeBadge, Button } from './UIElements.tsx';
 
 export interface NavItem {
   id: View;
@@ -26,64 +26,46 @@ export interface NavItem {
   isSandboxFeature?: boolean;
 }
 
-export const mainNavItems: NavItem[] = [
+export const primaryNavItems: NavItem[] = [
   {
-    id: 'home',
-    label: 'Beranda Studio',
-    hint: 'Ringkasan & karya terbaru',
-    icon: Compass,
+    id: 'story',
+    label: 'Kisah Cerita',
+    hint: 'Alur, naskah harian & meja baca',
+    icon: BookOpen,
   },
   {
     id: 'universe',
     label: 'Ensiklopedia Dunia',
-    hint: 'Tokoh, wilayah, & benda pusaka',
-    icon: BookOpen,
+    hint: 'Tokoh, wilayah, benda & misteri',
+    icon: Compass,
   },
   {
-    id: 'production',
-    label: 'Tulis Naskah',
-    hint: 'Tulis bab cerita & dialog',
-    icon: Sparkles,
+    id: 'character',
+    label: 'Ruang Tokoh',
+    hint: '9 Tab holistik profil karakter',
+    icon: Users,
   },
-  {
-    id: 'pages',
-    label: 'Produksi Halaman',
-    hint: 'Katalog komik & kronik harian',
-    icon: FileText,
-  },
-  {
-    id: 'scheduler',
-    label: 'Jadwal Terbit',
-    hint: 'Penerbitan otomatis alur cerita',
-    icon: CalendarCheck,
-  },
-];
-
-export const secondaryNavItems: NavItem[] = [
   {
     id: 'sandbox',
-    label: 'Laboratorium Sandbox',
-    hint: 'Simulasi waktu & eksperimen tokoh',
+    label: 'Ruang Eksperimen',
+    hint: 'Mesin waktu & simulasi ide',
     icon: TestTube,
     isSandboxFeature: true,
   },
   {
     id: 'history',
-    label: 'Pustaka Naskah',
-    hint: 'Arsip seluruh karya & bab',
+    label: 'Pustaka & Arsip',
+    hint: 'Hasil terbit & kronik perjalanan',
     icon: Clock,
   },
+];
+
+export const secondaryNavItems: NavItem[] = [
   {
-    id: 'ai',
-    label: 'Asisten AI',
-    hint: 'Koneksi model & imajinasi',
-    icon: Bot,
-  },
-  {
-    id: 'system',
-    label: 'Keandalan & Cadangan',
-    hint: 'Pencadangan & kesiapan studio',
-    icon: ShieldCheck,
+    id: 'studio',
+    label: 'Pusat Operasional',
+    hint: 'Kesiapan sistem, AI, & penjadwal',
+    icon: Sliders,
   },
 ];
 
@@ -93,165 +75,187 @@ export function Sidebar({
   systemStatus,
   onOpenGuide,
   isSandbox,
+  onOpenCreateStory,
+  activeStoryTitle,
+  currentDate,
 }: {
   currentView: View;
   onNavigate: (view: View) => void;
   systemStatus: string;
   onOpenGuide: () => void;
   isSandbox: boolean;
+  onOpenCreateStory: () => void;
+  activeStoryTitle?: string;
+  currentDate?: string;
 }) {
   return (
-    <aside
-      id="main-sidebar"
-      className="hidden w-72 shrink-0 border-r-2 border-white/80 bg-[#F4F7FB]/95 backdrop-blur-md lg:block shadow-[4px_0_20px_rgba(160,175,200,0.15)]"
-    >
-      <div className="sticky top-0 flex h-screen flex-col p-5 overflow-y-auto">
+    <aside className="w-72 shrink-0 flex flex-col justify-between border-r border-slate-200/80 bg-slate-50/70 p-4 min-h-screen">
+      <div className="space-y-6">
         {/* Brand Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-300 via-amber-400 to-amber-500 text-slate-900 border-2 border-white shadow-[0_4px_12px_rgba(245,158,11,0.35),inset_0_2px_2px_rgba(255,255,255,0.8)]">
-              <Sparkles className="h-6 w-6 fill-amber-100/50" />
-            </div>
-            <div>
-              <div className="text-base font-extrabold tracking-tight text-slate-900">
-                Pocer Universe
+        <div className="px-2 pt-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 text-slate-950 font-black shadow-[0_6px_14px_rgba(245,158,11,0.35),inset_0_2px_2px_rgba(255,255,255,0.6)] text-xl border-2 border-amber-200">
+                P
               </div>
-              <div className="text-[11px] font-semibold text-amber-700">
-                Studio Penulisan Cerita
+              <div>
+                <h1 className="text-base font-black tracking-tight text-slate-900 leading-tight">
+                  POCER STUDIO
+                </h1>
+                <p className="text-[11px] font-semibold text-slate-500">
+                  Dunia Cerita & Penulisan
+                </p>
               </div>
             </div>
           </div>
-          <button
-            id="open-guide-btn"
-            type="button"
-            onClick={onOpenGuide}
-            title="Panduan Pemula"
-            className="rounded-xl p-2 text-slate-400 bg-white border border-slate-200 shadow-sm transition hover:text-amber-600 hover:shadow"
-          >
-            <HelpCircle className="h-4 w-4" />
-          </button>
+
+          {/* Active Story Card in Sidebar */}
+          <div className="mt-4 p-3 rounded-2xl bg-white/80 border border-slate-200/80 shadow-xs">
+            <div className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
+              Cerita Aktif
+            </div>
+            <div className="text-xs font-bold text-slate-900 truncate mt-0.5">
+              {activeStoryTitle || 'Belum Membuka Cerita'}
+            </div>
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-[11px] text-slate-600 font-medium">
+              <span>📅 {currentDate || '2024-01-01'}</span>
+              <ModeBadge isSandbox={isSandbox} />
+            </div>
+          </div>
+
+          {/* Create Story Button */}
+          <div className="mt-3">
+            <Button
+              kind="clay"
+              size="sm"
+              onClick={onOpenCreateStory}
+              className="w-full flex items-center justify-center gap-2 text-xs font-bold py-2"
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>+ Buat Cerita Baru</span>
+            </Button>
+          </div>
         </div>
 
-        {/* Mode Indicator in Sidebar */}
-        <div className="mb-4">
-          <ModeBadge isSandbox={isSandbox} />
-        </div>
-
-        {/* Primary Menu */}
-        <div className="mb-2 px-2 text-[11px] font-bold uppercase tracking-wider text-slate-600">
-          Menu Utama Cerita
-        </div>
-        <nav className="space-y-1.5">
-          {mainNavItems.map(item => {
-            const Icon = item.icon;
-            const active = currentView === item.id;
-            return (
-              <button
-                key={item.id}
-                id={`nav-item-${item.id}`}
-                type="button"
-                onClick={() => onNavigate(item.id)}
-                className={`w-full text-left transition-all duration-150 rounded-2xl p-2.5 cursor-pointer ${
-                  active
-                    ? 'bg-gradient-to-r from-amber-50 to-amber-100/80 border-2 border-amber-300 shadow-[0_4px_12px_rgba(245,158,11,0.2),inset_0_1px_2px_rgba(255,255,255,0.9)] text-slate-900 font-bold'
-                    : 'bg-white/60 hover:bg-white border-2 border-transparent hover:border-slate-200 text-slate-600 hover:text-slate-900 shadow-sm'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`flex h-8 w-8 items-center justify-center rounded-xl transition ${
-                      active
-                        ? 'bg-amber-400 text-slate-950 shadow-sm'
-                        : 'bg-slate-100 text-slate-500'
+        {/* Navigation Groups */}
+        <div className="space-y-4">
+          <div>
+            <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Perjalanan Cerita
+            </div>
+            <nav className="space-y-1">
+              {primaryNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentView === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onNavigate(item.id)}
+                    className={`w-full flex items-center justify-between rounded-2xl px-3 py-2.5 text-left text-xs transition-all duration-150 group ${
+                      isActive
+                        ? isSandbox
+                          ? 'clay-nav-active-sandbox font-bold text-purple-950'
+                          : 'clay-nav-active font-bold text-amber-950'
+                        : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900 font-medium'
                     }`}
                   >
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold truncate">{item.label}</div>
-                    <div className="text-[10px] text-slate-600 truncate font-normal">{item.hint}</div>
-                  </div>
-                  {active && <ChevronRight className="h-4 w-4 text-amber-600 shrink-0" />}
-                </div>
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="my-4 border-t-2 border-slate-200/60" />
-
-        {/* Creative Lab & Tools */}
-        <div className="mb-2 px-2 text-[11px] font-bold uppercase tracking-wider text-slate-600">
-          Eksperimen & Cadangan
-        </div>
-        <nav className="space-y-1.5">
-          {secondaryNavItems.map(item => {
-            const Icon = item.icon;
-            const active = currentView === item.id;
-            const isLab = item.id === 'sandbox';
-
-            return (
-              <button
-                key={item.id}
-                id={`nav-item-${item.id}`}
-                type="button"
-                onClick={() => onNavigate(item.id)}
-                className={`w-full text-left transition-all duration-150 rounded-2xl p-2.5 cursor-pointer ${
-                  active
-                    ? isLab
-                      ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 border-2 border-indigo-300 shadow-[0_4px_12px_rgba(99,102,241,0.2),inset_0_1px_2px_rgba(255,255,255,0.9)] text-indigo-950 font-bold'
-                      : 'bg-gradient-to-r from-slate-100 to-white border-2 border-slate-300 shadow-[0_4px_10px_rgba(148,163,184,0.2),inset_0_1px_2px_rgba(255,255,255,0.9)] text-slate-900 font-bold'
-                    : isLab
-                    ? 'bg-indigo-50/50 hover:bg-indigo-50 border-2 border-indigo-100 hover:border-indigo-200 text-indigo-900 shadow-sm'
-                    : 'bg-white/60 hover:bg-white border-2 border-transparent hover:border-slate-200 text-slate-600 hover:text-slate-900 shadow-sm'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`flex h-8 w-8 items-center justify-center rounded-xl transition ${
-                      active
-                        ? isLab
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'bg-slate-700 text-white shadow-sm'
-                        : isLab
-                        ? 'bg-indigo-100 text-indigo-600'
-                        : 'bg-slate-100 text-slate-500'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold truncate flex items-center gap-1.5">
-                      <span>{item.label}</span>
-                      {isLab && (
-                        <span className="rounded-full bg-indigo-200 text-indigo-800 text-[9px] px-1.5 py-0.2 font-bold">
-                          LAB
-                        </span>
-                      )}
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all ${
+                          isActive
+                            ? isSandbox
+                              ? 'bg-purple-600 text-white shadow-sm'
+                              : 'bg-amber-500 text-slate-950 shadow-sm'
+                            : 'bg-slate-200/70 text-slate-600 group-hover:bg-slate-300/70 group-hover:text-slate-900'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold">{item.label}</div>
+                        <div className="text-[10px] text-slate-400 group-hover:text-slate-500 line-clamp-1">
+                          {item.hint}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-[10px] text-slate-600 truncate font-normal">{item.hint}</div>
-                  </div>
-                  {active && <ChevronRight className="h-4 w-4 text-slate-700 shrink-0" />}
-                </div>
-              </button>
-            );
-          })}
-        </nav>
+                    {isActive && (
+                      <ChevronRight
+                        className={`h-4 w-4 shrink-0 ${
+                          isSandbox ? 'text-purple-600' : 'text-amber-600'
+                        }`}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
 
-        {/* Footer info card */}
-        <div className="mt-auto pt-4">
-          <Card className="p-3.5 bg-white/90 border-2 border-white shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-                <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                <span>Kesiapan Studio</span>
-              </div>
-              <StatusBadge status={systemStatus} />
+          <div>
+            <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Operasional & Sistem
             </div>
-            <div className="mt-1.5 text-[11px] leading-relaxed text-slate-600">
-              Alur dan kebenaran cerita senantiasa dijaga konsisten.
-            </div>
-          </Card>
+            <nav className="space-y-1">
+              {secondaryNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentView === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onNavigate(item.id)}
+                    className={`w-full flex items-center justify-between rounded-2xl px-3 py-2.5 text-left text-xs transition-all duration-150 group ${
+                      isActive
+                        ? 'clay-nav-active font-bold text-amber-950'
+                        : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900 font-medium'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all ${
+                          isActive
+                            ? 'bg-amber-500 text-slate-950 shadow-sm'
+                            : 'bg-slate-200/70 text-slate-600 group-hover:bg-slate-300/70 group-hover:text-slate-900'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold">{item.label}</div>
+                        <div className="text-[10px] text-slate-400 group-hover:text-slate-500 line-clamp-1">
+                          {item.hint}
+                        </div>
+                      </div>
+                    </div>
+                    {isActive && (
+                      <ChevronRight className="h-4 w-4 shrink-0 text-amber-600" />
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer System Status & Guide */}
+      <div className="pt-4 border-t border-slate-200/80 space-y-2">
+        <button
+          type="button"
+          onClick={onOpenGuide}
+          className="w-full flex items-center justify-between p-2.5 rounded-2xl bg-amber-50/60 hover:bg-amber-100/70 border border-amber-200/80 text-amber-900 text-xs font-semibold transition"
+        >
+          <div className="flex items-center gap-2">
+            <HelpCircle className="h-4 w-4 text-amber-600" />
+            <span>Panduan Blueprint POCER</span>
+          </div>
+          <ChevronRight className="h-3.5 w-3.5 text-amber-600" />
+        </button>
+
+        <div className="flex items-center justify-between px-2 pt-1">
+          <div className="text-[11px] text-slate-500 font-medium">
+            Kesiapan Mesin
+          </div>
+          <StatusBadge status={systemStatus} />
         </div>
       </div>
     </aside>

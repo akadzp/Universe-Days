@@ -1,428 +1,222 @@
 import React, { useState } from 'react';
 import {
   TestTube,
-  Clock,
-  Sparkles,
-  Users,
-  MapPin,
-  Plus,
-  RefreshCw,
-  Copy,
-  Calendar,
   FastForward,
+  RotateCcw,
+  Sparkles,
+  Layers,
+  Wand2,
   CheckCircle2,
-  AlertCircle,
-  Sliders,
-  Send,
-  Zap,
+  AlertTriangle,
+  Play,
+  Copy,
+  ChevronRight,
+  ArrowRightLeft
 } from 'lucide-react';
-import { ControlOverview, ProductionRunRecord } from '../types.ts';
-import { Card, Button, StatusBadge, ModeBadge, InfoCallout } from '../components/UIElements.tsx';
-import { formatFriendlyDate, formatFriendlyTime } from '../translations.ts';
+import { Card, Button, InfoCallout, ModeBadge } from '../components/UIElements.tsx';
+import type { UniverseDetails } from '../types.ts';
 
 export function SandboxView({
-  overview,
-  runs,
-  onRunProduction,
+  universe,
   onAdvanceDay,
   onCloneToSandbox,
-  onAddCharacter,
-  onAddLocation,
-  onAddObject,
-  onLoadCurrentUniverse,
-  busy,
+  onAiAssist,
 }: {
-  overview: ControlOverview;
-  runs: ProductionRunRecord[];
-  onRunProduction: (kind: 'DAILY_STORY' | 'DAILY_PAGE' | 'GENERAL_PRODUCTION', instruction: string) => Promise<void>;
+  universe: UniverseDetails | null;
   onAdvanceDay: (days: number) => Promise<void>;
   onCloneToSandbox: () => Promise<void>;
-  onAddCharacter: (data: { displayName: string; role: string; background: string; traits: string[] }) => Promise<void>;
-  onAddLocation: (data: { displayName: string; locationType: string; accessibilityStatus: string }) => Promise<void>;
-  onAddObject: (data: { displayName: string; objectType: string; condition: string }) => Promise<void>;
-  onLoadCurrentUniverse: () => Promise<void>;
-  busy: boolean;
+  onAiAssist: (capability: string, input: any) => Promise<any>;
 }) {
-  const isMounted = overview.universe.status === 'READY';
-  const universeDate = overview.universe.universeDate;
-  const isSandbox = overview.universe.universeScope === 'SANDBOX';
+  const [isAdvancing, setIsAdvancing] = useState(false);
+  const [isCloning, setIsCloning] = useState(false);
+  const [hypothesisPrompt, setHypothesisPrompt] = useState('');
+  const [hypothesisResult, setHypothesisResult] = useState<any>(null);
+  const [isSimulating, setIsSimulating] = useState(false);
 
-  // State for forms
-  const [newCharName, setNewCharName] = useState('');
-  const [newCharRole, setNewCharRole] = useState('Pahlawan Petualang');
-  const [newCharBackground, setNewCharBackground] = useState('');
-  const [newCharTraits, setNewCharTraits] = useState('Pemberani, Setia, Cerdas');
-
-  const [newLocName, setNewLocName] = useState('');
-  const [newLocType, setNewLocType] = useState('SETTLEMENT');
-
-  const [newObjName, setNewObjName] = useState('');
-  const [newObjType, setNewObjType] = useState('ARTIFACT');
-
-  const [experimentPrompt, setExperimentPrompt] = useState('');
-  const [selectedTone, setSelectedTone] = useState('Fantasi Epik');
-
-  const handleAddChar = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCharName.trim()) return;
-    await onAddCharacter({
-      displayName: newCharName.trim(),
-      role: newCharRole.trim(),
-      background: newCharBackground.trim(),
-      traits: newCharTraits.split(',').map(s => s.trim()).filter(Boolean),
-    });
-    setNewCharName('');
-    setNewCharBackground('');
+  const handleAdvance = async (days: number) => {
+    setIsAdvancing(true);
+    try {
+      await onAdvanceDay(days);
+    } finally {
+      setIsAdvancing(false);
+    }
   };
 
-  const handleAddLoc = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newLocName.trim()) return;
-    await onAddLocation({
-      displayName: newLocName.trim(),
-      locationType: newLocType,
-      accessibilityStatus: 'OPEN',
-    });
-    setNewLocName('');
+  const handleClone = async () => {
+    setIsCloning(true);
+    try {
+      await onCloneToSandbox();
+    } finally {
+      setIsCloning(false);
+    }
   };
 
-  const handleAddObj = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newObjName.trim()) return;
-    await onAddObject({
-      displayName: newObjName.trim(),
-      objectType: newObjType,
-      condition: 'PRISTINE',
-    });
-    setNewObjName('');
-  };
-
-  const handleRunExperiment = () => {
-    const fullInstruction = `[Gaya: ${selectedTone}] ${experimentPrompt || 'Eksplorasi adegan tak terduga dalam dunia cerita.'}`;
-    void onRunProduction('GENERAL_PRODUCTION', fullInstruction);
+  const handleSimulateHypothesis = async () => {
+    if (!hypothesisPrompt.trim()) return;
+    setIsSimulating(true);
+    try {
+      const res = await onAiAssist('STORY_PREMISE', {
+        genre: universe?.storyMetadata?.genre || 'Fantasi',
+        userIdea: hypothesisPrompt,
+      });
+      setHypothesisResult(res?.proposal || null);
+    } finally {
+      setIsSimulating(false);
+    }
   };
 
   return (
-    <div id="view-sandbox" className="space-y-6">
-      {/* Sandbox Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2.5">
-            <TestTube className="h-6 w-6 text-indigo-600" />
-            <span>Laboratorium Eksperimen Cerita (Sandbox)</span>
-          </h2>
-          <p className="mt-1 text-xs sm:text-sm text-slate-600">
-            Uji ide cerita baru, lakukan simulasi waktu ke hari esok, dan coba karakter hipotetis tanpa mengubah arsip resmi.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <ModeBadge isSandbox={true} />
-        </div>
-      </div>
-
-      {/* Mode Difference Explanatory Banner */}
-      <Card variant="sandbox" className="p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1 max-w-2xl">
-            <div className="text-sm font-bold text-indigo-950 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-indigo-600" />
-              <span>Perbedaan Mode Sandbox vs Mode Produksi</span>
+    <div className="space-y-6 animate-fade-in">
+      {/* Sandbox Header with Distinct Experimental Theme */}
+      <Card className="p-6 bg-gradient-to-r from-purple-50/90 via-indigo-50/70 to-purple-100/50 border-2 border-purple-300 shadow-md">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-xl bg-purple-200 text-purple-900 text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+                <TestTube className="h-3.5 w-3.5 text-purple-700" />
+                <span>Ruang Simulasi & Eksperimen</span>
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full bg-white/80 text-purple-900 text-[11px] font-bold border border-purple-200">
+                Aman & Terisolasi
+              </span>
             </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              <strong>Mode Produksi (Kanun)</strong> adalah catatan resmi cerita yang tidak boleh diubah sembarangan. Sedangkan di <strong>Mode Sandbox</strong>, Anda bebas memajukan tanggal, menambah tokoh uji coba, dan menguji gaya naskah sebelum diterapkan secara resmi.
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+              Laboratorium Sandbox Bebas Eksperimen
+            </h2>
+            <p className="text-xs text-slate-600 font-medium max-w-2xl">
+              Uji coba loncatan garis waktu, buat simulasi alur alternatif tanpa merusak kebenaran Kanun Resmi (Canonical).
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2 shrink-0">
-            <Button
-              kind="indigo"
-              size="sm"
-              onClick={() => void onCloneToSandbox()}
-              disabled={busy}
-            >
-              <Copy className="h-3.5 w-3.5" />
-              Kloning Kanun ke Sandbox
-            </Button>
-            <Button
-              kind="secondary"
-              size="sm"
-              onClick={() => void onLoadCurrentUniverse()}
-              disabled={busy}
-            >
-              Kembali ke Arsip Kanun
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      {/* Section 1: Time Machine & Temporal Simulator */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700 font-bold">
-              <Clock className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">Simulasi Garis Waktu Cerita (Time Machine)</h3>
-              <p className="text-xs text-slate-600">
-                Majukan kalender alur cerita untuk melihat bagaimana peristiwa berkembang pada hari berikutnya.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-200">
-            <Calendar className="h-4 w-4 text-indigo-600" />
-            <span className="text-xs font-bold text-indigo-950">{formatFriendlyDate(universeDate)}</span>
-          </div>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-3 pt-2">
           <Button
             kind="indigo"
             size="md"
-            onClick={() => void onAdvanceDay(1)}
-            disabled={busy || !isMounted}
-            className="w-full"
+            onClick={handleClone}
+            disabled={isCloning}
+            className="shrink-0"
           >
-            <FastForward className="h-4 w-4" />
-            Maju +1 Hari (Hari Esok)
-          </Button>
-
-          <Button
-            kind="secondary"
-            size="md"
-            onClick={() => void onAdvanceDay(3)}
-            disabled={busy || !isMounted}
-            className="w-full"
-          >
-            <FastForward className="h-4 w-4" />
-            Lompat +3 Hari
-          </Button>
-
-          <Button
-            kind="secondary"
-            size="md"
-            onClick={() => void onAdvanceDay(7)}
-            disabled={busy || !isMounted}
-            className="w-full"
-          >
-            <FastForward className="h-4 w-4" />
-            Lompat +1 Pekan (7 Hari)
+            <Copy className={`h-4 w-4 ${isCloning ? 'animate-spin' : ''}`} />
+            <span>{isCloning ? 'Mengkroning...' : 'Kloning dari Kanon ke Sandbox'}</span>
           </Button>
         </div>
       </Card>
 
-      {/* Section 2: Character & Entity Playground */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Form Tambah Tokoh */}
-        <Card className="p-5 flex flex-col justify-between">
-          <form onSubmit={handleAddChar} className="space-y-3">
-            <div className="flex items-center gap-2 font-bold text-xs text-slate-900">
-              <Users className="h-4 w-4 text-amber-500" />
-              <span>Tambah Tokoh Eksperimen</span>
-            </div>
+      {/* Time Machine & Timeline Controls */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="p-6 space-y-4 bg-white border-2 border-purple-200">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+              <FastForward className="h-4 w-4 text-purple-600" />
+              <span>Mesin Loncatan Waktu (Time Machine)</span>
+            </h3>
+            <span className="px-2.5 py-1 rounded-xl bg-purple-100 text-purple-900 text-xs font-mono font-bold">
+              📅 {universe?.temporal?.currentUniverseDate || '2024-01-01'}
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 font-medium">
+            Majukan garis waktu cerita untuk mengamati perubahan kondisi tokoh dan status semesta.
+          </p>
 
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1">Nama Karakter</label>
-              <input
-                type="text"
-                value={newCharName}
-                onChange={e => setNewCharName(e.target.value)}
-                placeholder="Contoh: Ksatria Vaelen"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1">Peran / Arketipe</label>
-              <input
-                type="text"
-                value={newCharRole}
-                onChange={e => setNewCharRole(e.target.value)}
-                placeholder="Contoh: Pengembara Misterius"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1">Sifat & Kepribadian</label>
-              <input
-                type="text"
-                value={newCharTraits}
-                onChange={e => setNewCharTraits(e.target.value)}
-                placeholder="Pisahkan dengan koma"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1">Latar Belakang Singkat</label>
-              <textarea
-                value={newCharBackground}
-                onChange={e => setNewCharBackground(e.target.value)}
-                placeholder="Asal-usul atau rahasia karakter..."
-                rows={2}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              />
-            </div>
-
-            <Button kind="indigo" size="sm" disabled={busy || !isMounted || !newCharName.trim()} className="w-full">
-              <Plus className="h-3.5 w-3.5" />
-              Daftarkan ke Sandbox
+          <div className="grid grid-cols-3 gap-3 pt-2">
+            <Button
+              kind="secondary"
+              size="md"
+              onClick={() => handleAdvance(1)}
+              disabled={isAdvancing}
+              className="flex flex-col py-3 border-purple-200 hover:bg-purple-50"
+            >
+              <span className="text-sm font-black text-purple-900">+1 Hari</span>
+              <span className="text-[10px] text-slate-500 font-medium">Lompat esok hari</span>
             </Button>
-          </form>
-        </Card>
 
-        {/* Form Tambah Lokasi */}
-        <Card className="p-5 flex flex-col justify-between">
-          <form onSubmit={handleAddLoc} className="space-y-3">
-            <div className="flex items-center gap-2 font-bold text-xs text-slate-900">
-              <MapPin className="h-4 w-4 text-emerald-500" />
-              <span>Tambah Wilayah Eksperimen</span>
-            </div>
+            <Button
+              kind="secondary"
+              size="md"
+              onClick={() => handleAdvance(3)}
+              disabled={isAdvancing}
+              className="flex flex-col py-3 border-purple-200 hover:bg-purple-50"
+            >
+              <span className="text-sm font-black text-purple-900">+3 Hari</span>
+              <span className="text-[10px] text-slate-500 font-medium">Lompat 3 hari</span>
+            </Button>
 
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1">Nama Tempat / Lokasi</label>
-              <input
-                type="text"
-                value={newLocName}
-                onChange={e => setNewLocName(e.target.value)}
-                placeholder="Contoh: Benteng Kabut Abadi"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1">Tipe Wilayah</label>
-              <select
-                value={newLocType}
-                onChange={e => setNewLocType(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              >
-                <option value="SETTLEMENT">Kota / Pemukiman</option>
-                <option value="STRUCTURE">Kuil / Benteng / Kastil</option>
-                <option value="INTERIOR_SPACE">Ruang Rahasia / Aula</option>
-                <option value="TERRAIN">Hutan / Lembah / Pegunungan</option>
-              </select>
-            </div>
-
-            <div className="pt-8">
-              <Button kind="emerald" size="sm" disabled={busy || !isMounted || !newLocName.trim()} className="w-full">
-                <Plus className="h-3.5 w-3.5" />
-                Tambah Lokasi
-              </Button>
-            </div>
-          </form>
-        </Card>
-
-        {/* Form Tambah Pusaka */}
-        <Card className="p-5 flex flex-col justify-between">
-          <form onSubmit={handleAddObj} className="space-y-3">
-            <div className="flex items-center gap-2 font-bold text-xs text-slate-900">
-              <Sparkles className="h-4 w-4 text-violet-500" />
-              <span>Tambah Benda Pusaka</span>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1">Nama Benda / Senjata</label>
-              <input
-                type="text"
-                value={newObjName}
-                onChange={e => setNewObjName(e.target.value)}
-                placeholder="Contoh: Cincin Bintang Kejora"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1">Kategori Benda</label>
-              <select
-                value={newObjType}
-                onChange={e => setNewObjType(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400"
-              >
-                <option value="ARTIFACT">Pusaka Keramat</option>
-                <option value="WEAPON">Senjata Pusaka</option>
-                <option value="DOCUMENT">Kitab / Naskah Kuno</option>
-                <option value="TECHNOLOGY">Perangkat Magis</option>
-              </select>
-            </div>
-
-            <div className="pt-8">
-              <Button kind="indigo" size="sm" disabled={busy || !isMounted || !newObjName.trim()} className="w-full">
-                <Plus className="h-3.5 w-3.5" />
-                Tambah Benda
-              </Button>
-            </div>
-          </form>
-        </Card>
-      </div>
-
-      {/* Section 3: AI Prompt & Tone Workshop */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold shadow-sm">
-              <Zap className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">Bengkel Eksperimen Gaya Narasi AI</h3>
-              <p className="text-xs text-slate-600">
-                Uji coba berbagai genre cerita dan instruksi naskah dengan imajinasi bebas.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-800 mb-1.5">Pilih Nuansa / Genre Cerita:</label>
-            <div className="flex flex-wrap gap-2">
-              {['Fantasi Epik', 'Misteri & Detektif', 'Manga Aksi & Shonen', 'Drama Psikologis', 'Komedi & Satir'].map(tone => (
-                <button
-                  key={tone}
-                  type="button"
-                  onClick={() => setSelectedTone(tone)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    selectedTone === tone
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  {tone}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-800 mb-1.5">Instruksi Eksperimen Naskah:</label>
-            <textarea
-              value={experimentPrompt}
-              onChange={e => setExperimentPrompt(e.target.value)}
-              placeholder="Contoh: Buat dialog dramatis saat dua tokoh saling berhadapan di tengah badai salju..."
-              rows={3}
-              className="w-full rounded-2xl border-2 border-slate-200 bg-slate-50 p-4 text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            />
-          </div>
-
-          <div className="flex justify-end">
             <Button
               kind="indigo"
               size="md"
-              onClick={handleRunExperiment}
-              disabled={busy || !isMounted}
+              onClick={() => handleAdvance(7)}
+              disabled={isAdvancing}
+              className="flex flex-col py-3"
             >
-              <Send className="h-4 w-4" />
-              Jalankan Naskah Eksperimen
+              <span className="text-sm font-black text-white">+1 Minggu</span>
+              <span className="text-[10px] text-purple-100 font-medium">Lompat 7 hari</span>
             </Button>
           </div>
-        </div>
-      </Card>
+        </Card>
+
+        {/* Narrative Simulation Sandbox */}
+        <Card className="p-6 space-y-4 bg-white border-2 border-indigo-200">
+          <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-indigo-600" />
+            <span>Simulasi Ide & Alur Hipotetis</span>
+          </h3>
+          <p className="text-xs text-slate-500 font-medium">
+            Uji coba skenario "Bagaimana jika..." sebelum memasukkannya ke dalam kanun cerita.
+          </p>
+
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={hypothesisPrompt}
+              onChange={(e) => setHypothesisPrompt(e.target.value)}
+              placeholder="cth. Bagaimana jika artefak dicuri oleh sahabat sang tokoh?"
+              className="clay-input w-full px-3.5 py-2.5 text-xs rounded-xl"
+            />
+            <Button
+              kind="indigo"
+              size="sm"
+              onClick={handleSimulateHypothesis}
+              disabled={isSimulating || !hypothesisPrompt.trim()}
+              className="w-full"
+            >
+              <Wand2 className={`h-4 w-4 ${isSimulating ? 'animate-spin' : ''}`} />
+              <span>{isSimulating ? 'Memproyeksikan Alur...' : 'Simulasikan Dampak Naratif'}</span>
+            </Button>
+          </div>
+        </Card>
+      </div>
+
+      {/* Hypothesis Results */}
+      {hypothesisResult && (
+        <Card className="p-6 space-y-4 bg-gradient-to-r from-purple-50/50 to-indigo-50/50 border-2 border-purple-300 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-black text-purple-950 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-purple-600" />
+              <span>Hasil Proyeksi Alur Hipotetis</span>
+            </h4>
+            <span className="text-[11px] font-bold text-purple-700 bg-purple-100 px-2.5 py-0.5 rounded-full">
+              Draf Simulasi
+            </span>
+          </div>
+
+          <div className="space-y-2 text-xs">
+            <div className="p-3 bg-white/90 rounded-xl border border-purple-200 font-bold text-slate-900">
+              {hypothesisResult.title}
+            </div>
+            <div className="p-3 bg-white/90 rounded-xl border border-purple-200 text-slate-700 leading-relaxed">
+              <strong className="text-slate-900 block mb-1">Premis Simulasi:</strong>
+              {hypothesisResult.premise}
+            </div>
+            <div className="p-3 bg-white/90 rounded-xl border border-purple-200 text-slate-700 leading-relaxed">
+              <strong className="text-slate-900 block mb-1">Konflik yang Terpicu:</strong>
+              {hypothesisResult.initialConflict}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      <InfoCallout title="Perbedaan Hakiki: Produksi vs Sandbox" tone="indigo">
+        Segala eksperimen di dalam ruang Sandbox tidak memengaruhi naskah terbitan di Kanun Resmi. Anda bebas menguji konsekuensi tanpa rasa khawatir!
+      </InfoCallout>
     </div>
   );
 }

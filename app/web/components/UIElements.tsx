@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, AlertCircle, CircleDot, Info, Sparkles, TestTube } from 'lucide-react';
+import { CheckCircle2, AlertCircle, CircleDot, Info, Sparkles, TestTube, X, HelpCircle } from 'lucide-react';
 import { getFriendlyStatus, getStatusTone } from '../translations.ts';
 
 export function StatusBadge({
@@ -11,13 +11,13 @@ export function StatusBadge({
   customLabel?: string;
   showIcon?: boolean;
 }) {
-  const isPositive = ['READY', 'CONNECTED', 'HEALTHY', 'COMPLETED', 'ENABLED', 'INITIALIZED', 'WIRED', 'ALIVE'].includes(status);
-  const isWarning = ['WAITING_FOR_UNIVERSE', 'WAITING_FOR_DAILY_CONTEXT', 'NO_PROVIDER', 'NO_UNIVERSE', 'DEGRADED', 'CACHED', 'DISPATCHED'].includes(status);
+  const isPositive = ['READY', 'CONNECTED', 'HEALTHY', 'COMPLETED', 'ENABLED', 'INITIALIZED', 'WIRED', 'ALIVE', 'KONSISTEN', 'VALID'].includes(status);
+  const isWarning = ['WAITING_FOR_UNIVERSE', 'WAITING_FOR_DAILY_CONTEXT', 'NO_PROVIDER', 'NO_UNIVERSE', 'DEGRADED', 'CACHED', 'DISPATCHED', 'CARRYOVER'].includes(status);
 
   return (
     <span
       id={`status-badge-${status.toLowerCase()}`}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-all ${getStatusTone(status)}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-xs transition-all ${getStatusTone(status)}`}
     >
       {showIcon && (
         isPositive ? (
@@ -74,7 +74,7 @@ export function Button({
   children: React.ReactNode;
   onClick?: () => void;
   disabled?: boolean;
-  kind?: 'primary' | 'secondary' | 'indigo' | 'emerald' | 'danger' | 'ghost';
+  kind?: 'primary' | 'secondary' | 'indigo' | 'emerald' | 'danger' | 'ghost' | 'clay';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   id?: string;
@@ -91,6 +91,7 @@ export function Button({
     indigo: 'clay-button-indigo',
     emerald: 'bg-gradient-to-b from-emerald-500 to-teal-600 text-white border-2 border-emerald-200 shadow-[0_6px_14px_rgba(16,185,129,0.35),inset_0_2px_2px_rgba(255,255,255,0.6)] hover:brightness-105 active:scale-[0.98]',
     danger: 'clay-button-danger',
+    clay: 'bg-gradient-to-b from-amber-400 to-amber-500 text-slate-900 border-2 border-amber-200 shadow-[0_8px_16px_rgba(245,158,11,0.3),inset_0_2px_2px_rgba(255,255,255,0.7)] hover:brightness-105 active:scale-[0.98]',
     ghost: 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 rounded-xl',
   }[kind];
 
@@ -147,16 +148,57 @@ export function ModeBadge({
 }) {
   if (isSandbox) {
     return (
-      <div className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 px-3 py-1 text-xs font-bold text-indigo-700 shadow-sm">
-        <TestTube className="h-4 w-4 text-indigo-600 animate-pulse" />
-        <span>Mode Sandbox (Lab Eksperimen)</span>
+      <div className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-100 to-indigo-100 border-2 border-purple-300 px-3.5 py-1.5 text-xs font-bold text-purple-900 shadow-[0_4px_12px_rgba(147,51,234,0.15)]">
+        <TestTube className="h-4 w-4 text-purple-600 animate-pulse" />
+        <span>RUANG EKSPERIMEN (SANDBOX)</span>
       </div>
     );
   }
   return (
-    <div className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 px-3 py-1 text-xs font-bold text-amber-900 shadow-sm">
+    <div className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-50 to-amber-100 border-2 border-amber-300 px-3.5 py-1.5 text-xs font-bold text-amber-900 shadow-[0_4px_12px_rgba(245,158,11,0.15)]">
       <Sparkles className="h-4 w-4 text-amber-600" />
-      <span>Mode Produksi (Kanun Resmi)</span>
+      <span>KANUN RESMI (CANONICAL)</span>
+    </div>
+  );
+}
+
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  subtitle,
+  children,
+  maxWidth = 'max-w-2xl',
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  maxWidth?: string;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+      <div className={`relative w-full ${maxWidth} clay-card max-h-[90vh] flex flex-col overflow-hidden bg-white shadow-2xl border-2 border-slate-100 rounded-3xl`}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-amber-50/40">
+          <div>
+            <h3 className="text-lg font-black text-slate-900">{title}</h3>
+            {subtitle && <p className="text-xs text-slate-500 font-medium mt-0.5">{subtitle}</p>}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/50 rounded-xl transition"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="p-6 overflow-y-auto flex-1">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }
