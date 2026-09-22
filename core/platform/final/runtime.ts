@@ -19,7 +19,9 @@ import { ProductionOutputValidator } from '../validation/validator.ts';
 import { ProductionRunner } from '../production/runner.ts';
 import { DailyProductionBridge } from '../production/daily-bridge.ts';
 import { FileProductionStore } from '../persistence/file.ts';
+import { FileScheduledJobStore } from '../persistence/scheduled-jobs.ts';
 import { PageProductionScheduler } from '../scheduler/scheduler.ts';
+import { ScheduledProductionDispatcher } from '../scheduler/dispatcher.ts';
 import { CostController } from '../cost/controller.ts';
 import { ProviderRegistry, createOpenAICompatibleAdapterFromEnv } from '../providers/index.ts';
 import { UniverseAuthorityStore } from '../universe/index.ts';
@@ -44,6 +46,8 @@ export interface ProductionRuntime {
   readonly productionRunner: ProductionRunner;
   readonly dailyBridge: DailyProductionBridge;
   readonly scheduler: PageProductionScheduler;
+  readonly scheduledJobStore: FileScheduledJobStore;
+  readonly schedulerDispatcher: ScheduledProductionDispatcher;
   readonly costController: CostController;
   readonly providerRegistry: ProviderRegistry;
   readonly hardening: HardenedRuntimeBoundary;
@@ -56,6 +60,7 @@ export interface ProductionRuntimeOptions {
   readonly hardening?: ConstructorParameters<typeof HardenedRuntimeBoundary>[0];
   readonly loadEnvironmentProviders?: boolean;
   readonly dataDir?: string;
+  readonly scheduledDataDir?: string;
   readonly costBudget?: ConstructorParameters<typeof CostController>[0];
 }
 
@@ -97,6 +102,15 @@ export function createProductionRuntime(options?: ProductionRuntimeOptions): Pro
     pageBatchExecutor,
     listPageDefinitions: () => pageCatalog.list({ enabledOnly: true })
   });
+  const scheduledJobStore = new FileScheduledJobStore({ rootDir: options?.scheduledDataDir });
+  const schedulerDispatcher = new ScheduledProductionDispatcher({
+    scheduler,
+    pageCatalog,
+    bridge: dailyBridge,
+    authority: universeAuthority,
+    executor: pageBatchExecutor as BoundedPageBatchExecutor<any, any>,
+    jobStore: scheduledJobStore
+  });
 
   return Object.freeze({
     pageCatalog,
@@ -118,6 +132,8 @@ export function createProductionRuntime(options?: ProductionRuntimeOptions): Pro
     productionRunner,
     dailyBridge,
     scheduler,
+    scheduledJobStore,
+    schedulerDispatcher,
     costController,
     providerRegistry,
     hardening,
