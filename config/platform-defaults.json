@@ -1,0 +1,36 @@
+{
+  "platformVersion": "15-25",
+  "pageScaling": {
+    "enabled": true,
+    "defaultConcurrency": 4,
+    "maxBatchSize": 1000,
+    "sharding": "DETERMINISTIC_HASH"
+  },
+  "tokenOptimization": {
+    "charsPerTokenEstimate": 4,
+    "reuseSharedContext": true,
+    "safetyReserve": true
+  },
+  "semanticCache": {
+    "enabled": true,
+    "defaultMinimumSimilarity": 0.92,
+    "defaultMaxGenerationAge": 0
+  },
+  "continuity": {
+    "generationBased": true,
+    "runtimeDriftObservation": true
+  },
+  "recovery": {
+    "maxRetries": 2,
+    "corruptionAction": "QUARANTINE"
+  },
+  "modelBoundary": {
+    "providerNeutral": true,
+    "canonicalMutationAllowed": false
+  },
+  "hardening": {
+    "failClosedOnUnknown": true,
+    "maxContextCharacters": 250000,
+    "maxTokenBudget": 200000
+  }
+}
