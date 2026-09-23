@@ -76,6 +76,7 @@ export function UniverseView({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
 
   if (!universe || !universe.mounted) {
     return (
@@ -270,30 +271,86 @@ export function UniverseView({
       {/* TAB: Pusaka & Benda */}
       {activeTab === 'objects' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
-          {universe.objects.map((obj) => (
-            <Card key={obj.id} className="p-5 space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-amber-100 text-amber-900 rounded-xl">
-                    <Package className="h-5 w-5" />
+          {universe.objects.map((obj) => {
+            const owner = obj.ownerActorRef ? universe.characters.find((c) => c.id === obj.ownerActorRef) : null;
+            const holder = obj.holderActorRef ? universe.characters.find((c) => c.id === obj.holderActorRef) : null;
+            const location = obj.currentLocationRef ? universe.locations.find((l) => l.id === obj.currentLocationRef) : null;
+            const user = obj.currentUserRef ? universe.characters.find((c) => c.id === obj.currentUserRef) : null;
+            const wearer = obj.currentWearerRef ? universe.characters.find((c) => c.id === obj.currentWearerRef) : null;
+            const isSelected = selectedObjectId === obj.id;
+
+            return (
+              <Card key={obj.id} className="p-5 space-y-3">
+                <button type="button" onClick={() => setSelectedObjectId(isSelected ? null : obj.id)} className="w-full text-left" aria-expanded={isSelected}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-2 bg-amber-100 text-amber-900 rounded-xl shrink-0">
+                        <Package className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-bold text-slate-900 truncate">{obj.displayName}</h4>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">{obj.objectType}</span>
+                      </div>
+                    </div>
+                    <StatusBadge status={obj.condition || 'Belum ditentukan'} />
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900">{obj.displayName}</h4>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">{obj.objectType}</span>
-                  </div>
+                </button>
+
+                <p className="text-xs text-slate-600 line-clamp-2">
+                  {obj.description || 'Deskripsi belum tercatat.'}
+                </p>
+
+                <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-[11px] text-slate-500 font-medium">
+                  <span>Pemilik: {owner?.displayName || 'Belum ditentukan'}</span>
+                  <span>Pemegang: {holder?.displayName || 'Belum ditentukan'}</span>
+                  <span>Lokasi: {location?.displayName || 'Belum ditentukan'}</span>
+                  <span>Status kepemilikan: {obj.possessionStatus || 'Belum ditentukan'}</span>
                 </div>
-                <StatusBadge status={obj.condition || 'PRISTINE'} />
-              </div>
 
-              <p className="text-xs text-slate-600 line-clamp-2">
-                {obj.description || 'Deskripsi belum tercatat.'}
-              </p>
-
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-                <span>Pemilik: {obj.currentOwnerCharacterId ? 'Dimiliki Tokoh' : 'Belum bertuan'}</span>
-              </div>
-            </Card>
-          ))}
+                {isSelected && (
+                  <div className="pt-3 border-t border-slate-100 space-y-3 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Detail Benda</span>
+                      <StatusBadge status={obj.status || 'Belum ditentukan'} />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                      <div className="rounded-xl bg-slate-50 border border-slate-100 p-3">
+                        <div className="font-bold text-slate-700">Akses</div>
+                        <div className="mt-1 text-slate-500">{obj.accessStatus || 'Belum ditentukan'}</div>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 border border-slate-100 p-3">
+                        <div className="font-bold text-slate-700">Pengguna</div>
+                        <div className="mt-1 text-slate-500">{user?.displayName || obj.currentUserRef || 'Belum ditentukan'}</div>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 border border-slate-100 p-3">
+                        <div className="font-bold text-slate-700">Pemakai</div>
+                        <div className="mt-1 text-slate-500">{wearer?.displayName || obj.currentWearerRef || 'Belum ditentukan'}</div>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 border border-slate-100 p-3">
+                        <div className="font-bold text-slate-700">Kategori</div>
+                        <div className="mt-1 text-slate-500">{obj.category || 'Belum ditentukan'}</div>
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-[11px]">
+                      <div className="font-bold text-amber-900">Keberlakuan waktu</div>
+                      <div className="mt-1 text-amber-800">
+                        {obj.temporalValidity?.effectiveFrom || 'Belum ditentukan'}
+                        {obj.temporalValidity?.effectiveTo ? ` → ${obj.temporalValidity.effectiveTo}` : ' → masih berlaku'}
+                        {obj.temporalValidity?.temporalCategory ? ` · ${obj.temporalValidity.temporalCategory}` : ''}
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 border border-slate-100 p-3 text-[11px]">
+                      <div className="font-bold text-slate-700">Jejak perubahan</div>
+                      <div className="mt-1 text-slate-500">
+                        Field bersumber: {obj.fieldSources ? Object.keys(obj.fieldSources).length : 0} ·
+                        Revisi tercatat: {obj.revisionCount ?? 'Belum tersedia'}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
 
           {universe.objects.length === 0 && (
             <div className="col-span-3 p-12 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-100">

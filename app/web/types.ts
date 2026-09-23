@@ -203,6 +203,17 @@ export interface UniverseObject {
   holderActorRef?: string | null;
   ownerActorRef?: string | null;
   currentOwnerCharacterId?: string | null;
+  status?: string | null;
+  accessStatus?: string | null;
+  currentUserRef?: string | null;
+  currentWearerRef?: string | null;
+  temporalValidity?: {
+    effectiveFrom: string;
+    effectiveTo?: string;
+    temporalCategory?: string;
+  } | null;
+  fieldSources?: Record<string, string> | null;
+  revisionCount?: number | null;
 }
 
 export interface UniverseRelationship {

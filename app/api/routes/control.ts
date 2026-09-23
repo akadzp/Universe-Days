@@ -549,9 +549,20 @@ controlRouter.get('/universe/details', (_req, res) => {
       category: o.category,
       possessionStatus: o.possessionStatus,
       condition: o.condition,
+      status: o.status,
+      accessStatus: o.accessStatus,
       currentLocationRef: o.locationRef,
       holderActorRef: o.possessionRef ? String(o.possessionRef) : null,
-      ownerActorRef: o.ownershipRef ? String(o.ownershipRef) : null
+      ownerActorRef: o.ownershipRef ? String(o.ownershipRef) : null,
+      currentUserRef: o.currentUserRef ? String(o.currentUserRef) : null,
+      currentWearerRef: o.currentWearerRef ? String(o.currentWearerRef) : null,
+      temporalValidity: o.temporalValidity ? {
+        effectiveFrom: o.temporalValidity.effectiveFrom,
+        effectiveTo: o.temporalValidity.effectiveTo,
+        temporalCategory: o.temporalValidity.temporalCategory
+      } : null,
+      fieldSources: o.fieldSources ? { ...o.fieldSources } : null,
+      revisionCount: Array.isArray((o.history as any)?.revisions) ? (o.history as any).revisions.length : null
     }));
 
     const relationships = Object.values(u.relationships || {}).map((r: RelationshipEntity) => ({
