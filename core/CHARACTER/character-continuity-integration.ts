@@ -5,7 +5,7 @@
  * This adapter binds Character identity to a continuity item without copying
  * Character state into the continuity engine or inventing missing conditions.
  */
-import { CharacterAggregate } from './character-aggregate.ts';
+import { CharacterAggregate, validateCharacterAggregate } from './character-aggregate.ts';
 import { CharacterEntity } from './character.ts';
 import { ContinuityIdentity, ContinuityIdentityValidator, ContinuityItem, ContinuityStatus, EffectiveTime } from '../UNIVERSE/CONTINUITY/continuity-model.ts';
 import { Transition, TransitionType } from '../UNIVERSE/CONTINUITY/transition.ts';
@@ -17,6 +17,7 @@ export const CHARACTER_CONTINUITY_DOMAIN = 'CHARACTER';
 
 export interface CharacterContinuityBindingResult {
   readonly valid: boolean;
+  readonly aggregate?: CharacterAggregate;
   readonly character?: CharacterEntity;
   readonly continuityItem?: ContinuityItem;
   readonly issues: readonly string[];
@@ -46,7 +47,24 @@ export function bindCharacterContinuity(input: {
       `Character continuity bound: ${identity.continuityId}`
     )
   });
-  return Object.freeze({ valid: true, character: nextCharacter, continuityItem: input.continuityItem, issues: Object.freeze([]) });
+  const nextAggregate: CharacterAggregate = Object.freeze({
+    ...input.aggregate,
+    character: nextCharacter
+  });
+  const report = validateCharacterAggregate(nextAggregate);
+  if (!report.valid) {
+    return Object.freeze({
+      valid: false,
+      issues: Object.freeze(report.issues.map(issue => issue.message))
+    });
+  }
+  return Object.freeze({
+    valid: true,
+    aggregate: nextAggregate,
+    character: nextCharacter,
+    continuityItem: input.continuityItem,
+    issues: Object.freeze([])
+  });
 }
 
 export function buildCharacterContinuityTransition(input: {

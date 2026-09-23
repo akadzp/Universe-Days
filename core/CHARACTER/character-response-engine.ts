@@ -17,6 +17,7 @@ export interface CharacterResponseProposal {
   readonly rationaleReferences: readonly string[];
   readonly proposedDecision: UniverseDecision;
   readonly authoritative: false;
+  readonly recordedAt: string;
 }
 
 export function proposeCharacterResponse(input: {
@@ -24,6 +25,7 @@ export function proposeCharacterResponse(input: {
   readonly event: EventEntity;
   readonly intent: string;
   readonly rationaleReferences?: readonly string[];
+  readonly recordedAt: string;
 }): CharacterResponseProposal {
   const characterId = input.aggregate.character.identity.id as string;
   const proposalId = `CHAR-RESPONSE-${input.event.eventId}-${characterId}`;
@@ -36,7 +38,7 @@ export function proposeCharacterResponse(input: {
     traceability: {
       requestId: makeRequestID(`REQ_${proposalId}`),
       sourceSystem: makeSystemID('CHARACTER_RESPONSE_ENGINE'),
-      timestamp: 0,
+      timestamp: Date.parse(input.recordedAt),
       version: '1.0.0'
     }
   });
@@ -47,6 +49,7 @@ export function proposeCharacterResponse(input: {
     intent: input.intent,
     rationaleReferences: Object.freeze([...(input.rationaleReferences ?? [])]),
     proposedDecision: decision,
-    authoritative: false
+    authoritative: false,
+    recordedAt: input.recordedAt
   });
 }
