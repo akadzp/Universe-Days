@@ -9,3 +9,4 @@ export * from './handoff';
 export * from './validation';
 export * from './revision';
 export * from './date';
+export * from './daily-story-character-integration';

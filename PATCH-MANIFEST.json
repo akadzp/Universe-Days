@@ -1,14 +1,17 @@
 {
-  "patch": "character-aggregate-state-event-full-validation",
-  "base": "Universe-Days current/default branch at inspection time",
+  "patch": "pocer-character-integration-batch-4-9",
+  "base": "Universe-Days main branch",
+  "stages_applied": [4, 5, 6, 7, 8, 9],
   "scope": [
-    "Character Aggregate",
-    "State/Event integration",
-    "Character indicator lifecycle export surface",
-    "integration tests",
-    "validation documentation"
+    "Stage 4: Character-Relationship Integration",
+    "Stage 5: Character-Location Integration",
+    "Stage 6: Character-Continuity Integration",
+    "Stage 7: Character Response / Decision Boundary",
+    "Stage 8: Daily Story Character Context Integration",
+    "Stage 9: Final Architecture Audit"
   ],
-  "github_write": false,
-  "old_git_history_used": false,
-  "preserves_existing_character_attributes": true
+  "additive_mode": true,
+  "preserves_existing_character_attributes": true,
+  "ai_authority": "PROPOSER_ONLY",
+  "status": "COMPLETED"
 }
