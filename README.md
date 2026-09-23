@@ -1,1358 +1,1998 @@
-Pocer UI Architecture & Governance
+Berikut isi README.md lengkap dalam bahasa Indonesia, sesuai baseline terbaru yang sudah kita sepakati.
+
+Pocer — Arsitektur UI, Authority System & Governance
+
+> Status: Baseline UI Canonical
+Ruang lingkup: User Interface, navigasi, presentasi, interaksi, konsumsi data, batas mutation, dan governance UI terhadap system
+Prinsip utama: System adalah keputusan mutlak untuk UI.
+
+
+
+
+---
 
 1. Tujuan Dokumen
 
-Dokumen ini mendefinisikan arsitektur antarmuka pengguna (UI) untuk Pocer.
+Dokumen ini mendefinisikan kontrak arsitektur UI Pocer.
 
-Dokumen ini mengatur:
+README ini bukan definisi ulang domain system. Domain, authority, ownership, validation, temporal rules, provenance, continuity, persistence, AI boundary, dan aturan sistem lainnya tetap ditentukan oleh system governance dan domain rules.
 
-- tujuan UI;
-- prinsip desain UI;
-- struktur navigasi;
-- struktur sidebar;
-- tata letak halaman;
-- hubungan antar-area UI;
-- batas tanggung jawab setiap navigasi;
-- aturan pemisahan fitur;
-- aturan penggunaan data dari backend;
-- kepatuhan UI terhadap governance dan domain rules;
-- aturan mutation dari UI;
-- aturan terhadap data "UNKNOWN", "NOT_RECORDED", dan kondisi yang belum diketahui;
-- aturan terhadap data hasil produksi AI;
-- aturan terhadap Canon, Projection, dan Proposal;
-- aturan agar UI tidak membuat asumsi terhadap data;
-- batas antara UI dan sistem domain.
+Dokumen ini menetapkan bagaimana UI harus berperilaku terhadap system tersebut.
 
-Dokumen ini tidak mendefinisikan ulang domain system.
+UI Pocer harus selalu dipahami sebagai:
 
-Domain, authority, ownership, validation, temporal rules, provenance, continuity, persistence, AI boundary, dan aturan sistem lainnya tetap didefinisikan oleh system governance dan domain rules.
+> Interface untuk user terhadap system.
 
-UI hanya menjadi consumer dan command client terhadap aturan tersebut.
 
----
 
-2. Prinsip Utama
+UI bukan:
 
-2.1 UI Berorientasi Pengguna
+pemilik data;
 
-Struktur UI harus mengikuti mental model pengguna, bukan struktur internal backend.
+sumber kebenaran;
 
-UI tidak boleh memaksa pengguna memahami:
+domain owner;
 
-- domain owner;
-- system owner;
-- execution engine;
-- production runner;
-- persistence layer;
-- validation layer;
-- domain contract;
-- internal authority level;
-- internal storage;
-- internal pipeline.
+rule engine;
 
-Terminologi internal hanya boleh ditampilkan apabila memang diperlukan untuk memahami kondisi atau tindakan yang relevan bagi pengguna.
+validation authority;
+
+persistence layer;
+
+fallback data source;
+
+dummy-data provider;
+
+AI authority;
+
+Canon authority;
+
+mekanisme untuk mengubah sistem di luar contract yang diberikan system.
+
+
 
 ---
 
-2.2 UI Bukan Pemilik Kebenaran
+2. Prinsip Absolut: System Berkuasa Penuh atas UI
 
-UI tidak memiliki authority atas Canon.
+Prinsip tertinggi UI Pocer adalah:
 
-UI:
+> System adalah keputusan mutlak untuk UI.
 
-- membaca data;
-- menampilkan data;
-- meminta perubahan;
-- meminta proses;
-- menampilkan hasil validation;
-- menampilkan hasil production;
-- mengarahkan user kepada workflow yang valid.
 
-UI tidak boleh:
 
-- menentukan kebenaran domain;
-- membuat fakta Canon sendiri;
-- mengubah data secara langsung;
-- melakukan silent repair;
-- melakukan silent inference;
-- mengubah Proposal menjadi Canon;
-- mengubah Projection menjadi Canon;
-- menentukan hasil validation secara lokal sebagai pengganti backend.
+Artinya, UI harus menerima keputusan system mengenai:
 
----
+data;
 
-2.3 Backend Tetap Menjadi Authority
+state;
 
-Seluruh aturan domain tetap berasal dari backend.
+identity;
 
-UI harus menganggap backend sebagai sumber authority untuk:
+relationship;
 
-- identity;
-- state;
-- relationship;
-- object;
-- location;
-- knowledge;
-- temporal validity;
-- continuity;
-- story state;
-- persistence;
-- validation;
-- provenance;
-- mutation permission.
+location;
 
-UI tidak boleh mengimplementasikan ulang business rule secara parsial lalu menganggap hasil lokal sebagai keputusan final.
+object;
 
-UI dapat melakukan validation teknis untuk kebutuhan UX, tetapi validation tersebut tidak menggantikan validation backend.
+knowledge;
 
----
+behavior;
 
-3. Struktur Navigasi Utama
+style;
 
-Pocer menggunakan lima navigasi utama yang berada pada bottom navigation.
+continuity;
 
-Urutan dari kiri ke kanan:
+temporal validity;
 
-1. Dashboard
-2. Aktor
-3. Cerita
-4. Cocokkan
-5. Dunia
+event;
 
-Dashboard | Aktor | Cerita | Cocokkan | Dunia
+process;
 
-Kelima navigasi tersebut merupakan user-facing functional areas.
+story lifecycle;
 
-Navigasi tidak merepresentasikan satu-per-satu domain backend.
+production status;
 
----
+validation result;
 
-4. Bottom Navigation
+permission;
 
-4.1 Tujuan
+mutation validity;
 
-Bottom navigation menyediakan perpindahan antar-lima konteks utama aplikasi.
+provenance;
 
-Bottom navigation harus:
+persistence;
 
-- selalu tersedia pada root application layout;
-- memiliki urutan tetap;
-- memiliki state aktif yang jelas;
-- tidak berubah berdasarkan halaman internal;
-- tidak digunakan untuk menampilkan entity detail;
-- tidak digunakan untuk menampilkan system internals.
+Canon;
 
----
+Sandbox;
 
-4.2 Dashboard
+dan seluruh aturan domain lainnya.
 
-Dashboard adalah konteks observasi utama.
 
-Tujuannya adalah memberikan ringkasan keadaan aplikasi dan universe yang sedang aktif.
+Jika UI dan system berbeda, UI harus tunduk kepada system.
 
-Dashboard bersifat terutama read-oriented.
+UI tidak boleh membuat keputusan sendiri hanya karena:
 
-Sidebar
+data terlihat lebih baik jika diisi;
 
-Dashboard
-├── Beranda
-├── Hari Ini
-└── Aktivitas
+halaman terlihat lebih lengkap;
 
-Tanggung jawab
+user interface membutuhkan nilai default;
 
-Dashboard bertanggung jawab untuk:
+komponen membutuhkan object;
 
-- ringkasan kondisi;
-- konteks waktu aktif;
-- ringkasan aktivitas;
-- informasi status yang relevan bagi pengguna;
-- akses cepat menuju area yang memerlukan perhatian.
+demo membutuhkan data;
 
-Dashboard tidak menjadi owner terhadap data yang ditampilkan.
+empty state terlihat kurang menarik;
 
-Dashboard tidak boleh menjadi tempat kedua untuk mengedit entity yang memiliki canonical home pada navigasi lain.
+backend belum mengembalikan data;
 
----
+developer menganggap nilai tersebut masuk akal;
 
-5. Aktor
+AI menghasilkan nilai yang terlihat meyakinkan.
 
-Aktor adalah konteks untuk membangun, melihat, dan mengelola aktor serta karakter.
 
-Sidebar
+Urutan authority:
 
-Aktor
-├── Semua Aktor
-├── Karakter
-├── Grup
-├── Buat Karakter
-└── Riwayat
+SYSTEM
+  ↓
+DOMAIN / GOVERNANCE
+  ↓
+VALIDATION
+  ↓
+CANONICAL STATE
+  ↓
+UI
+  ↓
+USER
 
-5.1 Semua Aktor
+Untuk informasi:
 
-Digunakan untuk melihat registry aktor yang tersedia.
+CANONICAL / AUTHORITATIVE SYSTEM DATA
+  ↓
+BACKEND / CONTRACT
+  ↓
+UI
+  ↓
+USER
 
-Halaman ini harus menggunakan data backend sebagai sumber daftar dan status.
+Untuk perubahan:
 
-Filtering, sorting, pagination, dan search merupakan fungsi presentasi dan tidak boleh mengubah data Canon.
+USER INTENT
+  ↓
+UI
+  ↓
+SYSTEM COMMAND / CONTRACT
+  ↓
+VALIDATION
+  ↓
+DOMAIN AUTHORITY
+  ↓
+CANONICAL STATE
+  ↓
+PERSISTENCE
+
+UI tidak boleh memotong jalur tersebut.
+
 
 ---
 
-5.2 Karakter
+3. UI Tidak Boleh Mengubah Sistem
 
-Digunakan untuk mengakses karakter yang sudah ada.
+UI secara keseluruhan tidak boleh mengubah sistem secara langsung.
 
-Detail karakter dapat memiliki sub-navigation internal atau tab:
+Yang dimaksud dengan sistem mencakup seluruh canonical/domain state, bukan hanya database.
 
-Karakter
-├── Ringkasan
-├── Profil
-├── Keadaan
-├── Perilaku
-├── Gaya
-├── Pengetahuan
-├── Relasi
-├── Continuity
-└── Riwayat
+UI tidak boleh secara langsung mengubah:
 
-Sub-navigation tersebut bukan root navigation baru.
+Character;
 
-Informasi yang ditampilkan berasal dari domain yang berwenang.
+Actor;
 
-UI tidak boleh menggabungkan data dari beberapa domain lalu menganggap hasil gabungan tersebut sebagai source of truth baru.
+Actress;
 
----
+Object;
 
-5.3 Grup
+Location;
 
-Digunakan untuk melihat dan mengelola grouping yang memang tersedia melalui domain contract.
+Relationship;
 
-Aturan perubahan group tetap mengikuti domain authority.
+Knowledge;
 
-UI tidak boleh memindahkan aktor secara langsung melalui perubahan field lokal.
+State;
 
----
+Behavior;
 
-5.4 Buat Karakter
+Style;
 
-Merupakan workflow khusus untuk pembuatan karakter.
+Continuity;
 
-Workflow harus:
+Event;
 
-- mengikuti field yang tersedia pada contract;
-- membedakan required dan optional data;
-- mempertahankan unknown sebagai unknown;
-- tidak mengisi data semantik secara otomatis tanpa dasar;
-- menjalankan validation sebelum submission;
-- menggunakan command atau contract backend;
-- menampilkan hasil persistence dari backend.
+Process;
 
-UI tidak boleh membuat default yang mempunyai arti domain.
+Universe;
 
-Default visual yang hanya berkaitan dengan presentasi diperbolehkan selama tidak mengubah makna data.
+Daily Universe;
 
----
+Story Canon;
 
-5.5 Riwayat
+persistence;
 
-Menampilkan perubahan atau aktivitas yang relevan dengan aktor.
+temporal state;
 
-Riwayat bukan sumber data baru.
+provenance;
 
-Riwayat harus berasal dari history/audit/provenance yang tersedia dari backend.
+authority;
 
----
+atau domain state lainnya.
 
-6. Cerita
 
-Cerita merupakan konteks untuk proses pembuatan, pembacaan, pengelolaan, dan penelusuran hasil cerita.
+UI hanya boleh meminta system melakukan operasi yang memang disediakan system.
 
-Label utama yang digunakan adalah Cerita, bukan istilah internal seperti Production System atau Narrator System.
+3.1 Mutation yang sah
 
-Sidebar
-
-Cerita
-├── Hari Ini
-├── Daily Story
-├── Daily Page
-├── Ide
-└── Riwayat
-
----
-
-6.1 Hari Ini
-
-Merupakan entry point untuk story yang berhubungan dengan Daily Universe aktif.
-
-Halaman ini menghubungkan konteks temporal dengan story tanpa menjadikan story sebagai pengganti Universe.
-
----
-
-6.2 Daily Story
-
-Menampilkan story yang terikat pada Daily Universe dan lifecycle story yang valid.
-
-UI harus membedakan dengan jelas antara:
-
-- story yang sudah tersedia;
-- story yang sedang diproduksi;
-- proposal;
-- hasil validation;
-- hasil final yang sudah diterima sistem.
-
-UI tidak boleh menganggap output AI sebagai story Canon secara otomatis.
-
----
-
-6.3 Daily Page
-
-Menampilkan page yang berasal dari story dan page production pipeline.
-
-Page merupakan presentation/narrative projection.
-
-Page tidak boleh menjadi source of truth untuk domain Universe.
-
----
-
-6.4 Ide
-
-Digunakan untuk creative input yang belum menjadi Canon.
-
-Ide harus tetap berada pada status yang sesuai dengan lifecycle-nya.
-
-UI tidak boleh menaikkan status ide secara implisit.
-
----
-
-6.5 Riwayat
-
-Menampilkan history produksi dan hasil story/page yang tersedia.
-
-Riwayat tidak boleh mengubah status canonical data hanya karena sebuah hasil pernah diproduksi.
-
----
-
-7. Cocokkan
-
-Cocokkan merupakan area untuk memeriksa konsistensi antara berbagai informasi yang digunakan atau dihasilkan oleh sistem.
-
-Tujuan utama:
-
-«membantu pengguna mengetahui apakah informasi yang ditampilkan, dibangun, atau diproduksi masih konsisten dengan aturan dan data yang authoritative.»
-
-Sidebar
-
-Cocokkan
-├── Ringkasan
-├── Cerita
-├── Karakter
-├── Dunia
-└── Masalah
-
----
-
-7.1 Ringkasan
-
-Menampilkan hasil pemeriksaan secara agregat.
-
-Ringkasan tidak boleh menyembunyikan kondisi yang belum diketahui dengan status positif.
-
-Status harus mempertahankan semantic distinction yang diberikan backend.
-
----
-
-7.2 Cerita
-
-Digunakan untuk pemeriksaan hubungan antara story/page dengan data authoritative yang relevan.
-
-Pemeriksaan dapat mencakup:
-
-- continuity;
-- temporal consistency;
-- character consistency;
-- object consistency;
-- location consistency;
-- relationship consistency;
-- knowledge consistency;
-- provenance consistency.
-
-Jenis pemeriksaan yang sebenarnya tetap ditentukan oleh backend.
-
----
-
-7.3 Karakter
-
-Digunakan untuk melihat consistency result yang berkaitan dengan karakter.
-
-UI harus menampilkan status backend tanpa melakukan reinterpretasi semantik.
-
----
-
-7.4 Dunia
-
-Digunakan untuk melihat consistency result yang berkaitan dengan world data.
-
-UI tidak boleh mengubah hasil pemeriksaan menjadi keputusan mutation secara otomatis.
-
----
-
-7.5 Masalah
-
-Menampilkan kondisi yang membutuhkan perhatian pengguna.
-
-Masalah dapat berupa:
-
-- conflict;
-- validation failure;
-- unresolved state;
-- missing required information;
-- continuity issue;
-- temporal inconsistency;
-- provenance issue.
-
-UI harus membedakan:
-
-- masalah;
-- informasi yang belum diketahui;
-- informasi yang memang tidak dicatat;
-- informasi yang tidak berlaku.
-
-Semua kategori tersebut tidak boleh disederhanakan menjadi satu status generik.
-
----
-
-8. Dunia
-
-Dunia adalah konteks untuk informasi yang membentuk world state di luar workflow karakter dan story.
-
-Sidebar
-
-Dunia
-├── Ringkasan
-├── Tempat
-├── Benda
-├── Hubungan
-├── Pengetahuan
-└── Peristiwa
-
----
-
-8.1 Ringkasan
-
-Menampilkan struktur dan keadaan dunia secara agregat.
-
-Tidak menjadi sumber Canon baru.
-
----
-
-8.2 Tempat
-
-Digunakan untuk melihat dan mengelola location data.
-
-Location authority tetap berada pada domain yang ditentukan sistem.
-
-UI tidak boleh menentukan spatial truth hanya berdasarkan informasi yang muncul pada story.
-
----
-
-8.3 Benda
-
-Digunakan untuk melihat dan mengelola object data.
-
-Object detail dapat mencakup:
-
-- identity;
-- description;
-- state;
-- location;
-- ownership;
-- access;
-- temporal validity;
-- history;
-- provenance.
-
-UI tidak boleh menciptakan possession atau ownership hanya melalui tampilan.
-
----
-
-8.4 Hubungan
-
-Digunakan untuk melihat dan mengelola relationship data.
-
-Relationship tetap memiliki canonical owner sendiri.
-
-Character detail dapat menampilkan relationship reference, tetapi relationship management tetap berada pada area Dunia.
-
-Hal ini mencegah fitur relationship memiliki lebih dari satu canonical UI home.
-
----
-
-8.5 Pengetahuan
-
-Digunakan untuk melihat dan mengelola epistemic information yang memang tersedia untuk user.
-
-UI harus mempertahankan perbedaan antara:
-
-- objective fact;
-- belief;
-- rumor;
-- misconception;
-- unknown.
-
-Knowledge tidak boleh ditampilkan sebagai objective Universe truth tanpa status yang sesuai.
-
----
-
-8.6 Peristiwa
-
-Digunakan untuk melihat dan mengelola event data yang tersedia melalui contract.
-
-Event tidak boleh dibentuk hanya karena sebuah story menyebutkan sesuatu.
-
-Story-derived information harus mengikuti lifecycle dan provenance rules.
-
----
-
-9. Single Home Rule
-
-Setiap fitur user-facing harus memiliki satu canonical UI home.
-
-Tujuannya adalah mencegah:
-
-- duplicate editor;
-- duplicate mutation flow;
-- conflicting representations;
-- ambiguous ownership;
-- inconsistent state;
-- user confusion.
-
-Pemetaan canonical home:
-
-Fitur| Canonical UI Home
-Ringkasan aplikasi| Dashboard
-Kondisi hari aktif| Dashboard / Hari Ini
-Aktor| Aktor
-Karakter| Aktor
-Grup| Aktor
-Pembuatan karakter| Aktor
-Daily Story| Cerita
-Daily Page| Cerita
-Ide cerita| Cerita
-Production history| Cerita
-Continuity check| Cocokkan
-Consistency check| Cocokkan
-Conflict review| Cocokkan
-Tempat| Dunia
-Benda| Dunia
-Hubungan| Dunia
-Pengetahuan| Dunia
-Peristiwa| Dunia
-
-Data boleh direferensikan di area lain apabila dibutuhkan untuk konteks.
-
-Namun reference bukan canonical editor.
-
----
-
-10. Reference vs Ownership
-
-UI harus membedakan antara:
-
-1. display/reference
-2. edit/mutation
-
-Entity dapat muncul sebagai reference pada banyak halaman.
-
-Tetapi hanya canonical UI home yang menyediakan workflow mutation untuk entity tersebut.
-
-Contoh aturan arsitektural:
-
-Reference
-    ↓
-lihat data
-    ↓
-navigate ke canonical home
-    ↓
-edit melalui workflow resmi
-
-UI tidak boleh menyediakan duplicate mutation control hanya karena entity sedang ditampilkan pada halaman lain.
-
----
-
-11. Detail Page
-
-Detail page digunakan untuk fokus pada satu entity atau satu production artifact.
-
-Struktur umum:
-
-Header
-├── Breadcrumb
-├── Title
-├── Status
-└── Primary Action
-
-Content
-├── Main Information
-├── Related Information
-└── History / Metadata
-
-Footer / Action Area
-└── Contextual Actions
-
-Action harus selalu mengikuti permission dan command yang tersedia.
-
-UI tidak boleh menampilkan action sebagai available apabila backend tidak menyediakan operation yang valid.
-
----
-
-12. Header Global
-
-Header tidak digunakan sebagai feature navigation.
-
-Header hanya menyediakan application context.
-
-Struktur:
-
-Header
-├── Universe Context
-├── Temporal Context
-├── Global Search
-├── Status Indicator
-└── User / Application Controls
-
-Header tidak boleh menjadi tempat kedua untuk:
-
-- Character navigation;
-- Story navigation;
-- Object navigation;
-- Relationship navigation;
-- World management.
-
----
-
-13. Global Search
-
-Global search merupakan locator, bukan canonical workspace.
-
-Search dapat menemukan entity atau artifact dari berbagai area.
-
-Hasil search harus mengarahkan user ke canonical UI home.
-
-Search tidak boleh menyediakan mutation flow yang terpisah dari canonical home.
-
----
-
-14. Data State dan UI State
-
-UI harus membedakan:
-
-Canonical Data
-
-Data authoritative yang berasal dari backend.
-
-Projection
-
-Data yang dibentuk untuk kebutuhan tampilan.
-
-Proposal
-
-Data yang belum menjadi Canon.
-
-Loading
-
-Kondisi UI ketika data belum tersedia.
-
-Unknown
-
-Backend secara eksplisit tidak mengetahui nilainya.
-
-Not Recorded
-
-Nilai tidak tercatat.
-
-Not Applicable
-
-Nilai tidak berlaku terhadap entity atau konteks.
-
-Unresolved
-
-Sistem mengetahui terdapat kondisi yang belum terselesaikan.
-
-Kategori tersebut tidak boleh disamakan.
-
----
-
-15. Unknown Safety
-
-UI tidak boleh melakukan semantic filling.
-
-Jika backend tidak memberikan informasi, UI tidak boleh mengubah ketiadaan informasi menjadi asumsi.
-
-Aturan:
-
-UNKNOWN
-    ↓
-UNKNOWN
-
-NOT_RECORDED
-    ↓
-NOT_RECORDED
-
-UNRESOLVED
-    ↓
-UNRESOLVED
-
-UI boleh menggunakan placeholder visual untuk kebutuhan layout, tetapi placeholder tersebut tidak boleh menjadi nilai domain.
-
----
-
-16. Absence Is Not Fact
-
-UI tidak boleh mengartikan tidak adanya data sebagai fakta negatif.
-
-Ketiadaan field, reference, history, atau record tidak otomatis berarti:
-
-- tidak ada;
-- tidak pernah terjadi;
-- tidak dimiliki;
-- tidak diketahui oleh semua pihak;
-- tidak tersedia;
-- tidak berlaku.
-
-Interpretasi tersebut hanya boleh berasal dari backend contract atau domain rule.
-
----
-
-17. Temporal Safety
-
-UI harus mempertahankan temporal context.
-
-Data yang ditampilkan harus memiliki konteks waktu yang jelas apabila data tersebut bersifat temporal.
-
-UI tidak boleh:
-
-- menggabungkan state dari waktu berbeda tanpa indikasi;
-- menganggap current state sebagai historical truth;
-- menganggap historical state sebagai current state;
-- mengubah effective date secara lokal;
-- menyembunyikan temporal conflict.
-
-Tanggal, period, effective time, dan history harus mengikuti data authoritative.
-
----
-
-18. Character Safety
-
-UI tidak boleh mencampurkan:
-
-- profile;
-- state;
-- behavior;
-- style;
-- knowledge;
-- relationship;
-- continuity.
-
-Masing-masing harus tetap dapat dibedakan secara semantic.
-
-UI boleh menyajikannya dalam satu detail page karakter, tetapi grouping visual tidak boleh mengubah domain meaning.
-
----
-
-19. Relationship Safety
-
-Relationship tidak boleh disimpulkan hanya berdasarkan:
-
-- kedekatan visual;
-- urutan data;
-- interaksi story;
-- text similarity;
-- asumsi UI.
-
-Relationship hanya dapat ditampilkan sebagai relationship apabila backend menyediakan relationship data yang valid.
-
-Story-derived relationship tetap mengikuti provenance dan validation rules.
-
----
-
-20. Knowledge Safety
-
-UI harus mempertahankan epistemic boundary.
-
-Pengetahuan suatu actor tidak boleh ditampilkan sebagai Universe truth hanya karena informasi tersebut ada dalam UI.
-
-UI harus membedakan:
-
-- apa yang benar dalam Universe;
-- apa yang diketahui actor;
-- apa yang dipercaya actor;
-- apa yang hanya rumor;
-- apa yang belum diketahui.
-
----
-
-21. Story Safety
-
-Story adalah projection/narrative artifact.
-
-Story tidak boleh diperlakukan sebagai source of truth terhadap Universe.
-
-Jika terdapat perbedaan antara story dan authoritative Universe data, UI harus mengarahkan kondisi tersebut ke Cocokkan.
-
-UI tidak boleh memperbaiki Universe hanya berdasarkan isi story.
-
----
-
-22. Page Safety
-
-Daily Page adalah presentation layer.
-
-Page tidak boleh menjadi source of truth.
-
-Perubahan pada page tidak boleh secara otomatis mengubah:
-
-- character;
-- object;
-- location;
-- relationship;
-- knowledge;
-- state;
-- event.
-
-Apabila page production menghasilkan informasi baru yang berpotensi mempengaruhi Canon, informasi tersebut harus melewati workflow yang sesuai.
-
----
-
-23. AI Safety
-
-AI output selalu diperlakukan sesuai status yang diberikan backend.
-
-UI tidak boleh menganggap:
-
-AI output = Canon
-
-AI output harus dapat memiliki status Proposal atau status lain sesuai lifecycle backend.
-
-UI tidak boleh:
-
-- menyembunyikan bahwa data masih proposal apabila status tersebut relevan;
-- mengubah proposal menjadi Canon secara lokal;
-- menganggap generated content sebagai authoritative fact;
-- melakukan silent acceptance.
-
----
-
-24. Narrator Safety
-
-Narrator merupakan bagian dari story production.
-
-UI tidak perlu mengekspos Narrator sebagai system architecture.
-
-Apabila terdapat user-facing control yang berkaitan dengan creative direction, control tersebut harus disajikan sebagai bagian dari workflow Cerita.
-
-Narrator tidak boleh mendapatkan kemampuan UI untuk mengubah Canon secara langsung.
-
-Creative instruction tetap harus melalui production dan validation boundary.
-
----
-
-25. Mutation Architecture
-
-Semua mutation dari UI harus mengikuti:
+Pola yang benar:
 
 UI
  ↓
-Command / Contract
+User Action
  ↓
-Domain Validation
+Command / API Contract
+ ↓
+System Validation
  ↓
 Domain Owner
  ↓
-Cross-Domain Validation
+Provenance
+ ↓
+Canonical State
  ↓
 Persistence
- ↓
-Updated Canon
 
-UI tidak boleh:
+Pola yang dilarang:
 
 UI
  ↓
-Direct database mutation
+ubah object lokal
+ ↓
+anggap system berubah
 
 atau:
 
 UI
  ↓
-Modify cached object
+langsung tulis database
+
+atau:
+
+UI
  ↓
-Assume Canon changed
+ubah cache
+ ↓
+tampilkan sebagai Canon
 
-Local state hanya merupakan UI state sampai backend mengonfirmasi mutation.
+Local React state, store frontend, cache, component state, atau state visual bukan Canon.
 
----
-
-26. Optimistic UI
-
-Optimistic update hanya boleh digunakan apabila semantics dan rollback behavior telah didefinisikan dengan jelas.
-
-Untuk mutation yang mempengaruhi Canon atau memiliki cross-domain consequence, UI sebaiknya menunggu confirmation dari backend.
-
-UI tidak boleh menampilkan perubahan sebagai Canon apabila backend belum mengonfirmasi mutation.
 
 ---
 
-27. Validation
+4. UI Hanya Interface
 
-Validation UI terbagi menjadi dua kategori:
+UI memiliki empat fungsi utama:
+
+1. Display — menampilkan informasi dari system.
+
+
+2. Navigate — membantu user berpindah ke workflow yang tepat.
+
+
+3. Interact — menerima input dan intent user.
+
+
+4. Request — meminta system melakukan operasi yang valid.
+
+
+
+UI bukan tempat untuk:
+
+menentukan truth;
+
+memperbaiki Canon;
+
+membuat domain fact;
+
+mengarang state;
+
+memutuskan ownership;
+
+memutuskan relationship;
+
+menentukan temporal truth;
+
+mengubah proposal menjadi Canon;
+
+menentukan validation result;
+
+menentukan authority.
+
+
+Kesederhanaan UI harus diperoleh melalui abstraksi dan information architecture, bukan dengan menghilangkan aturan system.
+
+
+---
+
+5. Tidak Ada Data Dummy di Luar System
+
+Ini adalah aturan wajib.
+
+> UI tidak boleh membuat data dummy, contoh, mock, fallback, atau data sintetis di luar system lalu menampilkannya seolah-olah merupakan data system.
+
+
+
+Larangan ini berlaku untuk:
+
+production UI;
+
+development UI;
+
+empty state;
+
+fallback rendering;
+
+sample list;
+
+fake character;
+
+fake actor;
+
+fake actress;
+
+fake story;
+
+fake object;
+
+fake location;
+
+fake relationship;
+
+fake event;
+
+fake history;
+
+fake activity;
+
+fake statistics;
+
+fake universe;
+
+fake production result.
+
+
+Jika system tidak memiliki data, UI tidak boleh menciptakan data pengganti.
+
+5.1 Yang boleh dilakukan UI
+
+Jika data belum tersedia:
+
+System tidak memberikan data
+        ↓
+UI menampilkan keadaan kosong / belum tersedia
+
+Contoh:
+
+"Belum ada data."
+
+"Belum tersedia."
+
+"Belum tercatat."
+
+"Belum diketahui."
+
+"Tidak dapat dimuat."
+
+"Belum terselesaikan."
+
+
+Pemilihan label harus tetap sesuai semantic state dari system.
+
+5.2 Placeholder visual bukan domain data
+
+Placeholder visual diperbolehkan hanya jika jelas merupakan elemen presentation.
+
+Contoh yang diperbolehkan:
+
+skeleton loading;
+
+shimmer;
+
+icon;
+
+layout placeholder;
+
+disabled field sebelum data tersedia.
+
+
+Contoh yang dilarang:
+
+mengisi nama karakter palsu;
+
+menampilkan tanggal palsu;
+
+membuat relationship palsu;
+
+menampilkan jumlah actor palsu;
+
+membuat story contoh yang terlihat seperti story nyata;
+
+mengisi default domain value tanpa diberikan system.
+
+
+Aturan sederhana:
+
+> Placeholder boleh menjadi visual. Placeholder tidak boleh menjadi fakta.
+
+
+
+
+---
+
+6. Loading, Empty, Unknown, Error Bukan Hal yang Sama
+
+UI harus membedakan keadaan:
+
+Loading
+
+System belum selesai memberikan data.
+
+Empty
+
+System memberikan hasil valid bahwa collection tersebut kosong.
+
+Unknown
+
+System tidak mengetahui nilainya.
+
+Not Recorded
+
+Informasi tersebut tidak tercatat.
+
+Not Applicable
+
+Informasi tersebut memang tidak berlaku.
+
+Unresolved
+
+System mengetahui terdapat kondisi yang belum terselesaikan.
+
+Error
+
+Permintaan atau proses gagal.
+
+UI tidak boleh mengubah semua kondisi tersebut menjadi satu empty state generik.
+
+
+---
+
+7. Tidak Ada Silent Fallback
+
+Fallback tidak boleh digunakan untuk menggantikan system data.
+
+Contoh yang dilarang:
+
+const characters = apiCharacters ?? demoCharacters;
+
+Jika apiCharacters tidak tersedia, demoCharacters tidak boleh ditampilkan sebagai karakter system.
+
+Pola yang benar:
+
+API tidak tersedia
+      ↓
+UI menampilkan unavailable/error state
+
+Jika system memberikan nilai UNKNOWN:
+
+UNKNOWN
+  ↓
+UNKNOWN
+
+Bukan:
+
+UNKNOWN
+  ↓
+"default value"
+
+
+---
+
+8. Tidak Ada Silent Inference
+
+UI tidak boleh melakukan inference domain.
+
+UI tidak boleh menyimpulkan:
+
+Actor adalah Character hanya karena bentuk data;
+
+Character memiliki relationship hanya karena dua karakter sering muncul bersama;
+
+Object dimiliki seseorang karena object muncul pada scene;
+
+Character berada di suatu Location hanya karena story menyebut lokasi tersebut;
+
+Character mengetahui sesuatu karena informasi tersebut ada pada story;
+
+event terjadi karena narasi mengatakan sesuatu;
+
+state berubah karena UI melihat perubahan presentation;
+
+data yang hilang berarti false;
+
+data kosong berarti tidak ada;
+
+data tidak ditemukan berarti tidak pernah ada.
+
+
+Jika system tidak memberikan fakta tersebut, UI tidak boleh menciptakannya.
+
+
+---
+
+9. Tidak Ada Silent Repair
+
+UI tidak boleh memperbaiki data system secara diam-diam.
+
+Jika ditemukan conflict:
+
+Detect
+  ↓
+Display
+  ↓
+Explain
+  ↓
+User chooses valid action
+  ↓
+System validates
+  ↓
+Authorized mutation
+
+Bukan:
+
+Detect
+  ↓
+UI automatically repairs
+
+UI bukan continuity repair engine.
+
+
+---
+
+10. Domain System Tetap Menjadi Authority
+
+UI harus mengikuti domain ownership yang ditentukan system.
+
+Secara konseptual:
+
+UNIVERSE
+│
+├── TEMPORAL
+│
+├── ACTOR
+│   ├── Character
+│   └── Entity
+│
+├── OBJECT
+│
+├── LOCATION
+│
+├── RELATIONSHIP
+│
+├── EVENT
+│
+├── PROCESS
+│
+└── KNOWLEDGE
+
+Dengan proyeksi:
+
+UNIVERSE
+   ↓
+DAILY UNIVERSE
+   ↓
+STORY
+   ↓
+PAGE
+
+UI tidak boleh menggantikan owner domain tersebut.
+
+
+---
+
+11. Actor & Actress
+
+Dalam domain Pocer terdapat istilah:
+
+> Actor & Actress
+
+
+
+Istilah tersebut merupakan terminology domain dan harus dipertahankan.
+
+Area Actor & Actress mencakup:
+
+Actor;
+
+Actress;
+
+Character;
+
+seluruh aturan yang berkaitan dengan Character;
+
+identity;
+
+profile;
+
+state;
+
+behavior;
+
+knowledge;
+
+style;
+
+continuity;
+
+relationship reference;
+
+history;
+
+workflow karakter.
+
+
+UI tidak boleh menyederhanakan area ini menjadi hanya "Karakter" jika hal tersebut menghilangkan terminology domain Actor & Actress.
+
+
+---
+
+12. Character Bukan Hanya Snapshot
+
+Character merupakan identity/domain entity.
+
+UI harus membedakan:
+
+Identity;
+
+Profile;
+
+State;
+
+Behavior;
+
+Knowledge;
+
+Style;
+
+Relationships;
+
+Continuity;
+
+History.
+
+
+Profile bukan State.
+
+State bersifat temporal.
+
+Character detail boleh menyatukan informasi tersebut dalam satu workspace agar mudah digunakan user, tetapi grouping UI tidak boleh menghilangkan semantic distinction.
+
+
+---
+
+13. Relationship
+
+Relationship merupakan domain tersendiri.
+
+Character dapat memiliki reference terhadap relationship, tetapi Character bukan authority relationship.
+
+UI tidak boleh menciptakan relationship dari:
+
+proximity;
+
+story text;
+
+visual grouping;
+
+repeated appearance;
+
+assumption.
+
+
+Jika relationship ditampilkan pada Actor & Actress, UI harus memperlakukannya sebagai reference.
+
+Canonical management tetap mengikuti system contract.
+
+
+---
+
+14. Knowledge
+
+Knowledge berbeda dari objective Universe truth.
+
+UI harus dapat membedakan:
+
+apa yang benar di Universe;
+
+apa yang diketahui Actor/Actress;
+
+apa yang dipercaya;
+
+apa yang berupa rumor;
+
+apa yang belum diketahui.
+
+
+UI tidak boleh menampilkan knowledge sebagai objective fact tanpa semantic basis dari system.
+
+
+---
+
+15. Behavior dan Style
+
+Behavior adalah pola tindakan.
+
+Style adalah cara Actor/Actress mengekspresikan sesuatu.
+
+Keduanya tidak boleh diperlakukan sebagai:
+
+personality replacement;
+
+state;
+
+knowledge;
+
+relationship;
+
+identity.
+
+
+UI boleh menyajikannya dengan cara yang mudah dipahami user, tetapi semantic boundary tetap dipertahankan.
+
+
+---
+
+16. Continuity
+
+Continuity berfungsi sebagai pemeriksa/cross-checker.
+
+UI tidak boleh memperlakukan continuity sebagai:
+
+owner Canon;
+
+auto-repair mechanism;
+
+source of truth pengganti domain owner.
+
+
+Status continuity dapat mencakup:
+
+CONSISTENT;
+
+NEW_INFORMATION;
+
+VALID_CHANGE;
+
+CONFLICT;
+
+BLOCKED;
+
+UNKNOWN.
+
+
+UI harus menampilkan hasil system tanpa mengubah makna status tersebut.
+
+
+---
+
+17. Universe
+
+Universe adalah authoritative world state.
+
+Universe memiliki authority terhadap world truth, termasuk:
+
+characters;
+
+objects;
+
+locations;
+
+relationships;
+
+knowledge;
+
+behavior;
+
+style;
+
+events;
+
+processes;
+
+continuity/history;
+
+dan state temporal lainnya.
+
+
+UI tidak boleh membuat Universe truth dari story, page, AI output, atau presentation state.
+
+
+---
+
+18. Daily Universe
+
+Daily Universe merupakan temporal projection/context dari Universe untuk periode tertentu.
+
+Daily Universe bukan Universe baru.
+
+UI harus mempertahankan perbedaan antara:
+
+Universe;
+
+Daily Universe;
+
+Story;
+
+Page.
+
+
+Daily Universe dapat menjadi context untuk Cerita, tetapi tidak boleh dianggap sebagai source berbeda yang bebas dari authority Universe.
+
+
+---
+
+19. Story
+
+Story bukan Universe.
+
+Story adalah narrative artifact/projection yang memilih, mengatur, dan menyampaikan informasi dari world context.
+
+Pola:
+
+Authoritative Universe
+        ↓
+Daily Universe
+        ↓
+Narrative Production
+        ↓
+Story
+
+Story tidak boleh menjadi source of truth untuk Universe.
+
+Jika story berbeda dengan authoritative data, UI harus mempertahankan perbedaan tersebut dan mengarahkan pemeriksaan melalui workflow yang sesuai.
+
+
+---
+
+20. Daily Page
+
+Daily Page merupakan presentation/narrative projection.
+
+Page tidak boleh menjadi authority terhadap:
+
+Character;
+
+Object;
+
+Location;
+
+Relationship;
+
+Knowledge;
+
+State;
+
+Event;
+
+Universe.
+
+
+Perubahan page tidak otomatis mengubah Canon.
+
+
+---
+
+21. Narrator
+
+Narrator merupakan bagian dari creative story production.
+
+Narrator bertanggung jawab terhadap creative direction seperti:
+
+ide;
+
+composition;
+
+tone;
+
+voice;
+
+prose style;
+
+pacing;
+
+POV;
+
+vocabulary;
+
+dialogue preference;
+
+scene/exposition preference;
+
+emotional intensity;
+
+suspense;
+
+humor;
+
+author instructions;
+
+creative constraints.
+
+
+Namun:
+
+> Narrator bukan Canon authority.
+
+
+
+UI tidak boleh memberikan Narrator kemampuan untuk langsung mengubah Canon.
+
+Creative flow:
+
+AUTHORITATIVE UNIVERSE
+        ↓
+DAILY UNIVERSE
+        ↓
+NARRATOR
+        ↓
+LLM / PRODUCTION
+        ↓
+PROPOSAL
+        ↓
+VALIDATION
+        ↓
+DOMAIN OWNER
+        ↓
+CANON
+
+
+---
+
+22. AI Bukan Source of Truth
+
+AI adalah production worker/proposer.
+
+AI output tidak otomatis menjadi Canon.
+
+Pola yang benar:
+
+AI Output
+   ↓
+Proposal
+   ↓
+Validation
+   ↓
+Authorized Domain Mutation
+   ↓
+Canon
+
+UI tidak boleh menyembunyikan status proposal apabila status tersebut relevan.
+
+UI juga tidak boleh melakukan:
+
+AI Output → Canon
+
+secara langsung.
+
+
+---
+
+23. Navigasi Utama — Baseline Final
+
+Navigasi utama Pocer memiliki lima slot.
+
+Urutan dan fungsi:
+
+1. Dashboard
+
+
+2. Actor & Actress
+
+
+3. Cerita
+
+
+4. [Reserved / Empty]
+
+
+5. Profil User
+
+
+
+Penting:
+
+> Slot nomor 4 sengaja kosong.
+
+
+
+Slot nomor 4 belum memiliki workspace/menu yang ditentukan.
+
+UI tidak boleh mengisinya sendiri dengan:
+
+Cocokkan;
+
+Dunia;
+
+Pengaturan;
+
+Diagnostik;
+
+Mesin Produksi;
+
+atau fitur lain.
+
+
+Slot tersebut reserved sampai system/product decision menentukan workspace yang benar.
+
+
+---
+
+24. Dashboard
+
+Dashboard adalah workspace untuk seluruh hal yang berkaitan dengan dashboard.
+
+Dashboard bertanggung jawab terhadap:
+
+ringkasan;
+
+kondisi saat ini;
+
+informasi penting;
+
+aktivitas yang memang tersedia dari system;
+
+konteks yang membantu user memahami keadaan aplikasi.
+
+
+Dashboard bukan owner terhadap domain data yang diringkas.
+
+Jika Dashboard menampilkan Character, Story, Object, atau informasi lainnya, data tersebut tetap berasal dari domain/system authority masing-masing.
+
+Dashboard tidak boleh memiliki duplicate editor untuk domain lain.
+
+
+---
+
+25. Actor & Actress Workspace
+
+Actor & Actress merupakan workspace utama untuk:
+
+Actor;
+
+Actress;
+
+Character;
+
+seluruh fungsi dan aturan yang berkaitan dengan Character.
+
+
+Area ini dapat memiliki internal sections sesuai kebutuhan product, selama tidak menciptakan root navigation baru.
+
+Contoh konseptual:
+
+Actor & Actress
+├── Actor / Actress registry
+├── Character
+├── Group
+├── Character creation
+├── Character detail
+│   ├── Identity / Profile
+│   ├── State
+│   ├── Behavior
+│   ├── Style
+│   ├── Knowledge
+│   ├── Relationship references
+│   ├── Continuity
+│   └── History
+└── Other Character-related workflows
+
+Struktur internal dapat berubah sesuai system contract, tetapi seluruhnya tetap berada di workspace Actor & Actress.
+
+
+---
+
+26. Cerita Workspace
+
+Cerita mencakup seluruh user-facing story workflow.
+
+Termasuk:
+
+build story;
+
+Daily Story;
+
+Daily Page;
+
+ide;
+
+production workflow;
+
+hasil produksi;
+
+history;
+
+revisi story;
+
+creative direction yang memang tersedia bagi user.
+
+
+Istilah internal seperti:
+
+Production Runner;
+
+Pipeline;
+
+Narrator Engine;
+
+Provider;
+
+Persistence Layer;
+
+
+tidak boleh menjadi primary user-facing navigation jika tidak dibutuhkan oleh user.
+
+User harus melihat workflow "Cerita", bukan arsitektur backend.
+
+
+---
+
+27. Reserved Workspace
+
+Root navigation nomor 4 sengaja belum memiliki fitur.
+
+Aturan:
+
+tetap kosong;
+
+tidak diberi label fitur sementara;
+
+tidak diisi berdasarkan asumsi developer;
+
+tidak digunakan sebagai tempat memindahkan fitur yang belum memiliki home;
+
+tidak menjadi tempat menaruh fitur hanya agar navigation terlihat penuh.
+
+
+Reserved slot merupakan keputusan product yang belum ditetapkan.
+
+
+---
+
+28. Profil User
+
+Profil User mencakup user-related matters.
+
+Contohnya dapat meliputi hal-hal yang memang dimiliki oleh user/account system, seperti:
+
+profile;
+
+preferensi user;
+
+account-related settings;
+
+informasi personal yang memang diberikan system.
+
+
+Profil User bukan tempat untuk system governance atau domain management.
+
+UI tidak boleh menaruh internal engine configuration di Profil User hanya karena configuration tersebut terlihat seperti "settings".
+
+
+---
+
+29. Sidebar
+
+Sidebar bukan root navigation tambahan.
+
+Sidebar juga bukan duplikasi dari lima workspace utama.
+
+Sidebar tidak boleh menjadi tempat untuk mengulang:
+
+Dashboard;
+
+Actor & Actress;
+
+Cerita;
+
+Reserved workspace;
+
+Profil User.
+
+
+Sidebar hanya boleh berisi fungsi yang memang telah ditentukan sebagai contextual/system utility oleh product.
+
+Status Sidebar
+
+Isi Sidebar selain mode switch belum ditetapkan dalam baseline ini.
+
+Karena itu:
+
+> Jangan mengarang isi Sidebar.
+
+
+
+Proposal lama seperti:
+
+Tata Kelola & Aturan;
+
+Mesin Produksi;
+
+Kronologi Waktu;
+
+Diagnostik;
+
+Snapshot Semesta;
+
+Audit & Provenance;
+
+
+bukan baseline final Sidebar.
+
+Fitur-fitur tersebut tidak boleh otomatis dimasukkan ke Sidebar tanpa keputusan product/domain yang baru.
+
+
+---
+
+30. Mode Switch di Bagian Paling Bawah Sidebar
+
+Sidebar harus menyediakan mode switch di bagian paling bawah.
+
+Mode internal system:
+
+Production;
+
+Sandbox.
+
+
+Bahasa UI harus user-friendly dan menjelaskan konsekuensinya.
+
+Contoh terminology yang dapat digunakan:
+
+Mode Utama — bekerja dengan data utama/official system.
+
+Ruang Uji — melakukan eksplorasi atau percobaan tanpa diam-diam menggantikan data utama.
+
+
+Label final dapat disesuaikan, tetapi prinsipnya tetap:
+
+> User harus memahami bahwa Production dan Sandbox memiliki konsekuensi berbeda.
+
+
+
+Mode switch tidak boleh sekadar mengganti warna atau tema.
+
+
+---
+
+31. Production dan Sandbox
+
+Production dan Sandbox adalah boundary system, bukan sekadar UI theme.
+
+UI harus mengikuti keputusan system mengenai mode tersebut.
+
+Sandbox tidak boleh secara diam-diam menggantikan Canon Production.
+
+Secara konseptual:
+
+PRODUCTION
+    ↓
+AUTHORITATIVE / MAIN STATE
+
+sedangkan:
+
+SANDBOX
+    ↓
+SAFE EXPERIMENTATION
+    ↓
+VALIDATED / EXPLICIT WORKFLOW
+    ↓
+POSSIBLE AUTHORIZED RESULT
+
+UI tidak boleh menganggap Sandbox state sebagai Production Canon hanya karena user sedang melihatnya.
+
+
+---
+
+32. Sidebar Tidak Boleh Menjadi Second System
+
+Sidebar bukan tempat untuk menampilkan semua internal system.
+
+UI tidak harus membuat menu untuk:
+
+domain owner;
+
+authority level;
+
+execution engine;
+
+production runner;
+
+persistence;
+
+raw snapshot;
+
+internal pipeline;
+
+infrastructure;
+
+provider;
+
+internal registry.
+
+
+Internal architecture hanya ditampilkan jika benar-benar diperlukan sebagai user-facing information.
+
+
+---
+
+33. Single Home Rule
+
+Setiap user-facing feature harus memiliki satu canonical UI home.
+
+Tujuannya:
+
+mencegah duplicate editor;
+
+mencegah conflicting mutation flow;
+
+mencegah ambiguous ownership;
+
+menjaga konsistensi;
+
+membuat user tahu harus pergi ke mana.
+
+
+Data boleh direferensikan di tempat lain.
+
+Tetapi:
+
+> Reference bukan canonical home.
+
+
+
+Contoh:
+
+Character
+  ↓
+Canonical Home: Actor & Actress
+
+Jika Character muncul pada Dashboard atau Cerita, halaman tersebut hanya menampilkan reference/context dan mengarahkan user ke Actor & Actress untuk workflow Character.
+
+
+---
+
+34. Reference Tidak Sama dengan Ownership
+
+UI harus membedakan:
+
+1. melihat/reference;
+
+
+2. mengedit/mutate.
+
+
+
+Sebuah entity boleh muncul pada banyak halaman.
+
+Tetapi mutation hanya boleh dilakukan melalui workflow yang memang diberikan system untuk entity tersebut.
+
+Contoh:
+
+Story
+  ↓
+menampilkan Character reference
+  ↓
+User ingin mengubah Character
+  ↓
+Actor & Actress
+  ↓
+Official Character workflow
+
+Bukan:
+
+Story
+  ↓
+duplicate Character editor
+
+
+---
+
+35. Header
+
+Header adalah global application context.
+
+Header dapat menampilkan:
+
+current application context;
+
+active Universe context;
+
+temporal context;
+
+global search;
+
+user/application controls;
+
+global status.
+
+
+Header bukan second feature navigation.
+
+Header tidak boleh menjadi tempat kedua untuk:
+
+Actor & Actress;
+
+Cerita;
+
+domain workspace;
+
+system administration;
+
+duplicate feature navigation.
+
+
+
+---
+
+36. Global Search
+
+Global Search adalah locator.
+
+Search bertugas membantu user menemukan:
+
+entity;
+
+story;
+
+page;
+
+object;
+
+location;
+
+atau artifact lain yang memang tersedia.
+
+
+Search tidak menjadi canonical workspace.
+
+Jika user menemukan Character melalui search, search harus mengarahkan user ke canonical Actor & Actress workflow.
+
+Search tidak boleh membuat duplicate mutation flow.
+
+
+---
+
+37. UI State vs System State
+
+UI state adalah state presentation/interaksi.
+
+Contoh:
+
+active navigation;
+
+selected tab;
+
+filter;
+
+sorting;
+
+pagination;
+
+modal;
+
+drawer;
+
+expanded section;
+
+input yang belum dikirim.
+
+
+System state adalah state domain.
+
+Contoh:
+
+Character state;
+
+relationship;
+
+object ownership;
+
+location;
+
+temporal state;
+
+Universe state;
+
+Canon.
+
+
+UI state tidak boleh disamakan dengan system state.
+
+
+---
+
+38. Cache Bukan Authority
+
+Cache hanyalah optimization.
+
+Jika cache berbeda dari system:
+
+SYSTEM
+  >
+CACHE
+
+System menjadi dasar state final.
+
+UI tidak boleh mempromosikan cache menjadi Canon.
+
+Cache juga tidak boleh menjadi fallback source yang diam-diam menggantikan response system tanpa semantic distinction.
+
+
+---
+
+39. Client Validation vs System Validation
+
+UI boleh melakukan client-side validation untuk UX:
+
+format;
+
+required input;
+
+type;
+
+length;
+
+immediate feedback.
+
+
+Namun client validation bukan authority.
+
+System tetap menentukan:
+
+domain validity;
+
+temporal validity;
+
+cross-domain validity;
+
+provenance;
+
+continuity;
+
+mutation permission;
+
+Canonical state.
+
+
+Pola:
 
 Client Validation
-
-Digunakan untuk:
-
-- format;
-- required input;
-- length;
-- type;
-- immediate UX feedback.
-
-Server Validation
-
-Merupakan authority untuk:
-
-- domain validity;
-- temporal validity;
-- cross-domain validity;
-- provenance;
-- continuity;
-- mutation permission;
-- canonical state.
-
-Client validation tidak menggantikan server validation.
-
----
-
-28. Error Handling
-
-Error harus mempertahankan makna dari backend.
-
-UI tidak boleh mengubah semua error menjadi pesan generik apabila informasi yang lebih spesifik tersedia.
-
-Error harus dibedakan sekurang-kurangnya secara konseptual menjadi:
-
-- input error;
-- validation error;
-- conflict;
-- permission error;
-- unavailable operation;
-- temporal conflict;
-- persistence failure;
-- production failure;
-- unknown/unresolved condition.
-
-UI harus memberikan tindakan yang sesuai dengan jenis error.
-
----
-
-29. Loading dan Partial Data
-
-UI harus dapat menangani data yang belum lengkap tanpa mengarang nilai.
-
-Loading state harus berbeda dari:
-
-- empty state;
-- unknown;
-- not recorded;
-- unavailable;
-- error.
-
-Tidak boleh menggunakan empty state sebagai pengganti unknown.
-
----
-
-30. Read-Only dan Editable State
-
-UI harus memiliki distinction visual yang jelas antara:
-
-- informasi read-only;
-- informasi editable;
-- informasi proposal;
-- informasi pending;
-- informasi conflict.
-
-User harus mengetahui apakah tindakan mereka:
-
-- hanya mengubah tampilan;
-- mengubah draft;
-- membuat proposal;
-- mengubah Canon.
-
----
-
-31. Action Visibility
-
-UI hanya boleh menampilkan action yang valid untuk context saat ini.
-
-Action availability harus mempertimbangkan:
-
-- backend permission;
-- entity state;
-- lifecycle;
-- temporal constraints;
-- current workflow;
-- validation status.
-
-UI tidak boleh menampilkan action yang diketahui tidak valid hanya karena action tersebut secara visual tersedia.
-
----
-
-32. No Hidden Mutation
-
-Navigasi, membuka halaman, melakukan search, filtering, sorting, preview, atau membaca data tidak boleh menyebabkan mutation Canon secara tersembunyi.
-
-Semua mutation harus:
-
-- eksplisit;
-- berasal dari user action atau authorized workflow;
-- melalui command;
-- tervalidasi;
-- memiliki provenance.
-
----
-
-33. No Silent Repair
-
-UI tidak boleh memperbaiki data secara diam-diam.
-
-Jika terdapat conflict:
-
-detect
-→ display
-→ explain
-→ offer valid action
-
-bukan:
-
-detect
-→ automatically modify
-
-Repair harus mengikuti workflow yang memiliki authority untuk melakukan perubahan.
-
----
-
-34. No Silent Inference
-
-UI tidak boleh menyimpulkan data hanya untuk membuat tampilan terlihat lengkap.
-
-Tidak boleh melakukan inference terhadap:
-
-- identity;
-- gender;
-- relationship;
-- location;
-- ownership;
-- knowledge;
-- state;
-- behavior;
-- style;
-- chronology;
-- causality.
-
-Jika data tidak tersedia, UI harus mempertahankan status tersebut.
-
----
-
-35. Navigation Independence from Backend Domains
-
-Backend dapat memiliki lebih banyak domain daripada lima navigasi UI.
-
-Hal tersebut memang disengaja.
-
-UI tidak harus memiliki:
-
-Temporal
-Character System
-Object System
-State System
-Knowledge System
-Relationship System
-Engine
-Persistence
-Narrator
-Production Runner
-
-sebagai menu.
-
-Domain tersebut tetap bekerja sebagai internal authority.
-
-UI hanya menyediakan user-facing workflow yang memanfaatkan domain tersebut.
-
----
-
-36. UI dan Governance
-
-Hubungan UI dengan system governance:
-
-System Governance
-        │
-        ├── menentukan apa yang valid
-        ├── menentukan siapa yang memiliki authority
-        ├── menentukan mutation boundary
-        ├── menentukan provenance
-        ├── menentukan temporal validity
-        └── menentukan validation
-                │
-                ↓
-              UI
-        ├── menampilkan
-        ├── meminta
-        ├── mengarahkan
-        └── mengonfirmasi
-
-UI tidak berada di atas governance.
-
-UI juga tidak menggantikan governance.
-
----
-
-37. UI sebagai Contract Consumer
-
-UI harus dibangun berdasarkan contract yang tersedia.
-
-Setiap halaman harus dapat ditelusuri ke:
-
-UI Feature
     ↓
-UI Contract
+UX Feedback
+
+dan:
+
+System Validation
     ↓
-Backend Operation
-    ↓
+Actual Decision
+
+
+---
+
+40. Action Visibility
+
+UI hanya boleh menampilkan action yang valid untuk context.
+
+Action availability harus tunduk kepada:
+
+permission;
+
+entity state;
+
+lifecycle;
+
+temporal constraint;
+
+workflow;
+
+validation;
+
+system contract.
+
+
+UI tidak boleh menampilkan tombol sebagai seolah-olah dapat dilakukan jika system tidak menyediakan operasi tersebut.
+
+Jika system menolak operasi, UI harus mempertahankan keputusan system.
+
+
+---
+
+41. No Hidden Mutation
+
+Hal-hal berikut tidak boleh menyebabkan mutation Canon secara tersembunyi:
+
+membuka halaman;
+
+berpindah navigation;
+
+search;
+
+filtering;
+
+sorting;
+
+preview;
+
+loading;
+
+refresh;
+
+rendering;
+
+membuka detail;
+
+menutup modal;
+
+mengganti tab.
+
+
+Mutation harus eksplisit dan melalui system contract.
+
+
+---
+
+42. Optimistic UI
+
+Optimistic UI bukan alasan untuk menyatakan Canon telah berubah.
+
+Jika optimistic state digunakan:
+
+1. UI menyimpan temporary presentation state.
+
+
+2. System menerima command.
+
+
+3. System melakukan validation.
+
+
+4. System memberikan result.
+
+
+5. UI mengadopsi result system.
+
+
+6. Jika gagal, UI mengembalikan state sesuai system.
+
+
+
+Untuk mutation Canon yang memiliki cross-domain consequence, UI sebaiknya menunggu confirmation system.
+
+
+---
+
+43. Temporal Safety
+
+UI harus mempertahankan konteks waktu.
+
+UI tidak boleh:
+
+mencampurkan state dari waktu berbeda tanpa penjelasan;
+
+menganggap current state sebagai historical truth;
+
+menganggap historical state sebagai current truth;
+
+mengubah effective date secara lokal;
+
+menyembunyikan temporal conflict.
+
+
+Jika system memberikan temporal context, UI harus menampilkannya secara jelas saat relevan.
+
+Wall-clock browser tidak boleh menggantikan Universe time.
+
+
+---
+
+44. Story dan Canon Boundary
+
+Story output tidak otomatis menjadi Canon.
+
+Jika production menghasilkan sesuatu yang berpotensi menjadi domain fact:
+
+Production Output
+      ↓
+Proposal
+      ↓
+Validation
+      ↓
 Domain Owner
+      ↓
+Canonical Mutation
 
-Apabila sebuah fitur tidak memiliki contract atau operation yang valid, UI tidak boleh mengarang mutation path.
+UI harus mempertahankan boundary tersebut.
 
----
+Tidak boleh:
 
-38. Consistency Between UI and Backend
+Story text
+  ↓
+UI
+  ↓
+Universe fact
 
-Setiap data yang ditampilkan UI harus dapat dikategorikan sebagai:
-
-- authoritative backend data;
-- backend-derived projection;
-- production proposal;
-- presentation-only UI state.
-
-Tidak boleh terdapat kategori kelima berupa:
-
-«UI-generated domain truth.»
-
-UI tidak boleh menjadi sumber domain truth.
 
 ---
 
-39. Information Hierarchy
+45. Data Presentation
 
-Setiap halaman harus memiliki hierarchy:
+UI boleh melakukan transformation yang murni presentational.
 
-Context
-    ↓
-Primary Information
-    ↓
-Secondary Information
-    ↓
-Related Information
-    ↓
-Actions
+Contoh:
 
-Informasi paling penting harus berada pada area utama.
+format tanggal;
 
-Metadata internal tidak boleh mendominasi UI.
+format angka;
 
----
+sorting tampilan;
 
-40. Layout Rules
+grouping visual;
 
-Application layout menggunakan:
+responsive layout;
 
-┌─────────────────────────────────────────────────────────────┐
-│ Global Header                                               │
-├───────────────┬─────────────────────────────────────────────┤
-│               │                                             │
-│ Contextual    │                                             │
-│ Sidebar       │             Main Content                    │
-│               │                                             │
-│               │                                             │
-│               │                                             │
-├───────────────┴─────────────────────────────────────────────┤
-│ Dashboard │ Aktor │ Cerita │ Cocokkan │ Dunia              │
-└─────────────────────────────────────────────────────────────┘
+truncation;
+
+pagination;
+
+visual hierarchy.
+
+
+Transformation tersebut tidak boleh mengubah semantic meaning.
+
+Jika system mengatakan value UNKNOWN, formatting tidak boleh membuatnya terlihat sebagai known value.
+
 
 ---
 
-41. Global Header
+46. Internal Terminology vs User Terminology
 
-Header tetap berada di bagian atas.
+UI harus menggunakan bahasa yang mudah dipahami user.
 
-Tanggung jawab:
+Istilah internal seperti:
 
-- application context;
-- active universe;
-- temporal context;
-- global search;
-- user/application controls;
-- global status.
+Canon Rules;
 
-Header tidak menjadi second navigation.
+Truth Levels;
 
----
+Owner System;
 
-42. Contextual Sidebar
+Authority Level;
 
-Sidebar berubah berdasarkan bottom navigation aktif.
+Immutable Revision Ledger;
 
-Sidebar hanya menampilkan fitur yang relevan terhadap context tersebut.
+Engine Hardening;
 
-Sidebar tidak boleh mencampurkan fitur dari lima root navigation.
+External Providers;
 
----
+Raw Snapshot State Inspector;
 
-43. Main Content
+Universe Instance ID;
 
-Main content merupakan area kerja utama.
+Production Runner;
 
-Main content harus:
+Pipeline;
 
-- memiliki hierarchy yang jelas;
-- mendukung responsive layout;
-- menjaga focus pada satu primary task;
-- tidak menampilkan internal architecture sebagai primary content;
-- tidak mengharuskan user memahami backend terminology.
+Provenance;
 
----
+Persistence;
 
-44. Bottom Navigation
 
-Bottom navigation harus tetap sederhana.
+tidak boleh menjadi primary UX language tanpa kebutuhan yang jelas.
 
-Label:
+Istilah tersebut boleh muncul pada:
 
-Dashboard
-Aktor
-Cerita
-Cocokkan
-Dunia
+diagnostics;
 
-Tidak boleh ditambah domain baru hanya karena backend memiliki domain baru.
+developer/admin tooling;
 
-Penambahan root navigation harus dilakukan hanya apabila terdapat kebutuhan user-facing yang independen dan cukup besar untuk menjadi application context baru.
+technical detail;
+
+audit information;
+
+advanced system information;
+
+
+jika memang diperlukan.
+
+User-facing workflow harus menggunakan bahasa berdasarkan pekerjaan user, bukan struktur internal backend.
+
 
 ---
 
-45. Responsive Behavior
+47. System Architecture Tidak Sama dengan UI Information Architecture
 
-Pada desktop:
+Backend dapat memiliki banyak subsystem.
 
-Header
-Sidebar + Main Content
-Bottom Navigation
+UI tidak harus memetakan:
 
-Pada ukuran layar yang lebih kecil:
+1 backend domain = 1 menu
 
-- sidebar dapat berubah menjadi drawer;
-- main content tetap menjadi primary workspace;
-- bottom navigation tetap menjadi root context;
-- contextual navigation tidak boleh hilang tanpa pengganti yang jelas.
+Sebaliknya:
 
-Responsive transformation tidak boleh mengubah information architecture.
+Multiple backend domains
+        ↓
+One user workflow
+        ↓
+One UI workspace
 
----
+Contoh Actor & Actress dapat menggunakan data dari:
 
-46. Deep Linking
+Character;
 
-Setiap halaman utama dan detail entity harus dapat memiliki route yang stabil.
+Knowledge;
 
-Deep link harus mempertahankan:
+Relationship;
 
-- active root navigation;
-- active sidebar section;
-- entity context;
-- temporal context apabila relevan;
-- read/edit state apabila relevan.
+Continuity;
 
-Deep link tidak boleh membuka halaman yang kehilangan context penting.
+Temporal;
 
----
+History.
 
-47. Navigation State
 
-Navigation state harus dapat dibedakan dari domain state.
+Namun user tidak perlu melihat semua domain tersebut sebagai root menu terpisah.
 
-Contoh kategori UI state:
-
-- active navigation;
-- selected tab;
-- filters;
-- sorting;
-- pagination;
-- modal state;
-- drawer state;
-- expanded sections.
-
-UI state tersebut tidak boleh ditulis ke Canon kecuali memang merupakan domain mutation yang eksplisit.
 
 ---
 
-48. Cache
+48. UI Tidak Boleh Mengarang Feature Home
 
-Cache hanya merupakan optimization layer.
+Jika sebuah feature belum memiliki canonical UI home, UI tidak boleh sembarangan:
 
-Cache tidak menjadi authority.
+memasukkannya ke Dashboard;
 
-Apabila cache berbeda dengan backend:
+memasukkannya ke Sidebar;
 
-Backend
-    >
-Cache
+memasukkannya ke Reserved slot;
 
-Backend result harus menjadi dasar state final.
+membuat root menu baru;
 
-UI tidak boleh mempromosikan cached value menjadi Canon.
+menaruhnya di Profil User.
 
----
 
-49. Persistence Boundary
+Feature placement harus diputuskan terlebih dahulu.
 
-UI tidak boleh mengetahui atau mengandalkan:
+Reserved berarti reserved.
 
-- file path;
-- database implementation;
-- snapshot directory;
-- storage format;
-- persistence implementation detail.
-
-UI hanya menggunakan API/contract.
 
 ---
 
-50. Auditability
+49. Empty Workspace adalah Valid State
 
-Mutation yang dilakukan melalui UI harus tetap dapat ditelusuri melalui backend audit/provenance.
+Workspace tidak harus selalu penuh.
 
-UI tidak harus menampilkan seluruh metadata internal kepada user.
+Jika slot navigation memang reserved, UI harus mempertahankan keadaan tersebut.
 
-Namun UI tidak boleh menghilangkan metadata yang memang diperlukan untuk:
+Jika system tidak memiliki data, UI harus menampilkan empty/unknown state yang sesuai.
 
-- status;
-- provenance display;
-- history;
-- conflict resolution;
-- audit workflow.
+Tidak ada kewajiban untuk membuat UI terlihat penuh menggunakan data buatan.
+
+> Kebenaran system lebih penting daripada kepenuhan tampilan.
+
+
+
 
 ---
 
-51. Production Workflow
+50. Error Handling
 
-Workflow production user-facing:
+Error dari system harus dipertahankan maknanya.
+
+Secara konseptual, UI dapat membedakan:
+
+input error;
+
+validation error;
+
+conflict;
+
+permission error;
+
+unavailable operation;
+
+temporal conflict;
+
+persistence failure;
+
+production failure;
+
+unresolved condition.
+
+
+UI tidak boleh mengubah semua error menjadi:
+
+> "Something went wrong."
+
+
+
+jika system memberikan informasi yang lebih berguna dan aman untuk user.
+
+
+---
+
+51. Persistence Boundary
+
+UI tidak boleh bergantung pada detail persistence.
+
+UI tidak perlu mengetahui:
+
+database implementation;
+
+file path;
+
+snapshot directory;
+
+raw storage format;
+
+persistence implementation.
+
+
+UI berkomunikasi melalui contract.
+
+Jika persistence gagal, UI menampilkan hasil system.
+
+UI tidak membuat persistence fallback sendiri.
+
+
+---
+
+52. Audit dan Provenance
+
+Mutation yang melalui UI harus dapat ditelusuri oleh system.
+
+UI tidak perlu menampilkan seluruh metadata internal.
+
+Namun jika system memberikan informasi yang diperlukan untuk:
+
+history;
+
+provenance;
+
+status;
+
+conflict;
+
+audit;
+
+
+UI tidak boleh menghilangkannya dengan cara yang menyesatkan.
+
+UI tidak membuat provenance sendiri.
+
+
+---
+
+53. Production Flow
+
+Production flow user-facing:
 
 User Intent
     ↓
@@ -1362,375 +2002,708 @@ Production Request
     ↓
 Authoritative Context
     ↓
-Narrative Production
+Narrator / Production
     ↓
-AI / Production Output
+AI Output / Proposal
     ↓
 Validation
     ↓
 Accepted Result
 
-UI tidak boleh melewati validation boundary.
+UI hanya menjadi interface terhadap workflow tersebut.
+
+UI tidak boleh:
+
+bypass validation;
+
+menerima output sebagai Canon tanpa keputusan system;
+
+mengubah proposal secara diam-diam;
+
+menyatakan production berhasil jika system belum menyatakan berhasil.
+
+
 
 ---
 
-52. Story-to-Canon Boundary
+54. Forbidden UI Patterns
 
-Story dan page tidak otomatis menjadi Canon.
+Berikut pola yang dilarang:
 
-Jika production menghasilkan perubahan potensial terhadap Universe:
+1. UI membuat domain truth.
 
-Production Output
+
+2. UI menyimpan Canon sebagai source of truth.
+
+
+3. UI melakukan direct database mutation.
+
+
+4. UI mengubah cached object dan menganggap Canon berubah.
+
+
+5. UI membuat dummy domain data.
+
+
+6. UI membuat fallback domain data.
+
+
+7. UI menggunakan sample data sebagai production data.
+
+
+8. UI menggunakan mock data di production path.
+
+
+9. UI mengisi UNKNOWN dengan default domain value.
+
+
+10. UI mengubah NOT_RECORDED menjadi false/empty.
+
+
+11. UI menganggap absence sebagai negative fact.
+
+
+12. UI melakukan silent inference.
+
+
+13. UI melakukan silent repair.
+
+
+14. UI mengubah Proposal menjadi Canon.
+
+
+15. UI menganggap AI output sebagai Canon.
+
+
+16. UI menganggap Story sebagai Universe truth.
+
+
+17. UI menganggap Page sebagai Universe truth.
+
+
+18. UI membuat duplicate canonical editor.
+
+
+19. UI melakukan mutation ketika hanya melakukan navigation.
+
+
+20. UI menentukan relationship truth.
+
+
+21. UI menentukan spatial truth.
+
+
+22. UI menentukan temporal truth.
+
+
+23. UI menentukan epistemic truth.
+
+
+24. UI menentukan validation result sebagai pengganti system.
+
+
+25. UI mengubah Sandbox menjadi Production secara lokal.
+
+
+26. UI mengisi Reserved navigation dengan feature yang belum diputuskan.
+
+
+27. UI mengarang isi Sidebar.
+
+
+28. UI menjadikan internal backend architecture sebagai primary user workflow.
+
+
+29. UI menggunakan browser wall-clock sebagai Universe time.
+
+
+30. UI menganggap cache sebagai authority.
+
+
+31. UI mengarang permission.
+
+
+32. UI mengarang ownership.
+
+
+33. UI menyembunyikan conflict.
+
+
+34. UI menyembunyikan proposal status.
+
+
+35. UI menyatakan operation berhasil sebelum system mengonfirmasi.
+
+
+36. UI menggunakan visual placeholder sebagai domain fact.
+
+
+
+
+---
+
+55. Canonical UI Architecture
+
+Baseline navigation:
+
+POCER
+│
+├── Dashboard
+│
+├── Actor & Actress
+│   └── seluruh Actor, Actress,
+│       Character, dan Character-related workflows
+│
+├── Cerita
+│   └── seluruh story workflows
+│
+├── [RESERVED / EMPTY]
+│
+└── Profil User
+
+Sidebar:
+
+SIDEBAR
+│
+├── Contextual / approved utilities
+│
+├── ...
+│
+└── Mode Switch
+      ├── Production / Mode Utama
+      └── Sandbox / Ruang Uji
+
+Isi Sidebar selain mode switch belum menjadi keputusan final.
+
+Jangan menambahkan fitur tanpa keputusan baru.
+
+
+---
+
+56. Hubungan UI dengan System Governance
+
+Model authority:
+
+SYSTEM GOVERNANCE
+        │
+        ├── rules
+        ├── authority
+        ├── ownership
+        ├── validation
+        ├── temporal rules
+        ├── provenance
+        ├── persistence
+        └── mutation boundary
+                 │
+                 ↓
+                UI
+        ┌────────┼────────┐
+        ↓        ↓        ↓
+     Display  Navigate  Request
+                 │
+                 ↓
+              USER
+
+UI tidak berada di atas governance.
+
+UI juga tidak menggantikan governance.
+
+
+---
+
+57. UI Contract Consumer
+
+Setiap UI feature harus dapat ditelusuri:
+
+UI Feature
     ↓
-Proposal
+UI Interaction
+    ↓
+System Contract
+    ↓
+Domain Authority
     ↓
 Validation
     ↓
-Authorized Mutation
-    ↓
-Canon
+Canonical Result
 
-UI harus mempertahankan boundary tersebut.
+Jika operation tidak tersedia pada system contract:
 
----
+> UI tidak boleh menciptakan operation tersebut.
 
-53. Continuity Workflow
 
-Cocokkan merupakan user-facing surface untuk continuity.
 
-Continuity result digunakan untuk:
+Jika system tidak menyediakan data:
 
-- mendeteksi ketidaksesuaian;
-- menampilkan lokasi masalah;
-- membantu user memahami konflik;
-- mengarahkan ke workflow yang sah.
+> UI tidak boleh menciptakan data tersebut.
 
-Continuity tidak boleh melakukan auto-repair.
 
----
 
-54. Accessibility
+Jika system menolak perubahan:
 
-UI harus mempertahankan accessibility sebagai bagian dari architecture.
+> UI harus tunduk pada penolakan tersebut.
 
-Minimal:
 
-- semantic HTML;
-- keyboard navigation;
-- focus management;
-- accessible labels;
-- sufficient contrast;
-- visible focus state;
-- screen reader compatibility;
-- status announcement untuk asynchronous operation;
-- error association dengan input;
-- tidak mengandalkan warna sebagai satu-satunya indikator status.
 
-Status domain seperti conflict, unknown, proposal, dan valid harus dapat dibedakan tanpa mengandalkan warna saja.
 
 ---
 
-55. Visual Status Semantics
+58. Testing Requirements
 
-Visual state harus konsisten.
-
-UI harus memiliki semantic presentation untuk:
-
-- normal;
-- active;
-- selected;
-- pending;
-- loading;
-- success;
-- warning;
-- conflict;
-- error;
-- unknown;
-- unresolved;
-- read-only.
-
-Visual treatment tidak boleh mengubah semantic value dari backend.
-
----
-
-56. Design System
-
-Komponen UI harus reusable.
-
-Minimal component categories:
-
-Navigation
-Layout
-Typography
-Form
-Input
-Button
-Card
-Table
-List
-Tabs
-Badge
-Status
-Dialog
-Drawer
-Toast
-Timeline
-Empty State
-Loading State
-Error State
-
-Komponen harus bersifat presentation-oriented dan tidak memiliki domain authority.
-
-Domain mutation tetap dilakukan melalui service/contract layer.
-
----
-
-57. Separation of Concerns
-
-Arsitektur frontend harus memisahkan:
-
-Presentation
-    ↓
-View Model / UI State
-    ↓
-API / Contract Client
-    ↓
-Backend
-
-Jangan:
-
-Component
-    ↓
-Direct Domain Mutation
-
-Komponen React/UI tidak boleh menjadi tempat business rules utama.
-
----
-
-58. UI Business Logic Boundary
-
-Logic yang hanya berkaitan dengan presentasi boleh berada di frontend.
-
-Logic yang menentukan kebenaran domain harus berada di backend.
-
-Frontend boleh menentukan:
-
-- layout;
-- sorting;
-- filtering;
-- visual grouping;
-- local form state;
-- interaction state.
-
-Frontend tidak boleh menentukan:
-
-- canonical validity;
-- ownership;
-- relationship truth;
-- temporal truth;
-- epistemic truth;
-- continuity truth;
-- authority;
-- final mutation validity.
-
----
-
-59. Testing Requirements
-
-UI harus memiliki test untuk memastikan governance tidak dilanggar.
-
-Minimal test categories:
+UI harus diuji bukan hanya secara visual, tetapi juga terhadap boundary system.
 
 Navigation Tests
 
-Memastikan lima root navigation dan contextual sidebar bekerja konsisten.
+Memastikan:
 
-Contract Tests
+lima root navigation sesuai baseline;
 
-Memastikan UI menggunakan operation yang tersedia.
+Actor & Actress menjadi workspace Actor/Actress/Character;
+
+Cerita menjadi story workspace;
+
+Reserved tetap kosong;
+
+Profil User menjadi user workspace;
+
+tidak ada root menu tambahan tanpa keputusan.
+
+
+System Authority Tests
+
+Memastikan:
+
+UI tidak membuat domain truth;
+
+UI tidak melakukan direct mutation;
+
+UI mengikuti response system.
+
+
+Dummy/Fallback Tests
+
+Memastikan:
+
+tidak ada dummy domain data;
+
+tidak ada fallback domain data;
+
+tidak ada sample data yang tampil sebagai real data;
+
+unavailable tetap unavailable.
+
 
 Unknown Tests
 
-Memastikan unknown tidak berubah menjadi inferred value.
+Memastikan:
+
+UNKNOWN tetap UNKNOWN;
+
+NOT_RECORDED tetap NOT_RECORDED;
+
+UNRESOLVED tetap UNRESOLVED.
+
 
 Mutation Tests
 
-Memastikan semua mutation melalui contract.
+Memastikan seluruh mutation melalui contract.
 
-Permission Tests
+Proposal Tests
 
-Memastikan action yang tidak valid tidak dapat dieksekusi.
+Memastikan production/AI output tidak langsung menjadi Canon.
+
+Temporal Tests
+
+Memastikan temporal context tidak hilang.
 
 Continuity Tests
 
 Memastikan conflict tidak menghasilkan silent repair.
 
-Proposal Tests
-
-Memastikan AI/production output tidak langsung menjadi Canon.
-
-Temporal Tests
-
-Memastikan temporal context tidak hilang pada workflow yang relevan.
-
 Reference Tests
 
-Memastikan reference page tidak membuat duplicate mutation path.
+Memastikan reference tidak menciptakan duplicate mutation path.
+
+Sandbox Tests
+
+Memastikan Sandbox tidak diam-diam menggantikan Production Canon.
+
 
 ---
 
-60. Forbidden UI Patterns
+59. Definition of Done untuk UI
 
-UI tidak boleh:
+Sebuah UI feature dianggap sesuai arsitektur apabila:
 
-1. membuat domain truth sendiri;
-2. menyimpan Canon hanya di frontend;
-3. melakukan direct database mutation;
-4. melakukan silent repair;
-5. melakukan silent inference;
-6. mengubah unknown menjadi false;
-7. mengubah not recorded menjadi empty;
-8. menganggap absence sebagai negative fact;
-9. menganggap story sebagai Universe truth;
-10. menganggap page sebagai Universe truth;
-11. menganggap AI output sebagai Canon;
-12. membuat duplicate canonical editor;
-13. menyembunyikan conflict;
-14. mengubah temporal context secara diam-diam;
-15. menampilkan backend architecture sebagai user workflow;
-16. menggunakan cached data sebagai authority;
-17. membuat domain default yang tidak diberikan backend;
-18. mengubah status domain hanya karena kebutuhan presentation;
-19. melakukan mutation ketika hanya melakukan navigation;
-20. mengimplementasikan ulang domain authority di frontend.
+memiliki canonical home yang jelas;
 
----
+menggunakan terminology user-facing yang tepat;
 
-61. Canonical UI Information Architecture
+mengambil data dari system;
 
-Struktur final:
+tidak membuat domain data sendiri;
 
-POCER
-│
-├── Dashboard
-│   ├── Beranda
-│   ├── Hari Ini
-│   └── Aktivitas
-│
-├── Aktor
-│   ├── Semua Aktor
-│   ├── Karakter
-│   ├── Grup
-│   ├── Buat Karakter
-│   └── Riwayat
-│
-├── Cerita
-│   ├── Hari Ini
-│   ├── Daily Story
-│   ├── Daily Page
-│   ├── Ide
-│   └── Riwayat
-│
-├── Cocokkan
-│   ├── Ringkasan
-│   ├── Cerita
-│   ├── Karakter
-│   ├── Dunia
-│   └── Masalah
-│
-└── Dunia
-    ├── Ringkasan
-    ├── Tempat
-    ├── Benda
-    ├── Hubungan
-    ├── Pengetahuan
-    └── Peristiwa
+tidak menggunakan dummy/fallback sebagai system data;
+
+membedakan loading/empty/unknown/error;
+
+tidak melakukan silent inference;
+
+tidak melakukan silent repair;
+
+tidak mengubah Canon secara langsung;
+
+menggunakan system contract untuk mutation;
+
+tunduk pada system validation;
+
+mempertahankan temporal context;
+
+mempertahankan provenance/status ketika relevan;
+
+tidak menganggap AI sebagai authority;
+
+tidak menganggap story/page sebagai Universe truth;
+
+tidak membuat duplicate editor;
+
+tidak menambahkan navigation yang belum diputuskan.
+
+
 
 ---
 
-62. Final UI Principle
+60. Prinsip Implementasi Frontend
 
-Arsitektur UI Pocer harus mengikuti prinsip berikut:
+Frontend secara konseptual:
 
-User Mental Model
-        ↓
-User Workflow
-        ↓
-UI Navigation
-        ↓
-UI Contract
-        ↓
-System Governance
-        ↓
-Domain Authority
-        ↓
-Validation
-        ↓
-Canon
+Presentation
+    ↓
+UI State
+    ↓
+Contract Client
+    ↓
+System
 
-Arah informasi:
+Bukan:
 
-Canon
-  ↓
-Backend
+Presentation
+    ↓
+Business Truth
+    ↓
+Local Mutation
+    ↓
+Fake Persistence
+
+Komponen UI boleh mengelola:
+
+layout;
+
+interaction;
+
+selection;
+
+filters;
+
+sorting;
+
+form state;
+
+visual state.
+
+
+Komponen UI tidak boleh menjadi tempat utama untuk:
+
+domain authority;
+
+canonical validation;
+
+ownership;
+
+relationship truth;
+
+temporal truth;
+
+epistemic truth;
+
+persistence authority.
+
+
+
+---
+
+61. Prinsip Data Flow
+
+Read
+
+AUTHORITATIVE SYSTEM
+        ↓
+VALIDATED DATA
+        ↓
+UI CONTRACT
+        ↓
+PROJECTION / VIEW MODEL
+        ↓
+UI
+        ↓
+USER
+
+Mutation
+
+USER
   ↓
 UI
   ↓
-User
+EXPLICIT COMMAND
+  ↓
+DOMAIN OWNER
+  ↓
+VALIDATION
+  ↓
+PROVENANCE
+  ↓
+CANONICAL STATE
+  ↓
+PERSISTENCE
 
-Arah mutation:
+Creative Production
 
-User
-  ↓
-UI
-  ↓
-Contract
-  ↓
-Backend
-  ↓
-Validation
-  ↓
-Domain Authority
-  ↓
-Canon
+AUTHORITATIVE UNIVERSE
+        ↓
+DAILY UNIVERSE
+        ↓
+NARRATOR
+        ↓
+LLM / PRODUCTION
+        ↓
+PROPOSAL
+        ↓
+VALIDATION
+        ↓
+DOMAIN OWNER
+        ↓
+CANON
 
-UI tidak boleh memotong jalur tersebut.
 
 ---
 
-63. Kesimpulan
+62. Mental Model User
 
-Pocer memiliki lima konteks utama:
+User tidak seharusnya dipaksa memahami struktur internal system.
+
+User cukup memahami:
 
 Dashboard
-Aktor
+Actor & Actress
 Cerita
-Cocokkan
-Dunia
+Reserved
+Profil User
 
-Kelima konteks tersebut merupakan struktur yang ditujukan kepada pengguna.
+Kemudian:
 
-Struktur backend tidak harus terlihat pada navigasi.
+masuk ke Actor & Actress untuk Actor/Actress/Character;
 
-Domain system tetap menjadi authority di belakang UI.
+masuk ke Cerita untuk story;
 
-UI bertugas:
+menggunakan Dashboard untuk overview;
 
-- memberikan model mental yang sederhana;
-- menyediakan workflow yang jelas;
-- menampilkan data authoritative;
-- menjaga perbedaan antara Canon, Projection, Proposal, dan UI state;
-- mempertahankan unknown dan unresolved state;
-- meminta mutation melalui contract;
-- menampilkan validation result;
-- mencegah silent inference;
-- mencegah silent repair;
-- mencegah duplicate canonical editor;
-- mempertahankan temporal dan epistemic boundaries;
-- mengarahkan pengguna ke workflow yang benar.
+menggunakan Profil User untuk user-related matters;
 
-Dengan demikian:
+melihat Reserved sebagai workspace yang belum ditentukan;
 
-«UI boleh sederhana bagi pengguna, tetapi tidak boleh sederhana dengan cara menghilangkan aturan sistem.»
+menggunakan Sidebar hanya untuk fungsi yang memang disediakan dan mode Production/Sandbox.
 
-Kesederhanaan UI dicapai melalui abstraksi dan information architecture, bukan dengan menghapus domain constraints.
+
+Complexity system tetap berada di belakang UI.
+
+
+---
+
+63. UI Boleh Sederhana, System Tidak Boleh Disederhanakan Secara Salah
+
+Tujuan UI adalah membuat system dapat digunakan dengan mudah.
+
+Namun:
+
+> Kesederhanaan UI tidak boleh diperoleh dengan menghapus truth, authority, validation, provenance, atau domain boundary.
+
+
+
+Contoh yang benar:
+
+Backend:
+UNKNOWN
+      ↓
+UI:
+"Belum diketahui"
+
+Contoh yang salah:
+
+Backend:
+UNKNOWN
+      ↓
+UI:
+"Normal"
+
+Contoh yang benar:
+
+Backend:
+Proposal
+      ↓
+UI:
+"Proposal — belum menjadi data utama"
+
+Contoh yang salah:
+
+Backend:
+Proposal
+      ↓
+UI:
+"Data Character"
+
+
+---
+
+64. Prinsip Utama yang Tidak Boleh Dilanggar
+
+Jika seluruh README ini harus diringkas menjadi beberapa aturan:
+
+1. System adalah authority.
+
+SYSTEM > UI
+
+2. UI adalah interface.
+
+UI ≠ DOMAIN
+UI ≠ CANON
+UI ≠ AUTHORITY
+
+3. UI tidak boleh mengubah system secara langsung.
+
+UI → CONTRACT → SYSTEM
+
+4. UI tidak boleh membuat data domain.
+
+NO DUMMY
+NO FAKE FALLBACK
+NO SILENT DEFAULT
+NO SYNTHETIC DOMAIN DATA
+
+5. Data yang tidak ada tidak boleh dikarang.
+
+MISSING ≠ FALSE
+UNKNOWN ≠ DEFAULT
+EMPTY ≠ NOT_EXIST
+
+6. Story bukan Universe.
+
+STORY ≠ CANON
+PAGE ≠ CANON
+AI OUTPUT ≠ CANON
+
+7. Actor & Actress adalah terminology domain.
+
+Workspace tersebut mencakup seluruh Actor/Actress dan seluruh Character-related rules/workflows.
+
+8. Root navigation memiliki lima slot.
+
+Dashboard
+Actor & Actress
+Cerita
+[Reserved / Empty]
+Profil User
+
+9. Reserved tetap kosong sampai ada keputusan.
+
+UI tidak boleh mengarang feature baru.
+
+10. Sidebar bukan tempat membuang feature yang belum memiliki home.
+
+Isi Sidebar harus mengikuti keputusan product/system.
+
+11. Mode Production/Sandbox harus tersedia di bagian paling bawah Sidebar.
+
+Bahasanya harus mudah dipahami user dan tetap merepresentasikan boundary system.
+
+12. Canon hanya berubah melalui jalur system yang sah.
+
+USER
+ ↓
+UI
+ ↓
+CONTRACT
+ ↓
+VALIDATION
+ ↓
+DOMAIN AUTHORITY
+ ↓
+CANON
+
+
+---
+
+65. Final Statement
+
+Pocer UI bukan system kedua.
+
+Pocer UI bukan database kedua.
+
+Pocer UI bukan fallback engine.
+
+Pocer UI bukan dummy-data engine.
+
+Pocer UI bukan domain owner.
+
+Pocer UI bukan validation authority.
+
+Pocer UI bukan Canon authority.
+
+Pocer UI bukan AI authority.
+
+Pocer UI adalah:
+
+> interface yang memungkinkan user berinteraksi dengan system tanpa mengambil alih keputusan system.
+
+
+
+Karena itu, prinsip final Pocer adalah:
+
+SYSTEM
+                      │
+             absolute authority
+                      │
+             domain + governance
+                      │
+              validation + rules
+                      │
+                    CANON
+                      │
+                  CONTRACT
+                      │
+                      UI
+                      │
+                    USER
+
+Dan untuk seluruh implementasi:
+
+> Jika UI menginginkan sesuatu tetapi system tidak mengatakan demikian, UI harus mengikuti system.
+
+
+
+> Jika data tidak diberikan system, UI tidak boleh mengarangnya.
+
+
+
+> Jika perubahan tidak diizinkan system, UI tidak boleh memaksakannya.
+
+
+
+> Jika sebuah feature belum memiliki home yang diputuskan, UI tidak boleh mengarang home-nya.
+
+
+
+> Jika sebuah status belum menjadi Canon, UI tidak boleh menampilkannya sebagai Canon.
+
+
+
+> UI harus membuat system mudah digunakan, bukan membuat system mengikuti UI.
