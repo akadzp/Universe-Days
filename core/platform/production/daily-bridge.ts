@@ -116,7 +116,9 @@ export class DailyProductionBridge {
       return this.blocked(input, 'Daily production requires an explicit universe scope.');
     }
 
-    const dailyContextResult = input.dailyContext
+    const dailyContextResult:
+      | { readonly context: UniversePeriodContext; readonly initializationMode: 'OWNER_CONTEXT' | 'FIRST_PERIOD' | 'NORMAL_CONTINUATION'; readonly reason?: undefined }
+      | { readonly context: null; readonly initializationMode?: undefined; readonly reason: string } = input.dailyContext
       ? { context: input.dailyContext, initializationMode: 'OWNER_CONTEXT' as const }
       : this.initializeDailyContext(input);
 

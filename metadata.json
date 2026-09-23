@@ -1,0 +1,8 @@
+{
+  "name": "Universe Days (Pocer)",
+  "description": "Authoritative Narrative Universe and Daily Continuity Storytelling Platform following the Pocer UI Architecture & Governance specifications.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
