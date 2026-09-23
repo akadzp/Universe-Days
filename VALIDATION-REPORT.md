@@ -1,37 +1,33 @@
-# Final Three-Stage Validation Report
+# Validation Report — Current Repository
 
-## Stage 1 — Character Aggregate
+## Repository baseline
 
-Checked against the current/default repository model:
-- `CharacterEntity` remains unchanged; no existing attribute was removed.
-- Aggregate is additive and composes Behavior, Style, State, and Character indicators.
-- Behavior/Style/State remain referenced by their existing IDs and ownership boundaries.
-- Actor Level/Group rules remain delegated to Actor classification; Aggregate only exposes the same policy as a read-only coordination constant.
-- Indicator mutations go through the existing indicator lifecycle and registry.
+- Repository: `akadzp/Universe-Days`
+- Branch: `main`
+- Commit inspected: `0eb9a198af07aac16f6b3ff97bf084c16deb6a87`
+- Commit message: `feat: integrate character aggregate, state, and events`
+- GitHub Actions workflow runs associated with the commit: none returned.
 
-## Stage 2 — State/Event integration
+## Stage audit
 
-Implemented and checked:
-- Event must list the Character in `participantRefs`.
-- Event effects are validated before indicator mutation.
-- AI/UNKNOWN indicator effects cannot become authoritative.
-- Indicator changes are recorded in indicator history and Character revision history.
-- Character State changes go through `CharacterStateLifecycle.changeState()`.
-- State remains a separate authoritative entity; the Aggregate only updates its composed snapshot.
-- Event effective time and Engine recorded time are explicit and separate.
-- State change requires its predecessor state and change trigger through the existing State lifecycle.
-- No direct Event → Character field mutation is introduced.
+| Stage | Current status | Result |
+|---|---|---|
+| Character Aggregate | implemented | inspected |
+| State / Event integration | implemented | inspected |
+| Knowledge integration | added by this patch | contract-covered |
+| Relationship integration | added by this patch | contract-covered |
+| Location integration | added by this patch | contract-covered |
+| Continuity Engine | existing | inspected |
+| Decision / Response foundation | existing Decision/Action layer | inspected |
+| Daily Story integration | existing orchestrator + validator | inspected |
+| Full repository validation | environment-limited | not claimed |
 
-## Stage 3 — Repository validation
+## Important distinction
 
-Static repository validation performed against the current/default branch through the repository connector:
-- inspected Character, Actor, Behavior, Style, Character State, Event, Universe, identity, history, provenance, indicator lifecycle/registry/validation/effects surfaces;
-- verified the current `tsconfig.json` and package lint command;
-- verified that the patch is additive and does not replace `CharacterEntity` fields;
-- new Aggregate + Event integration TypeScript was independently type-checked with TypeScript 5.8.3 in a strict isolated contract harness.
+The existing Continuity Engine, Decision/Action layer, and Daily Story Core are not silently rewritten by this patch. They remain their existing authorities. This patch establishes Character's explicit bindings to the supporting domains and leaves those larger engines for their dedicated integration passes.
 
-### Environment limitation
+## Environment limitation
 
-A complete repository-wide `npm run lint` / full runtime test execution could not be performed in this session because the repository could not be cloned into the execution container and its dependency tree is not locally available. The patch therefore does **not** claim a full repository-wide test-suite pass.
+The execution container could not clone the public repository because outbound DNS/network access is unavailable. Consequently `npm install` and a genuine repository-wide `npm run lint` could not be run here.
 
-The included integration test is intended to be run from the repository checkout after applying the patch.
+The patch therefore contains no claim of a full repository-wide pass. It is based on direct inspection of the current GitHub `main` tree and commit metadata.
