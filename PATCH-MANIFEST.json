@@ -1,11 +1,17 @@
 {
-  "stage": 3,
-  "name": "character-indicator-lifecycle",
-  "additive": true,
+  "stage": 4,
+  "name": "character-indicator-binary-rules",
+  "type": "additive",
   "files": [
-    "core/CHARACTER/indicator/lifecycle.ts",
-    "core/CHARACTER/indicator/registry.ts"
+    "core/CHARACTER/indicator/rules.ts",
+    "core/CHARACTER/indicator/rule-validation.ts",
+    "PATCH-README.md",
+    "PATCH-MANIFEST.json"
   ],
-  "preserves_existing_attributes": true,
-  "next_stage": 4
+  "principles": [
+    "BOOLEAN rules are first-class",
+    "UNKNOWN is not FALSE",
+    "rules do not mutate domain state",
+    "existing attributes remain untouched"
+  ]
 }
