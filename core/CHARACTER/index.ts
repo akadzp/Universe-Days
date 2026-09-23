@@ -3,3 +3,4 @@ export * from './character-profile';
 export * from './actor';
 export * from './behavior';
 export * from './character-style';
+export * from './indicator/index.ts';

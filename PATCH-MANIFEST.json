@@ -1,0 +1,13 @@
+{
+  "name": "Universe-Days-character-indicator-foundation-patch",
+  "base_commit": "0644d63b911a231e8a5e7b4693b4e1ae0d5be61f",
+  "mode": "additive",
+  "files": [
+    "core/CHARACTER/indicator/indicator.ts",
+    "core/CHARACTER/indicator/registry.ts",
+    "core/CHARACTER/indicator/validation.ts",
+    "core/CHARACTER/indicator/effects.ts",
+    "core/CHARACTER/character.ts",
+    "PATCH-README.md"
+  ]
+}
