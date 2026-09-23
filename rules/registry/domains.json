@@ -1,70 +1,778 @@
 {
-  "version": "1.0.0",
-  "domains": {
-    "TEMPORAL": {
-      "owner": "TEMPORAL_SYSTEM",
-      "authorityLevel": 1,
-      "description": "Authoritative owner of temporal truth, cycle progression, and chronological ordering."
-    },
-    "CHARACTER": {
-      "owner": "CHARACTER_SYSTEM",
-      "authorityLevel": 2,
-      "description": "Authoritative owner of character identity, traits, status, and physical bounds."
-    },
-    "RELATIONSHIP": {
-      "owner": "RELATIONSHIP_SYSTEM",
-      "authorityLevel": 2,
-      "description": "Authoritative owner of inter-entity relationships, affinity, and relational dynamics."
-    },
-    "OBJECT": {
-      "owner": "OBJECT_SYSTEM",
-      "authorityLevel": 2,
-      "description": "Authoritative owner of items, relics, physical state, and possession."
-    },
-    "KNOWLEDGE": {
-      "owner": "KNOWLEDGE_SYSTEM",
-      "authorityLevel": 2,
-      "description": "Authoritative owner of epistemic secrets, rumors, and facts."
-    },
-    "STATE": {
-      "owner": "STATE_SYSTEM",
-      "authorityLevel": 1,
-      "description": "Authoritative owner of global universe state vectors."
-    },
-    "LOCATION": {
-      "owner": "LOCATION_SYSTEM",
-      "authorityLevel": 2,
-      "description": "Authoritative owner of spatial nodes, geography, and containment."
-    },
-    "DAILY_UNIVERSE": {
-      "owner": "DAILY_UNIVERSE_SYSTEM",
-      "authorityLevel": 2,
-      "description": "Authoritative owner of diurnal cycles and daily universe orchestration."
-    },
-    "DAILY_STORY": {
-      "owner": "DAILY_STORY_SYSTEM",
-      "authorityLevel": 3,
-      "description": "Authoritative owner of daily story lifecycles and narrative beat progression."
-    },
-    "DAILY_PAGE": {
-      "owner": "DAILY_PAGE_SYSTEM",
-      "authorityLevel": 3,
-      "description": "Authoritative owner of daily page composition and presentation layout."
-    },
-    "NARRATOR": {
-      "owner": "NARRATOR_SYSTEM",
-      "authorityLevel": 4,
-      "description": "Authoritative owner of narrative transformation and stylistic voice."
-    },
-    "INSTANCE_MANAGEMENT": {
-      "owner": "INSTANCE_MANAGEMENT_SYSTEM",
-      "authorityLevel": 1,
-      "description": "Authoritative owner of persistent storage and instance snapshots."
-    },
-    "ENGINE": {
-      "owner": "ENGINE_SYSTEM",
-      "authorityLevel": 1,
-      "description": "Authoritative owner of execution flow, state machines, and task resolution."
-    }
-  }
+"version": "2.0.0",
+
+"system": {
+"name": "POCER Universe Days",
+"mode": "AUTHORITATIVE_DOMAIN_SYSTEM",
+
+"corePrinciples": [
+  "UNIVERSE_IS_CANON",
+  "DOMAIN_OWNS_ITS_TRUTH",
+  "UNKNOWN_IS_NOT_DEFAULT",
+  "ABSENCE_IS_NOT_FACT",
+  "TIME_IS_FIRST_CLASS",
+  "KNOWLEDGE_IS_NOT_OBJECTIVE_TRUTH",
+  "STATE_IS_TEMPORAL",
+  "STORY_IS_PROJECTION",
+  "PAGE_IS_PRESENTATION",
+  "NARRATOR_IS_NOT_CANON_AUTHORITY",
+  "AI_IS_PROPOSER_NOT_AUTHORITY",
+  "UI_IS_CONSUMER_NOT_AUTHORITY",
+  "NO_SILENT_INFERENCE",
+  "NO_SILENT_REPAIR",
+  "ALL_MUTATIONS_ARE_VALIDATED",
+  "ALL_CANON_MUTATIONS_HAVE_PROVENANCE"
+]
+
+},
+
+"authority": {
+"levels": {
+"1": {
+"name": "SYSTEM_CORE",
+"description": "Core infrastructure authority. Owns fundamental execution, temporal, state, and persistence invariants."
+},
+"2": {
+"name": "DOMAIN",
+"description": "Authoritative owner of persistent universe facts."
+},
+"3": {
+"name": "PROJECTION",
+"description": "Authoritative owner of derived narrative projections and presentation lifecycle, but cannot redefine lower-level domain truth."
+},
+"4": {
+"name": "CREATIVE",
+"description": "Authoritative owner of narrative transformation, creative direction, and stylistic composition. Cannot create Canon without domain authorization."
+}
+},
+
+"rules": [
+  "A domain may mutate its own canonical facts only.",
+  "A domain may request another domain to mutate its facts through an explicit contract.",
+  "No domain may directly overwrite another domain's canonical state.",
+  "Higher authorityLevel does not override domain ownership.",
+  "Projection domains cannot redefine source-domain truth.",
+  "Creative domains cannot redefine source-domain truth.",
+  "Infrastructure domains cannot invent semantic domain facts.",
+  "Cross-domain changes require explicit commands or validated transitions."
+]
+
+},
+
+"domains": {
+"TEMPORAL": {
+"owner": "TEMPORAL_SYSTEM",
+"authorityLevel": 1,
+"description": "Authoritative owner of temporal truth, cycle progression, and chronological ordering.",
+"owns": [
+"date",
+"datetime",
+"period",
+"sequence",
+"temporalValidity",
+"effectiveFrom",
+"effectiveTo",
+"chronologicalOrder",
+"temporalRelations",
+"clockProgression"
+],
+"mayMutate": [
+"ADVANCE_TIME",
+"CREATE_PERIOD",
+"CLOSE_PERIOD",
+"REGISTER_TEMPORAL_TRANSITION"
+],
+"mustNotMutate": [
+"CHARACTER_IDENTITY",
+"OBJECT_IDENTITY",
+"RELATIONSHIP_FACT",
+"KNOWLEDGE_FACT",
+"NARRATIVE_CONTENT"
+]
+},
+
+"CHARACTER": {
+  "owner": "CHARACTER_SYSTEM",
+  "authorityLevel": 2,
+  "description": "Authoritative owner of character identity, profile, classification references, and character-specific persistent facts.",
+  "owns": [
+    "characterIdentity",
+    "characterProfile",
+    "actorClassificationReference",
+    "roleReferences",
+    "characterHistory"
+  ],
+  "references": [
+    "STATE",
+    "KNOWLEDGE",
+    "RELATIONSHIP",
+    "LOCATION",
+    "BEHAVIOR",
+    "STYLE"
+  ],
+  "mayMutate": [
+    "CREATE_CHARACTER",
+    "UPDATE_CHARACTER_PROFILE",
+    "REQUEST_TRANSITION",
+    "REQUEST_GROUP_CHANGE",
+    "REQUEST_LEVEL_CHANGE"
+  ],
+  "mustNotMutate": [
+    "OBJECT_LOCATION",
+    "RELATIONSHIP_FACT",
+    "KNOWLEDGE_FACT",
+    "GLOBAL_STATE",
+    "TEMPORAL_CLOCK"
+  ]
+},
+
+"RELATIONSHIP": {
+  "owner": "RELATIONSHIP_SYSTEM",
+  "authorityLevel": 2,
+  "description": "Authoritative owner of inter-entity relationships, affinity, status, direction, and relational dynamics.",
+  "owns": [
+    "relationshipIdentity",
+    "relationshipType",
+    "relationshipStatus",
+    "relationshipDynamic",
+    "relationshipDirection",
+    "relationshipHistory",
+    "relationshipProvenance"
+  ],
+  "rules": [
+    "Relationship facts belong to RELATIONSHIP_SYSTEM.",
+    "Character references relationships but does not own relationship truth.",
+    "Narrative occurrence alone does not automatically become Canon.",
+    "Story-derived relationship facts require narrative basis and validation.",
+    "UNKNOWN values must not be inferred from missing information."
+  ]
+},
+
+"OBJECT": {
+  "owner": "OBJECT_SYSTEM",
+  "authorityLevel": 2,
+  "description": "Authoritative owner of persistent objects, physical state, ownership, possession, access, and object history.",
+  "owns": [
+    "objectIdentity",
+    "objectDescription",
+    "objectProvenance",
+    "ownership",
+    "possession",
+    "access",
+    "wearState",
+    "objectTemporalValidity",
+    "objectHistory"
+  ],
+  "rules": [
+    "Objects are persistent world entities, not merely story props.",
+    "Ownership and possession are authoritative object-domain facts.",
+    "Character references object interaction but does not own object truth.",
+    "A story mentioning an object does not automatically create or mutate the object."
+  ]
+},
+
+"KNOWLEDGE": {
+  "owner": "KNOWLEDGE_SYSTEM",
+  "authorityLevel": 2,
+  "description": "Authoritative owner of what an Actor knows, believes, misunderstands, or has learned.",
+  "owns": [
+    "knowledgeItems",
+    "knownFacts",
+    "beliefs",
+    "rumors",
+    "misconceptions",
+    "knowledgeAcquisition",
+    "knowledgeCertainty",
+    "knowledgeHistory"
+  ],
+  "rules": [
+    "Knowledge is actor-relative.",
+    "Knowledge is not equivalent to Universe truth.",
+    "A fact may exist in Universe while remaining unknown to an Actor.",
+    "A character may only act from knowledge available to that character.",
+    "BELIEF, RUMOR, MISCONCEPTION, and FACT must remain distinguishable.",
+    "Knowledge mismatch with objective Universe truth is not automatically a continuity error."
+  ]
+},
+
+"STATE": {
+  "owner": "STATE_SYSTEM",
+  "authorityLevel": 1,
+  "description": "Authoritative owner of dynamic temporal state vectors.",
+  "owns": [
+    "currentLocationReference",
+    "currentActivity",
+    "currentMood",
+    "currentCondition",
+    "currentGoal",
+    "currentStatus",
+    "stateTimeline",
+    "stateTransitions"
+  ],
+  "rules": [
+    "State is temporal.",
+    "State does not redefine identity.",
+    "State does not redefine personality.",
+    "State does not redefine backstory.",
+    "State does not redefine knowledge.",
+    "State does not redefine relationship facts.",
+    "Missing state means UNKNOWN or NOT_RECORDED, never an inferred value."
+  ]
+},
+
+"LOCATION": {
+  "owner": "LOCATION_SYSTEM",
+  "authorityLevel": 2,
+  "description": "Authoritative owner of spatial nodes, geography, containment, and spatial relationships.",
+  "owns": [
+    "locationIdentity",
+    "geography",
+    "containment",
+    "spatialRelations",
+    "locationHistory"
+  ],
+  "rules": [
+    "Location owns spatial truth.",
+    "Character current location is a reference to LOCATION truth.",
+    "Object location is a reference to LOCATION truth.",
+    "Story prose cannot silently establish authoritative spatial truth."
+  ]
+},
+
+"DAILY_UNIVERSE": {
+  "owner": "DAILY_UNIVERSE_SYSTEM",
+  "authorityLevel": 2,
+  "description": "Authoritative owner of daily temporal projection and daily universe orchestration.",
+  "owns": [
+    "dailyPeriod",
+    "dailySequence",
+    "dailyContext",
+    "activeEntities",
+    "dailyEvents",
+    "dailyProcesses",
+    "dailyContinuityContext",
+    "dailyProjectionMetadata"
+  ],
+  "rules": [
+    "Daily Universe is a temporal projection of Universe truth.",
+    "Daily Universe cannot contradict authoritative source domains.",
+    "Daily Universe does not become a second independent Universe.",
+    "Daily context may select relevant facts but may not invent canonical facts.",
+    "Daily Universe progression must use TEMPORAL authority."
+  ]
+},
+
+"DAILY_STORY": {
+  "owner": "DAILY_STORY_SYSTEM",
+  "authorityLevel": 3,
+  "description": "Authoritative owner of daily story lifecycle, narrative structure, and narrative beat progression.",
+  "owns": [
+    "storyIdentity",
+    "storyLifecycle",
+    "storyScope",
+    "storyTrigger",
+    "storyBeats",
+    "storyRevision",
+    "storyCanonStatus",
+    "storyValidation"
+  ],
+  "rules": [
+    "Daily Story is derived from Universe and Daily Universe context.",
+    "Story is not a replacement for Universe truth.",
+    "Story may propose events but cannot silently canonicalize them.",
+    "Story-derived facts require explicit validation by the owning domain.",
+    "Story revision must preserve provenance."
+  ]
+},
+
+"DAILY_PAGE": {
+  "owner": "DAILY_PAGE_SYSTEM",
+  "authorityLevel": 3,
+  "description": "Authoritative owner of daily page composition, layout, and reader-facing presentation.",
+  "owns": [
+    "pageDefinition",
+    "pageComposition",
+    "pageSections",
+    "presentationOrder",
+    "presentationMetadata"
+  ],
+  "rules": [
+    "Daily Page is presentation.",
+    "Daily Page cannot mutate Universe truth directly.",
+    "Daily Page may select and arrange authoritative information.",
+    "Presentation wording must not imply facts absent from source data.",
+    "Missing information must remain visibly unknown or omitted according to presentation policy."
+  ]
+},
+
+"NARRATOR": {
+  "owner": "NARRATOR_SYSTEM",
+  "authorityLevel": 4,
+  "description": "Authoritative owner of narrative transformation, creative intent, ideation, voice, and stylistic composition.",
+  "owns": [
+    "creativeIntent",
+    "storyIdeation",
+    "narrativeFocus",
+    "genre",
+    "tone",
+    "voice",
+    "pointOfView",
+    "pacing",
+    "proseStyle",
+    "dialogueStyle",
+    "expositionStyle",
+    "creativeConstraints"
+  ],
+  "rules": [
+    "Narrator may transform authoritative facts into narrative.",
+    "Narrator may select which facts to emphasize.",
+    "Narrator may propose story ideas.",
+    "Narrator may not redefine Canon.",
+    "Narrator may not invent missing character facts as authoritative facts.",
+    "Narrator may not convert UNKNOWN into a factual value.",
+    "Narrator output is creative production unless explicitly validated by a domain owner.",
+    "Narrator is not equivalent to the LLM provider.",
+    "LLM is an implementation mechanism used by production, not the owner of narrative authority."
+  ]
+},
+
+"INSTANCE_MANAGEMENT": {
+  "owner": "INSTANCE_MANAGEMENT_SYSTEM",
+  "authorityLevel": 1,
+  "description": "Authoritative owner of persistent storage, snapshots, revisions, and runtime instance state.",
+  "owns": [
+    "universeSnapshots",
+    "currentUniversePointer",
+    "persistenceMetadata",
+    "revisionMetadata",
+    "storageIntegrity"
+  ],
+  "rules": [
+    "Persistence stores authoritative state but does not invent domain state.",
+    "Persistence must only accept validated canonical state.",
+    "SANDBOX state must not silently become persistent Canon.",
+    "Snapshot restoration must preserve provenance and revision identity."
+  ]
+},
+
+"ENGINE": {
+  "owner": "ENGINE_SYSTEM",
+  "authorityLevel": 1,
+  "description": "Authoritative owner of execution flow, state machines, task resolution, and orchestration.",
+  "owns": [
+    "executionFlow",
+    "stateMachines",
+    "taskResolution",
+    "dependencyOrdering",
+    "executionGuards",
+    "orchestration"
+  ],
+  "rules": [
+    "ENGINE executes rules but does not invent domain meaning.",
+    "ENGINE cannot bypass domain ownership.",
+    "ENGINE cannot directly canonicalize AI proposals.",
+    "ENGINE must preserve deterministic execution where required."
+  ]
+}
+
+},
+
+"truth": {
+"truthLevels": {
+"CANON": {
+"description": "Validated authoritative Universe fact.",
+"mayBeUsedAsFact": true,
+"requiresProvenance": true,
+"requiresOwner": true
+},
+"DERIVED": {
+"description": "Deterministically derived information from Canon.",
+"mayBeUsedAsFact": true,
+"mayBePersisted": true,
+"requiresSourceReferences": true,
+"mustNotOverrideCanon": true
+},
+"PROJECTION": {
+"description": "Contextual or presentation representation of Canon.",
+"mayBeUsedAsFact": false,
+"mustReferenceSource": true,
+"mustNotMutateCanon": true
+},
+"PROPOSAL": {
+"description": "AI, Narrator, Story, or user-generated proposed information awaiting validation.",
+"mayBeUsedAsFact": false,
+"requiresValidation": true,
+"mayNotBecomeCanonAutomatically": true
+},
+"UNKNOWN": {
+"description": "The system has no authoritative value.",
+"mayBeUsedAsFact": false,
+"mustNotBeInferred": true,
+"mustNotBeDefaulted": true
+}
+},
+
+"rules": [
+  "CANON cannot be silently replaced by DERIVED.",
+  "PROJECTION cannot become CANON through display or serialization.",
+  "PROPOSAL cannot become CANON without owner validation.",
+  "UNKNOWN cannot be converted into a semantic default.",
+  "Missing information cannot be treated as negative information.",
+  "Absence of evidence is not evidence of absence."
+]
+
+},
+
+"unknownPolicy": {
+"enabled": true,
+
+"allowedRepresentations": [
+  "UNKNOWN",
+  "NOT_RECORDED",
+  "NOT_APPLICABLE",
+  "UNRESOLVED"
+],
+
+"rules": [
+  "UNKNOWN means no authoritative value is known.",
+  "NOT_RECORDED means the domain has not recorded a value.",
+  "NOT_APPLICABLE means the field does not apply to the entity.",
+  "UNRESOLVED means competing information exists but no authoritative resolution has occurred.",
+  "UI must not replace these values with semantic defaults.",
+  "AI must not infer these values unless explicitly operating in PROPOSAL mode.",
+  "PROPOSAL inference must remain labeled as PROPOSAL."
+]
+
+},
+
+"mutation": {
+"rules": [
+"Every canonical mutation must identify its domain owner.",
+"Every canonical mutation must pass domain validation.",
+"Every canonical mutation must have provenance.",
+"Every canonical mutation must have temporal validity when the domain is temporal.",
+"Cross-domain mutation must use an explicit command or transition.",
+"Read operations must not mutate state.",
+"Projection generation must not mutate Canon.",
+"AI output must not directly mutate Canon.",
+"Narrative output must not directly mutate Canon.",
+"UI input must not bypass domain contracts.",
+"Failed validation must not partially mutate Canon.",
+"No silent auto-repair is permitted."
+],
+
+"provenanceRequired": [
+  "USER_DEFINED",
+  "STORY_DERIVED",
+  "AI_PROPOSAL",
+  "SYSTEM_DERIVED",
+  "MIGRATION",
+  "IMPORT"
+]
+
+},
+
+"inference": {
+"policy": "EXPLICIT_ONLY",
+
+"forbidden": [
+  "DEFAULT_FROM_MISSING",
+  "GUESS_FROM_CONTEXT",
+  "GUESS_FROM_NAME",
+  "GUESS_FROM_GENDER",
+  "GUESS_FROM_ROLE",
+  "GUESS_FROM_LOCATION",
+  "GUESS_FROM_RELATIONSHIP",
+  "GUESS_FROM_STORY",
+  "GUESS_FROM_VISUAL_PRESENTATION",
+  "GUESS_FROM_LANGUAGE_PATTERN",
+  "GUESS_FROM_AI_PRIOR"
+],
+
+"rules": [
+  "Inference may exist only inside an explicitly designated proposal operation.",
+  "Inference must never be presented as Canon before validation.",
+  "Inference must retain its source and confidence metadata when applicable.",
+  "Absence of explicit information must remain UNKNOWN."
+]
+
+},
+
+"ai": {
+"role": "PRODUCTION_PROPOSER",
+
+"permissions": {
+  "readAuthoritativeContext": true,
+  "generateProposal": true,
+  "generateNarrative": true,
+  "generateStoryIdeas": true,
+  "mutateCanonDirectly": false,
+  "declareAuthority": false,
+  "overrideDomainOwner": false,
+  "repairCanonSilently": false
+},
+
+"rules": [
+  "AI receives compiled authoritative context.",
+  "AI output is PROPOSAL unless explicitly classified otherwise by a domain owner.",
+  "AI cannot claim authority over Universe facts.",
+  "AI cannot resolve domain conflicts by itself.",
+  "AI cannot silently create missing facts.",
+  "AI cannot silently change temporal truth.",
+  "AI cannot silently alter relationships.",
+  "AI cannot silently alter knowledge.",
+  "AI cannot silently alter object ownership or location.",
+  "AI cannot silently alter character identity."
+]
+
+},
+
+"ui": {
+"role": "CONSUMER_AND_COMMAND_CLIENT",
+
+"permissions": {
+  "readCanonicalData": true,
+  "displayProjections": true,
+  "submitExplicitCommands": true,
+  "createProposals": true,
+  "directCanonMutation": false,
+  "semanticInference": false,
+  "silentDefaults": false,
+  "silentRepair": false
+},
+
+"rules": [
+  "UI must be generated from domain contracts.",
+  "UI must not invent domain fields without an explicit contract.",
+  "UI must not assign semantic defaults to unknown fields.",
+  "UI must distinguish UNKNOWN from actual values.",
+  "UI must distinguish PROPOSAL from CANON.",
+  "UI must not write directly to persistence.",
+  "UI must not write directly to Universe snapshots.",
+  "UI must use domain commands for mutations.",
+  "UI presentation must not redefine domain ownership.",
+  "UI may offer an explicit user choice, but an unselected option must remain unresolved."
+]
+
+},
+
+"projection": {
+"rules": [
+"Projection is derived from authoritative state.",
+"Projection must retain source references where traceability matters.",
+"Projection may omit information but must not fabricate information.",
+"Projection may reorder information for presentation.",
+"Projection may summarize information.",
+"Projection may not change semantic meaning.",
+"Projection must be disposable and reproducible from source truth."
+]
+},
+
+"story": {
+"rules": [
+"Story selects and arranges authoritative information.",
+"Story may contain fictional narrative language describing Canon.",
+"Story may contain proposals for future events.",
+"Proposed events are not Canon until validated.",
+"Narrative implication is not automatically domain fact.",
+"A character saying something does not make that statement objective truth.",
+"A narrator stating something does not override domain truth.",
+"Story continuity must reference the underlying Universe state."
+]
+},
+
+"continuity": {
+"statuses": [
+"CONSISTENT",
+"NEW_INFORMATION",
+"VALID_CHANGE",
+"CONFLICT",
+"BLOCKED",
+"UNKNOWN"
+],
+
+"rules": [
+  "Continuity is an auditing mechanism.",
+  "Continuity does not own replacement facts.",
+  "Continuity does not automatically repair conflicts.",
+  "CONFLICT requires resolution by the relevant domain owner.",
+  "NEW_INFORMATION is not automatically a contradiction.",
+  "VALID_CHANGE is not a continuity error.",
+  "UNKNOWN remains UNKNOWN until authoritative information exists."
+]
+
+},
+
+"temporal": {
+"rules": [
+"Every temporal fact must have an effective temporal context where applicable.",
+"Current state must be evaluated relative to a Universe time.",
+"Historical state must not be overwritten as if it were current state.",
+"Future proposals must not be treated as current Canon.",
+"Temporal ordering belongs to TEMPORAL_SYSTEM.",
+"Date progression must not use wall-clock time as semantic Universe time.",
+"A missing temporal value must not be silently substituted with the current system date."
+]
+},
+
+"crossDomain": {
+"rules": [
+"References are not ownership.",
+"A domain may reference another domain without owning its truth.",
+"Cross-domain consistency is validated through contracts.",
+"Circular ownership is forbidden.",
+"A domain cannot resolve another domain's conflict unilaterally.",
+"Derived views may aggregate multiple domains but do not become owners of the aggregated facts."
+]
+},
+
+"creation": {
+"rules": [
+"Creation requires explicit identity.",
+"Creation requires an owning domain.",
+"Creation requires valid provenance.",
+"Required fields may not be semantically defaulted.",
+"UNKNOWN may be used only where the domain explicitly permits unknown state.",
+"AI_PROPOSAL cannot become authoritative merely because it passes structural validation.",
+"Semantic validation and structural validation are separate requirements."
+]
+},
+
+"validation": {
+"layers": [
+{
+"name": "STRUCTURAL",
+"purpose": "Validate shape, types, required fields, and serialization."
+},
+{
+"name": "DOMAIN",
+"purpose": "Validate domain-specific invariants and ownership."
+},
+{
+"name": "TEMPORAL",
+"purpose": "Validate effective time, ordering, and temporal consistency."
+},
+{
+"name": "CROSS_DOMAIN",
+"purpose": "Validate references and inter-domain invariants."
+},
+{
+"name": "PROVENANCE",
+"purpose": "Validate source, authority, and mutation traceability."
+},
+{
+"name": "CONTINUITY",
+"purpose": "Detect contradictions and invalid transitions without automatic repair."
+}
+],
+
+"rules": [
+  "All canonical mutations must pass applicable validation layers.",
+  "Validation failure must reject the mutation.",
+  "Validation must not silently rewrite user or AI input.",
+  "Validation may produce explicit correction requirements."
+]
+
+},
+
+"persistence": {
+"rules": [
+"Only validated canonical state may become persistent Canon.",
+"Proposals may be persisted separately from Canon.",
+"Snapshots must identify their Universe and revision.",
+"Snapshot persistence must preserve provenance.",
+"Current Canon pointer must reference validated state only.",
+"Temporary or sandbox state must never silently replace Canon."
+]
+},
+
+"determinism": {
+"rules": [
+"Domain evaluation must be deterministic for identical authoritative inputs.",
+"Semantic defaults must not depend on execution order.",
+"Wall-clock time must not silently influence Universe semantics.",
+"Randomness must be explicitly declared when allowed.",
+"AI output must be treated as nondeterministic production output and validated accordingly.",
+"Reproducible operations should retain their input context and configuration."
+]
+},
+
+"security": {
+"rules": [
+"No untrusted presentation layer may obtain domain authority.",
+"No AI provider may obtain direct persistence authority.",
+"No client may submit an owner identity different from the authenticated execution context.",
+"Domain ownership must be resolved server-side.",
+"Authorization and semantic validation are separate concerns.",
+"Persistence endpoints must reject unvalidated domain mutations."
+]
+},
+
+"audit": {
+"requiredForCanonicalMutation": [
+"timestamp",
+"actor",
+"domain",
+"operation",
+"source",
+"previousStateReference",
+"newStateReference",
+"reason"
+],
+
+"rules": [
+  "Canonical mutations must be traceable.",
+  "Audit history must not be rewritten as part of ordinary mutation.",
+  "Correction must create a new auditable transition rather than silently replacing history."
+]
+
+},
+
+"forbiddenPatterns": [
+"UI_TO_CANON_DIRECT_WRITE",
+"AI_TO_CANON_DIRECT_WRITE",
+"NARRATOR_TO_CANON_DIRECT_WRITE",
+"STORY_TO_CANON_DIRECT_WRITE",
+"PROJECTION_TO_CANON_WRITE",
+"UNKNOWN_TO_DEFAULT",
+"MISSING_TO_INFERRED",
+"SILENT_AUTO_REPAIR",
+"CROSS_DOMAIN_DIRECT_MUTATION",
+"WALL_CLOCK_AS_UNIVERSE_TIME",
+"STORY_STATEMENT_AS_OBJECTIVE_FACT",
+"CHARACTER_REFERENCE_AS_RELATIONSHIP_AUTHORITY",
+"CHARACTER_LOCATION_AS_SPATIAL_AUTHORITY",
+"AI_OUTPUT_AS_AUTOMATIC_CANON",
+"PRESENTATION_AS_DOMAIN_TRUTH"
+],
+
+"canonicalFlow": {
+"read": [
+"AUTHORITATIVE_DOMAIN",
+"VALIDATED_UNIVERSE",
+"CONTEXT_COMPILER",
+"PROJECTION"
+],
+
+"creativeProduction": [
+  "AUTHORITATIVE_UNIVERSE",
+  "DAILY_UNIVERSE",
+  "NARRATOR",
+  "LLM",
+  "PROPOSAL",
+  "VALIDATION",
+  "DOMAIN_OWNER",
+  "CANON"
+],
+
+"mutation": [
+  "EXPLICIT_COMMAND",
+  "DOMAIN_OWNER",
+  "VALIDATION",
+  "PROVENANCE",
+  "CANONICAL_STATE",
+  "PERSISTENCE"
+]
+
+}
 }
