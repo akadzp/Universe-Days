@@ -539,7 +539,14 @@ controlRouter.get('/universe/details', (_req, res) => {
       accessibilityStatus: l.accessibilityStatus,
       parentLocationRef: l.parentLocationRef,
       containedLocationRefs: l.containedLocationRefs ? Array.from(l.containedLocationRefs) : [],
-      adjacentLocationRefs: l.adjacentLocationRefs ? Array.from(l.adjacentLocationRefs) : []
+      adjacentLocationRefs: l.adjacentLocationRefs ? Array.from(l.adjacentLocationRefs) : [],
+      coordinates: l.coordinates ?? null,
+      temporalValidity: l.temporalValidity ?? null,
+      continuityReference: l.continuityReference ?? null,
+      source: l.source ?? null,
+      fieldSources: l.fieldSources ?? null,
+      revisionCount: Array.isArray((l.history as any)?.revisions) ? (l.history as any).revisions.length : null,
+      aliases: l.aliases ? Array.from(l.aliases) : []
     }));
 
     const objects = Object.values(u.objects || {}).map((o: ObjectEntity) => ({
@@ -573,7 +580,22 @@ controlRouter.get('/universe/details', (_req, res) => {
       direction: r.direction,
       strength: r.strength,
       status: r.status,
-      dynamic: (r as any).dynamic
+      dynamic: (r as any).dynamic ?? r.currentDynamic ?? null,
+      relationshipStatus: r.relationshipStatus ?? null,
+      currentDynamic: r.currentDynamic ?? null,
+      publicStatus: r.publicStatus ?? null,
+      romanticStatus: r.romanticStatus ?? null,
+      partnershipStatus: r.partnershipStatus ?? null,
+      startDate: r.startDate ?? null,
+      currentSince: r.currentSince ?? null,
+      confidence: r.confidence ?? null,
+      basisReference: r.basisReference ?? null,
+      sourceEvent: r.sourceEvent ?? null,
+      temporalValidity: r.temporalValidity ?? null,
+      continuityReference: r.continuityReference ?? null,
+      source: r.source ?? null,
+      revisionCount: Array.isArray((r.history as any)?.revisions) ? (r.history as any).revisions.length : null,
+      changes: r.changes ? Array.from(r.changes).map(ch => ({ changeId: ch.changeId, date: ch.date, event: ch.event, trigger: ch.trigger, sourceEvent: ch.sourceEvent })) : []
     }));
 
     const unresolvedConditions = Object.values(u.unresolvedConditions || {}).map((uc: UnresolvedConditionEntity) => ({
@@ -581,7 +603,20 @@ controlRouter.get('/universe/details', (_req, res) => {
       title: uc.conditionType,
       description: uc.description,
       status: uc.currentStatus,
-      severity: uc.conditionType === 'NARRATIVE_TENSION' ? 'HIGH' : 'NORMAL'
+      severity: uc.conditionType === 'NARRATIVE_TENSION' ? 'HIGH' : 'NORMAL',
+      ownerDomain: uc.ownerDomain ? String(uc.ownerDomain) : null, targetEntityRef: uc.targetEntityRef ?? null,
+      temporalScope: uc.temporalScope ?? null, dependencyRefs: Array.from(uc.dependencyRefs ?? []), createdAt: uc.createdAt ?? null,
+      lastUpdated: uc.lastUpdated ?? null, resolutionRef: uc.resolutionRef ?? null, resolutionNotes: uc.resolutionNotes ?? null,
+      sourceSystem: uc.sourceSystem ? String(uc.sourceSystem) : null, validationStatus: uc.validationStatus ?? null, provenance: uc.provenance ?? null
+    }));
+
+    const states = Object.values(u.states || {}).map((st: StateEntity) => ({
+      id: st.stateId, entityRef: String(st.entityRef), stateType: st.stateType, currentValue: st.currentValue, previousValue: st.previousValue,
+      lifecycle: st.lifecycle, validationStatus: st.validationStatus, temporalValidity: st.temporalValidity ?? null,
+      transitionCount: st.transitionCount, continuityReference: st.continuityReference ?? null, stateEvent: st.stateEvent ?? null,
+      stateChange: st.stateChange ?? null, changeTrigger: st.changeTrigger ?? null, changeDate: st.changeDate ?? null,
+      sourceEventReference: st.sourceEventReference ?? null, source: st.source ?? null, fieldSources: st.fieldSources ?? null,
+      revisionCount: Array.isArray((st.history as any)?.revisions) ? (st.history as any).revisions.length : null
     }));
 
     return res.json({
@@ -590,16 +625,20 @@ controlRouter.get('/universe/details', (_req, res) => {
       universeScope: mounted.universeScope,
       storyMetadata: (u as any).storyMetadata,
       temporal: {
-        currentUniverseDate: u.temporalContext.currentUniverseDate,
-        currentUniverseTime: u.temporalContext.currentUniverseTime,
-        periodRef: u.temporalContext.currentPeriodRef,
-        calendarSystem: 'GREGORIAN_STANDARD'
+        currentUniverseDate: u.temporalContext.currentUniverseDate, currentUniverseTime: u.temporalContext.currentUniverseTime,
+        periodRef: u.temporalContext.currentPeriodRef, previousPeriodRef: u.temporalContext.previousPeriodRef, periodSequence: u.temporalContext.periodSequence,
+        periodLifecycleState: u.temporalContext.periodLifecycleState, activeTimezoneOrEra: u.temporalContext.activeTimezoneOrEra, calendarSystem: 'GREGORIAN_STANDARD',
+        currentPeriod: u.temporalContext.currentPeriodRef ? ((u.periods || {}) as any)[u.temporalContext.currentPeriodRef] ?? null : null,
+        periods: Object.values(u.periods || {})
       },
       characters,
       locations,
       objects,
       relationships,
-      unresolvedConditions
+      unresolvedConditions,
+      states,
+      continuity: { activeConditionRefs: Array.from(u.continuityContext?.activeConditionRefs ?? []), activeChainRefs: Array.from(u.continuityContext?.activeChainRefs ?? []) },
+      dailyUniverse: { currentPeriod: u.temporalContext.currentPeriodRef ? ((u.periods || {}) as any)[u.temporalContext.currentPeriodRef] ?? null : null, periodCount: Object.keys(u.periods || {}).length, openConditionCount: Object.values(u.unresolvedConditions || {}).filter((c: UnresolvedConditionEntity) => c.currentStatus !== 'RESOLVED' && c.currentStatus !== 'ABANDONED').length, activeProcessCount: Object.values(u.processes || {}).length }
     });
   } catch (error) {
     return res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
@@ -633,8 +672,8 @@ controlRouter.get('/universe/character/:characterId', (req, res) => {
           otherCharacterId: otherId,
           otherCharacterName: otherChar?.identity.displayName ?? otherId,
           relationshipType: r.relationshipType,
-          direction: r.direction ?? 'BIDIRECTIONAL',
-          strength: r.strength ?? 1.0,
+          direction: r.direction,
+          strength: r.strength,
           status: r.status ?? 'ACTIVE',
           dynamic: (r as any).dynamic || (r.relationshipType ? `Relasi: ${r.relationshipType}` : 'Belum tercatat'),
           narrativeBasis: (r as any).narrativeBasis || (r.notes ? r.notes : 'Terbentuk seiring perkembangan cerita.')
@@ -650,8 +689,13 @@ controlRouter.get('/universe/character/:characterId', (req, res) => {
         statement: k.statement,
         subject: k.referencedSubject,
         certainty: k.certainty,
-        acquisitionSource: k.acquisitionSource || 'Pengalaman Langsung',
-        acquiredDate: k.acquiredDate,
+        acquisitionSource: k.acquisitionSource ?? null,
+        acquiredDate: k.acquiredDate ?? null,
+        knowledgeStatus: k.knowledgeStatus ?? null,
+        temporalValidity: k.temporalValidity ?? null,
+        source: k.source ?? null,
+        fieldSources: k.fieldSources ?? null,
+        revisionCount: Array.isArray((k.history as any)?.revisions) ? (k.history as any).revisions.length : null,
         isUniverseFactConfirmed: k.isUniverseFactConfirmed
       }));
 

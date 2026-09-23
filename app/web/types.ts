@@ -184,11 +184,18 @@ export interface UniverseLocation {
   id: string;
   displayName: string;
   description?: string;
-  locationType: string;
-  accessibilityStatus: string;
+  locationType?: string | null;
+  accessibilityStatus?: string | null;
   parentLocationRef?: string | null;
   containedLocationRefs?: string[];
   adjacentLocationRefs?: string[];
+  coordinates?: { x?: number; y?: number; z?: number; system?: string } | null;
+  temporalValidity?: { effectiveFrom: string; effectiveTo?: string; temporalCategory?: string } | null;
+  continuityReference?: string | null;
+  source?: string | null;
+  fieldSources?: Record<string, string> | null;
+  revisionCount?: number | null;
+  aliases?: string[];
 }
 
 export interface UniverseObject {
@@ -227,6 +234,21 @@ export interface UniverseRelationship {
   strength?: number;
   status?: string;
   dynamic?: string;
+  relationshipStatus?: string | null;
+  currentDynamic?: string | null;
+  publicStatus?: string | null;
+  romanticStatus?: string | null;
+  partnershipStatus?: string | null;
+  startDate?: string | null;
+  currentSince?: string | null;
+  confidence?: string | null;
+  basisReference?: string | null;
+  sourceEvent?: string | null;
+  temporalValidity?: { effectiveFrom: string; effectiveTo?: string; temporalCategory?: string } | null;
+  continuityReference?: string | null;
+  source?: string | null;
+  revisionCount?: number | null;
+  changes?: Array<{ changeId: string; date?: string; event?: string; trigger?: string; sourceEvent?: string }>;
 }
 
 export interface UniverseUnresolvedCondition {
@@ -238,7 +260,22 @@ export interface UniverseUnresolvedCondition {
   conditionType?: string;
   significance?: string;
   resolutionStatus?: string;
+  ownerDomain?: string | null; targetEntityRef?: string | null;
+  temporalScope?: { effectiveFrom: string; deadline?: string; temporalCategory?: string } | null;
+  dependencyRefs?: string[]; createdAt?: string | null; lastUpdated?: string | null;
+  resolutionRef?: string | null; resolutionNotes?: string | null; sourceSystem?: string | null; validationStatus?: string | null; provenance?: unknown;
 }
+
+export interface UniverseState {
+  id: string; entityRef?: string; stateType?: string; currentValue?: unknown; previousValue?: unknown;
+  lifecycle?: string; validationStatus?: string;
+  temporalValidity?: { effectiveFrom: string; effectiveTo?: string; temporalCategory?: string } | null;
+  transitionCount?: number; continuityReference?: string | null; stateEvent?: string | null;
+  stateChange?: string | null; changeTrigger?: string | null; changeDate?: string | null;
+  sourceEventReference?: string | null; source?: string | null; fieldSources?: Record<string,string> | null; revisionCount?: number | null;
+}
+
+export interface UniversePeriodProjection { periodId: string; startTime: string; endTime?: string; sequenceNumber: number; status: string; previousPeriodRef?: string; isFirstPeriod?: boolean; openUnresolvedCount?: number; activeProcessCount?: number; }
 
 export interface UniverseDetails {
   mounted: boolean;
@@ -254,16 +291,31 @@ export interface UniverseDetails {
     initialConflict?: string;
   };
   temporal?: {
-    currentUniverseDate: string;
-    currentUniverseTime: string;
-    periodRef?: string;
-    calendarSystem: string;
+    currentUniverseDate: string; currentUniverseTime: string; periodRef?: string; previousPeriodRef?: string; periodSequence?: number; periodLifecycleState?: string; activeTimezoneOrEra?: string; calendarSystem?: string; currentPeriod?: UniversePeriodProjection | null; periods?: UniversePeriodProjection[];
   } | null;
   characters: UniverseCharacter[];
   locations: UniverseLocation[];
   objects: UniverseObject[];
   relationships: UniverseRelationship[];
   unresolvedConditions: UniverseUnresolvedCondition[];
+  states?: UniverseState[];
+  continuity?: { activeConditionRefs: string[]; activeChainRefs: string[] };
+  dailyUniverse?: { currentPeriod?: UniversePeriodProjection | null; periodCount: number; openConditionCount: number; activeProcessCount: number };
+}
+
+export interface CharacterKnowledgeItem {
+  id: string;
+  statement: string;
+  subject?: string;
+  certainty?: string;
+  acquisitionSource?: string | null;
+  acquiredDate?: string | null;
+  knowledgeStatus?: string | null;
+  temporalValidity?: { effectiveFrom: string; effectiveTo?: string; temporalCategory?: string } | null;
+  source?: string | null;
+  fieldSources?: Record<string, string> | null;
+  revisionCount?: number | null;
+  isUniverseFactConfirmed?: boolean;
 }
 
 export interface CharacterWorkspaceData {

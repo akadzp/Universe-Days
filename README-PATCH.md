@@ -1,19 +1,7 @@
-# Object UI Reconstruction Patch
+# POCER UI Patch 7 — Continuity-and-Daily-Universe
 
-Basis: Universe-Days-UI-Rebuild-Character-Builder.zip uploaded by user.
+Final integration projection for continuity context and Daily Universe cycle. Also removes remaining visible semantic fallbacks in the DUNIA projection.
 
-Apply these three files to the same paths in the repo:
-- app/web/views/UniverseView.tsx
-- app/web/types.ts
-- app/api/routes/control.ts
+Apply after Patch 6.
 
-Scope:
-- Object UI detail projection
-- owner / holder / location
-- current user / wearer
-- access / status / category
-- temporal validity
-- field-source and revision visibility
-- preserves unset/unknown semantics
-
-No Object System core authority/lifecycle implementation is changed.
+Core authority is unchanged; UI remains projection/command surface.

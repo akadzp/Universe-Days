@@ -44,7 +44,7 @@ export function UniverseView({
   onAddMystery: (data: any) => Promise<void>;
   onAiAssist: (capability: string, input: any) => Promise<any>;
 }) {
-  const [activeTab, setActiveTab] = useState<'locations' | 'objects' | 'relationships' | 'mysteries' | 'characters'>('locations');
+  const [activeTab, setActiveTab] = useState<'overview' | 'time' | 'locations' | 'objects' | 'relationships' | 'states' | 'mysteries' | 'characters'>('overview');
 
   // Modals
   const [isLocModalOpen, setIsLocModalOpen] = useState(false);
@@ -211,9 +211,12 @@ export function UniverseView({
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto no-scrollbar">
         {[
+          { id: 'overview', label: 'Ikhtisar Dunia', icon: Compass },
+          { id: 'time', label: 'Waktu Dunia', icon: Layers },
           { id: 'locations', label: `Wilayah (${universe.locations.length})`, icon: MapPin },
           { id: 'objects', label: `Benda Pusaka (${universe.objects.length})`, icon: Package },
           { id: 'relationships', label: `Ikatan Relasi (${universe.relationships.length})`, icon: Heart },
+          { id: 'states', label: `Keadaan Dunia (${universe.states?.length ?? 0})`, icon: Layers },
           { id: 'mysteries', label: `Misteri (${universe.unresolvedConditions.length})`, icon: HelpCircle },
           { id: 'characters', label: `Tokoh (${universe.characters.length})`, icon: Users },
         ].map((tab) => {
@@ -236,6 +239,12 @@ export function UniverseView({
         })}
       </div>
 
+      {/* TAB: Ikhtisar Dunia */}
+      {activeTab === 'overview' && (<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in">{[['Tokoh', universe.characters.length], ['Wilayah', universe.locations.length], ['Benda', universe.objects.length], ['Kondisi Belum Selesai', universe.unresolvedConditions.length]].map(([label,value]) => <Card key={String(label)} className="p-5"><div className="text-[10px] uppercase tracking-wide font-bold text-slate-400">{label}</div><div className="text-2xl font-black text-slate-900 mt-1">{value}</div></Card>)}<Card className="col-span-2 lg:col-span-4 p-5 bg-slate-50 border-slate-200"><div className="text-xs font-black text-slate-900">Konteks waktu saat ini</div><div className="text-sm text-slate-700 mt-1">{universe.temporal?.currentUniverseDate || 'Belum ditentukan'} · {universe.temporal?.currentUniverseTime || 'Belum ditentukan'}</div><div className="text-[10px] text-slate-400 mt-1">Periode {universe.temporal?.periodRef || 'Belum ditentukan'} · Urutan {universe.temporal?.periodSequence ?? 'Belum tersedia'}</div></Card><Card className="col-span-2 lg:col-span-4 p-5 bg-slate-50 border-slate-200"><div className="text-xs font-black text-slate-900">Kontinuitas & Siklus Dunia</div><div className="text-[10px] text-slate-500 mt-1">Kondisi aktif: {universe.continuity?.activeConditionRefs.length ?? 0} · rantai aktif: {universe.continuity?.activeChainRefs.length ?? 0}</div></Card></div>)}
+
+      {/* TAB: Waktu Dunia */}
+      {activeTab === 'time' && (<div className="space-y-4 animate-fade-in"><Card className="p-5 border-slate-200"><div className="text-xs font-black text-slate-900">Siklus Dunia Harian</div><div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 text-xs text-slate-600"><div>Periode aktif: <strong>{universe.dailyUniverse?.currentPeriod?.periodId || 'Belum ditentukan'}</strong></div><div>Kondisi terbuka: <strong>{universe.dailyUniverse?.openConditionCount ?? 'Belum tersedia'}</strong></div><div>Proses aktif: <strong>{universe.dailyUniverse?.activeProcessCount ?? 'Belum tersedia'}</strong></div></div><div className="text-[10px] text-slate-400 mt-2">Projection membaca hasil universe/temporal state; bukan authority baru.</div></Card><Card className="p-5"><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><div><div className="text-[10px] uppercase font-bold text-slate-400">Tanggal Dunia</div><div className="font-black text-slate-900 mt-1">{universe.temporal?.currentUniverseDate || 'Belum ditentukan'}</div></div><div><div className="text-[10px] uppercase font-bold text-slate-400">Waktu Dunia</div><div className="font-black text-slate-900 mt-1">{universe.temporal?.currentUniverseTime || 'Belum ditentukan'}</div></div><div><div className="text-[10px] uppercase font-bold text-slate-400">Periode</div><div className="font-black text-slate-900 mt-1">{universe.temporal?.periodRef || 'Belum ditentukan'}</div></div><div><div className="text-[10px] uppercase font-bold text-slate-400">Urutan Periode</div><div className="font-black text-slate-900 mt-1">{universe.temporal?.periodSequence ?? 'Belum tersedia'}</div></div></div><div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-600"><div>Status periode: <strong>{universe.temporal?.periodLifecycleState || 'Belum ditentukan'}</strong></div><div>Periode sebelumnya: <strong>{universe.temporal?.previousPeriodRef || 'Belum ditentukan'}</strong></div><div>Zona/era: <strong>{universe.temporal?.activeTimezoneOrEra || 'Belum ditentukan'}</strong></div></div></Card><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{(universe.temporal?.periods || []).map(p => <Card key={p.periodId} className="p-4 space-y-2"><div className="flex items-center justify-between"><strong className="text-sm">{p.periodId}</strong><StatusBadge status={p.status || 'UNKNOWN'} /></div><div className="text-[10px] text-slate-500">Urutan {p.sequenceNumber} · Mulai {p.startTime}</div><div className="text-[10px] text-slate-400">Selesai: {p.endTime || 'Belum ditentukan'} · Kondisi terbuka: {p.openUnresolvedCount ?? 'Belum tersedia'}</div></Card>)}</div></div>)}
+
       {/* TAB: Wilayah & Lokasi */}
       {activeTab === 'locations' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
@@ -251,12 +260,21 @@ export function UniverseView({
                     <span className="text-[10px] font-bold text-slate-400 uppercase">{loc.locationType}</span>
                   </div>
                 </div>
-                <StatusBadge status={loc.accessibilityStatus || 'OPEN'} />
+                <StatusBadge status={loc.accessibilityStatus || 'UNKNOWN'} />
               </div>
 
               <p className="text-xs text-slate-600 line-clamp-3">
                 {loc.description || 'Deskripsi belum tercatat.'}
               </p>
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-[10px] font-semibold text-slate-500">
+                <div>Induk: <span className="text-slate-700">{loc.parentLocationRef || 'Belum ditentukan'}</span></div>
+                <div>Isi: <span className="text-slate-700">{loc.containedLocationRefs?.length ?? 0}</span></div>
+                <div>Terhubung: <span className="text-slate-700">{loc.adjacentLocationRefs?.length ?? 0}</span></div>
+                <div>Akses: <span className="text-slate-700">{loc.accessibilityStatus || 'Belum ditentukan'}</span></div>
+              </div>
+              <div className="text-[10px] text-slate-400 pt-1">
+                Berlaku: {loc.temporalValidity?.effectiveFrom || 'Belum ditentukan'}{loc.temporalValidity?.effectiveTo ? ` → ${loc.temporalValidity.effectiveTo}` : ''}
+              </div>
             </Card>
           ))}
 
@@ -374,7 +392,7 @@ export function UniverseView({
                   <span className="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">
                     {r.relationshipType}
                   </span>
-                  <StatusBadge status={r.status || 'ACTIVE'} />
+                  <StatusBadge status={r.status || 'UNKNOWN'} />
                 </div>
 
                 <div className="flex items-center justify-between py-2 text-xs font-bold text-slate-900">
@@ -384,8 +402,19 @@ export function UniverseView({
                 </div>
 
                 <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                  {r.dynamic || 'Dinamika belum tercatat.'}
+                  {r.dynamic || r.currentDynamic || 'Dinamika belum tercatat.'}
                 </p>
+                <div className="grid grid-cols-2 gap-2 text-[10px] font-semibold text-slate-500">
+                  <div>Arah: <span className="text-slate-700">{r.direction || 'Belum ditentukan'}</span></div>
+                  <div>Kekuatan: <span className="text-slate-700">{r.strength ?? 'Belum ditentukan'}</span></div>
+                  <div>Romantis: <span className="text-slate-700">{r.romanticStatus || 'Belum ditentukan'}</span></div>
+                  <div>Kemitraan: <span className="text-slate-700">{r.partnershipStatus || 'Belum ditentukan'}</span></div>
+                  <div>Publik: <span className="text-slate-700">{r.publicStatus || 'Belum ditentukan'}</span></div>
+                  <div>Diperbarui: <span className="text-slate-700">{r.currentSince || 'Belum ditentukan'}</span></div>
+                </div>
+                <div className="text-[10px] text-slate-400 pt-1">
+                  Berlaku: {r.temporalValidity?.effectiveFrom || 'Belum ditentukan'}{r.temporalValidity?.effectiveTo ? ` → ${r.temporalValidity.effectiveTo}` : ''} · Revisi {r.revisionCount ?? 'Belum tersedia'}
+                </div>
               </Card>
             );
           })}
@@ -395,6 +424,21 @@ export function UniverseView({
               Belum ada ikatan relasi antartokoh. Klik "+ Relasi Antartokoh" untuk menghubungkan dua karakter.
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB: Keadaan Dunia */}
+      {activeTab === 'states' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
+          {(universe.states || []).map((st) => (
+            <Card key={st.id} className="p-5 space-y-3">
+              <div className="flex items-start justify-between gap-3"><div><h4 className="text-sm font-bold text-slate-900">{st.stateType || 'Keadaan'}</h4><div className="text-[10px] text-slate-400 mt-1">Entitas: {st.entityRef || 'Belum ditentukan'}</div></div><StatusBadge status={st.validationStatus || 'UNKNOWN'} /></div>
+              <div className="text-xs text-slate-700 bg-slate-50 rounded-xl p-3 border border-slate-100"><div>Nilai kini: <strong>{typeof st.currentValue === 'object' ? JSON.stringify(st.currentValue) : String(st.currentValue ?? 'Belum ditentukan')}</strong></div><div className="mt-1">Nilai sebelumnya: {typeof st.previousValue === 'object' ? JSON.stringify(st.previousValue) : String(st.previousValue ?? 'Belum ditentukan')}</div></div>
+              <div className="grid grid-cols-2 gap-2 text-[10px] font-semibold text-slate-500"><div>Transisi: <span className="text-slate-700">{st.transitionCount ?? 'Belum tersedia'}</span></div><div>Pemicu: <span className="text-slate-700">{st.changeTrigger || 'Belum ditentukan'}</span></div><div>Peristiwa: <span className="text-slate-700">{st.stateEvent || 'Belum ditentukan'}</span></div><div>Sumber: <span className="text-slate-700">{st.source || 'Belum ditentukan'}</span></div></div>
+              <div className="text-[10px] text-slate-400">Berlaku: {st.temporalValidity?.effectiveFrom || 'Belum ditentukan'} · Revisi {st.revisionCount ?? 'Belum tersedia'}</div>
+            </Card>
+          ))}
+          {(universe.states || []).length === 0 && <div className="col-span-3 p-12 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-100">Belum ada keadaan dunia yang tercatat.</div>}
         </div>
       )}
 
@@ -414,9 +458,9 @@ export function UniverseView({
                 {m.description}
               </p>
 
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>Status: <strong className="text-amber-800">{m.resolutionStatus || 'TERBUKA'}</strong></span>
-              </div>
+              <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-[10px] text-slate-500"><span>Status: <strong className="text-amber-800">{m.status || 'Belum ditentukan'}</strong></span><span>Pemilik domain: <strong>{m.ownerDomain || 'Belum ditentukan'}</strong></span><span>Target: <strong>{m.targetEntityRef || 'Belum ditentukan'}</strong></span><span>Validasi: <strong>{m.validationStatus || 'Belum ditentukan'}</strong></span></div>
+              <div className="text-[10px] text-slate-400">Berlaku: {m.temporalScope?.effectiveFrom || 'Belum ditentukan'}{m.temporalScope?.deadline ? ` · Tenggat ${m.temporalScope.deadline}` : ''} · Dependensi {m.dependencyRefs?.length ?? 0}</div>
+              {(m.resolutionRef || m.resolutionNotes) && <div className="text-[10px] text-slate-500 bg-slate-50 rounded-xl p-2 border border-slate-100">Resolusi: {m.resolutionRef || 'Belum ada referensi'}{m.resolutionNotes ? ` — ${m.resolutionNotes}` : ''}</div>}
             </Card>
           ))}
 

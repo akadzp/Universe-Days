@@ -1145,6 +1145,12 @@ export function CharacterWorkspaceView({
                 {k.subject && (
                   <div className="text-[11px] text-slate-500">Subjek terkait: <strong>{k.subject}</strong></div>
                 )}
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-[10px] text-slate-500">
+                  <span>Status: <strong>{k.knowledgeStatus || 'Belum ditentukan'}</strong></span>
+                  <span>Sumber: <strong>{k.acquisitionSource || 'Belum ditentukan'}</strong></span>
+                  <span>Berlaku: <strong>{k.temporalValidity?.effectiveFrom || 'Belum ditentukan'}</strong></span>
+                  <span>Revisi: <strong>{k.revisionCount ?? 'Belum tersedia'}</strong></span>
+                </div>
               </Card>
             ))}
             {data.knowledge.length === 0 && (
