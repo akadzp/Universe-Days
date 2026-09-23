@@ -13,6 +13,8 @@ export interface CharacterLevelEvidence {
   readonly evidence: CharacterStoryImpactEvidence;
   /** True only when the character is an entity/non-human actor under the existing classification. */
   readonly isEntity: boolean;
+  /** Explicitly false when the available evidence is not sufficient to classify the character. */
+  readonly evidenceSufficient?: boolean;
 }
 
 export interface CharacterLevelEvaluation {
@@ -28,6 +30,10 @@ export interface CharacterLevelEvaluation {
  * validate and decide whether a level transition is canonically permitted.
  */
 export function evaluateCharacterLevel(input: CharacterLevelEvidence): CharacterLevelEvaluation {
+  if (input.evidenceSufficient === false) {
+    return { level: null, reason: 'Available story evidence is insufficient for a canonical level classification.' };
+  }
+
   if (input.isEntity) {
     return { level: ActorLevel.ENTITY, reason: 'ENTITY classification is explicit.' };
   }

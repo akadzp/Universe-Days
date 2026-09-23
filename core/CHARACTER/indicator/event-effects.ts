@@ -2,8 +2,9 @@
  * Story/Event -> Character indicator effect boundary.
  *
  * Events and AI may propose effects, but proposals never mutate Character.
- * The resolver is pure: it calculates an effect from the event's base effect,
- * character disposition, and current condition. Authoritative mutation remains
+ * The resolver is pure: it resolves an event's base effect using explicitly supplied
+ * disposition/condition factors. The indicator set is used only to validate that the
+ * target indicator exists; no hidden factor is inferred from indicator values. Authoritative mutation remains
  * the responsibility of indicator lifecycle + validation.
  */
 import { ActorDataSource } from '../actor.ts';
@@ -33,6 +34,11 @@ export interface ResolveCharacterIndicatorEffectInput {
   readonly indicators: CharacterIndicators;
 }
 
+function hasIndicator(indicators: CharacterIndicators, key: string): boolean {
+  const groups = [indicators.personality, indicators.behavior, indicators.capability, indicators.motivation, indicators.social, indicators.condition];
+  return groups.some(group => Object.prototype.hasOwnProperty.call(group, key) && (group as Record<string, unknown>)[key] !== undefined);
+}
+
 function clampFactor(value: number | undefined): number {
   if (value === undefined || !Number.isFinite(value)) return 1;
   return Math.max(0, value);
@@ -47,7 +53,14 @@ function clampFactor(value: number | undefined): number {
 export function resolveCharacterIndicatorEffect(
   input: ResolveCharacterIndicatorEffectInput,
 ): CharacterIndicatorEffectProposal {
-  const { proposal } = input;
+  const { proposal, indicators } = input;
+  if (!hasIndicator(indicators, proposal.indicatorKey)) {
+    return Object.freeze({
+      ...proposal,
+      status: 'PROPOSED',
+      reason: `Target indicator '${proposal.indicatorKey}' is not present on the Character.`
+    });
+  }
   if (proposal.baseOperation !== 'INCREASE' && proposal.baseOperation !== 'DECREASE') {
     return Object.freeze({ ...proposal, status: 'RESOLVED' });
   }

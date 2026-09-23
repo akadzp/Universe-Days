@@ -46,7 +46,7 @@ export const CHARACTER_INDICATOR_DEFINITIONS: readonly CharacterIndicatorDefinit
   continuous('desireIntensity', 'Current intensity of active desire.'),
   continuous('fearIntensity', 'Current intensity of active fear.'),
   reference('currentGoalReference', 'Reference to the currently active character goal.'),
-  evolvingOrdinal('currentPriority', 'Current priority ordering for the active goal.'),
+  continuous('currentPriority', 'Current priority value for the active goal.'),
   evolvingOrdinal('decisionSpeed', 'Typical speed of decision making.'),
   evolvingOrdinal('responseIntensity', 'Typical intensity of behavioral response.'),
   evolvingOrdinal('trustTendency', 'General tendency to trust other actors.'),

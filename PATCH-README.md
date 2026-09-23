@@ -33,3 +33,7 @@ No existing CharacterProfile, Behavior, CharacterStyle, CharacterState, ActorCla
 ## Stage 7 scope
 
 The integration contract is intentionally conservative: it consolidates the layers without inventing direct EventEntity -> Character mutation or changing existing domain gateway ownership. Those connections should be wired through the existing validation/domain-gateway architecture in a later implementation pass if needed.
+
+
+## Audit Correction
+This correction patch addresses three audit findings without deleting existing Character attributes: `currentPriority` is DYNAMIC, Level evaluation can explicitly return UNKNOWN/null when evidence is insufficient, and Event Effect resolution validates target indicator presence while requiring modulation factors to be explicitly supplied rather than inferred silently.

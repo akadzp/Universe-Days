@@ -1,7 +1,15 @@
 {
   "patch": "character-indicator-final-integration",
   "version": 1,
-  "stages": [1,2,3,4,5,6,7],
+  "stages": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
   "mode": "additive",
   "preservesExistingAttributes": true,
   "files": [
@@ -35,5 +43,11 @@
     "Stage 4 rules never mutate Character directly.",
     "Stage 5 event effects produce validated effect proposals/resolution inputs.",
     "Stage 6 level/group evaluation does not use indicator scores as Level truth."
+  ],
+  "stage": "CORRECTION-AUDIT",
+  "corrections": [
+    "currentPriority persistence corrected from EVOLVING to DYNAMIC",
+    "Level evaluation can explicitly return null when evidenceSufficient is false",
+    "Event effect resolver validates target indicator presence and does not silently infer modulation factors"
   ]
 }
