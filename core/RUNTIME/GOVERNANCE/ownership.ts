@@ -32,7 +32,7 @@ export const DOMAIN_OWNERS: Record<CoreDomain, DomainOwner> = {
   CHARACTER: {
     ownerId: makeSystemID('CHARACTER_SYSTEM'),
     domainId: makeDomainID('CHARACTER'),
-    description: 'Authoritative owner of character identity, traits, and physical state.',
+    description: 'Authoritative owner of character identity, traits, profile, and character-specific persistent facts.',
     authorityLevel: 2
   },
   RELATIONSHIP: {
