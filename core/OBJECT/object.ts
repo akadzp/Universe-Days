@@ -1167,7 +1167,13 @@ export class ObjectSystem {
       );
     }
 
-    const effectiveTime = input.effectiveTime ?? new Date().toISOString();
+    if (!input.effectiveTime?.trim()) {
+      return failure(
+        EngineErrorCode.INVALID_DOMAIN_REQUEST,
+        'Object relation creation requires explicit effectiveTime; wall-clock fallback is prohibited.'
+      );
+    }
+    const effectiveTime = input.effectiveTime.trim();
     const actor = input.actorId ?? this.OWNER_ID;
 
     const history = RevisionHistoryManager.createInitial(

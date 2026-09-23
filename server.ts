@@ -7,17 +7,11 @@ import { createProductionRuntime } from './core/INFRA/FINAL/runtime.ts';
 import { createGenericSeedUniverse } from './core/VALIDATION/fixtures/universe-seed.ts';
 import { INSTANCE_MANAGEMENT_ACTOR } from './core/INFRA/INSTANCE/instance.ts';
 import { inspectDeploymentReadiness } from './core/INFRA/FINAL/deploy-runtime.ts';
-import { EntityIdentityFactory } from './core/SHARED/identity.ts';
-import { RevisionHistoryManager } from './core/SHARED/history.ts';
-import { createProvenanceMetadata } from './core/SHARED/provenance.ts';
-import { EntityType, EntityLifecycleStatus } from './core/SHARED/model-types.ts';
-import { makeSystemID, makeDomainID, makeEntityID } from './core/SHARED/identifiers.ts';
-import { TemporalStatus } from './core/RUNTIME/TEMPORAL/types.ts';
+import { CharacterCommandService } from './core/CHARACTER/character-command.ts';
 import { DailyProductionPipeline } from './core/INFRA/PRODUCTION/legacy/pipeline.ts';
 import { DeterministicMockProductionRenderer } from './core/INFRA/PRODUCTION/legacy/mock-renderer.ts';
 import { TimePoint } from './core/RUNTIME/TEMPORAL/time-point.ts';
 import { StoryTriggerType } from './core/DAILY-STORY/trigger.ts';
-import type { CharacterEntity } from './core/CHARACTER/character.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -120,66 +114,37 @@ async function startServer() {
     res.json(domainsSpec);
   });
 
-  // Create Character (Command via domain authority)
+  // Create Character through the Character-owned command boundary.
   app.post('/api/characters', (req, res) => {
     try {
-      const { id, displayName, role, locationRef, tags } = req.body;
-      if (!id || !displayName) {
-        return res.status(400).json({ error: 'id and displayName are required.' });
-      }
-
+      const { id, displayName, role, locationRef, effectiveTime } = req.body ?? {};
       const mounted = ensureMountedUniverse();
-      if (!mounted) {
-        return res.status(500).json({ error: 'No authoritative Universe mounted.' });
-      }
+      if (!mounted) return res.status(500).json({ error: 'No authoritative Universe mounted.' });
 
-      const u = mounted.universe;
-      const cleanId = String(id).toUpperCase().replace(/[^A-Z0-9_]/g, '_');
-      const fullId = cleanId.startsWith('CHAR_') ? cleanId : `CHAR_${cleanId}`;
+      const time =
+        typeof effectiveTime === 'string' && effectiveTime.trim()
+          ? effectiveTime.trim()
+          : mounted.universe.temporalContext.currentUniverseTime;
 
-      if (u.characters[fullId]) {
-        return res.status(409).json({ error: `Character with id '${fullId}' already exists.` });
-      }
+      const character = CharacterCommandService.createCharacter(
+        mounted,
+        runtime.universeInstances,
+        {
+          id: String(id ?? ''),
+          displayName: String(displayName ?? ''),
+          role: role ? String(role) : undefined,
+          locationRef: locationRef ? String(locationRef) : null,
+          effectiveTime: time
+        }
+      );
 
-      const charOwner = makeSystemID('CHARACTER_SYSTEM');
-      const seedTime = u.temporalContext.currentUniverseTime;
-
-      const newChar: CharacterEntity = {
-        identity: EntityIdentityFactory.create({
-          id: fullId,
-          entityType: EntityType.CHARACTER,
-          displayName: String(displayName).trim(),
-          status: EntityLifecycleStatus.ACTIVE,
-          tags: Array.isArray(tags) ? tags : []
-        }),
-        roleReferences: role ? [String(role)] : [],
-        stateReference: null,
-        knowledgeReferences: [],
-        relationshipReferences: [],
-        locationReference: locationRef || null,
-        temporalValidity: {
-          effectiveFrom: seedTime,
-          temporalCategory: TemporalStatus.ACTUAL
-        },
-        history: RevisionHistoryManager.createInitial(charOwner, seedTime),
-        provenance: createProvenanceMetadata(charOwner, makeDomainID('CHARACTER'))
-      };
-
-      // Clone snapshot to respect deep freeze and avoid in-place mutation
-      const updatedUniverse: any = JSON.parse(JSON.stringify(u));
-      updatedUniverse.characters[fullId] = newChar;
-
-      // Re-persist authoritative snapshot and reload
-      runtime.universeInstances.persist(updatedUniverse, INSTANCE_MANAGEMENT_ACTOR);
-      runtime.universeInstances.load(updatedUniverse.universeId, mounted.universeScope);
-
-      res.status(201).json({
-        message: 'Character created authoritative and persisted',
-        character: newChar
+      return res.status(201).json({
+        message: 'Character command accepted and persisted through Character boundary.',
+        character
       });
     } catch (err) {
-      console.error('Error creating character:', err);
-      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+      const message = err instanceof Error ? err.message : String(err);
+      return res.status(message.includes('already exists') ? 409 : 422).json({ error: message });
     }
   });
 
