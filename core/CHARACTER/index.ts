@@ -1,1 +1,1 @@
-export * from './character-domain-integration';
+export * from './character-knowledge-integration';

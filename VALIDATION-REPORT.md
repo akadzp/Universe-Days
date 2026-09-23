@@ -1,33 +1,27 @@
-# Validation Report — Current Repository
+# Knowledge Integration Validation Report
 
-## Repository baseline
+## Verified against current branch
 
-- Repository: `akadzp/Universe-Days`
-- Branch: `main`
-- Commit inspected: `0eb9a198af07aac16f6b3ff97bf084c16deb6a87`
-- Commit message: `feat: integrate character aggregate, state, and events`
-- GitHub Actions workflow runs associated with the commit: none returned.
+Current repository commit inspected: `0eb9a198af07aac16f6b3ff97bf084c16deb6a87`.
 
-## Stage audit
+Checked:
+- `KnowledgeEntity`, `KnowledgeLifecycle`, and `validateKnowledge` remain authoritative in DOMAIN/KNOWLEDGE.
+- `CharacterEntity.knowledgeReferences` remains the only Character-side knowledge binding.
+- Event participant gating is required before acquisition/change.
+- Resolved Event is required before knowledge acquisition/change is materialized.
+- AI_PROPOSAL/UNKNOWN cannot become authoritative Knowledge.
+- `knowerRef` must match the Character participant.
+- Event effective time is preserved as Knowledge effective time for acquisition.
+- Existing Character attributes are preserved.
 
-| Stage | Current status | Result |
-|---|---|---|
-| Character Aggregate | implemented | inspected |
-| State / Event integration | implemented | inspected |
-| Knowledge integration | added by this patch | contract-covered |
-| Relationship integration | added by this patch | contract-covered |
-| Location integration | added by this patch | contract-covered |
-| Continuity Engine | existing | inspected |
-| Decision / Response foundation | existing Decision/Action layer | inspected |
-| Daily Story integration | existing orchestrator + validator | inspected |
-| Full repository validation | environment-limited | not claimed |
+## Tests included
 
-## Important distinction
-
-The existing Continuity Engine, Decision/Action layer, and Daily Story Core are not silently rewritten by this patch. They remain their existing authorities. This patch establishes Character's explicit bindings to the supporting domains and leaves those larger engines for their dedicated integration passes.
+The patch adds integration tests for:
+- resolved Event -> Knowledge acquisition -> Character reference;
+- unresolved Event rejection;
+- AI proposal rejection;
+- wrong Character ownership rejection.
 
 ## Environment limitation
 
-The execution container could not clone the public repository because outbound DNS/network access is unavailable. Consequently `npm install` and a genuine repository-wide `npm run lint` could not be run here.
-
-The patch therefore contains no claim of a full repository-wide pass. It is based on direct inspection of the current GitHub `main` tree and commit metadata.
+A full repository-wide `npm run lint` / runtime test execution was not available in this session because the repository dependency tree is not installed in the execution container. The included tests are therefore contract/integration tests to run from the repository checkout after applying the patch; this report does not claim a full repository-wide test pass.
