@@ -1,8 +1,0 @@
-{
-  "version": "2.0.0",
-  "registryName": "pocer-architecture-registry",
-  "status": "DEPRECATED_SOURCE_REPLACED_BY_SPECIFICATION_LAYER",
-  "specificationSource": "rules/specification/index.json",
-  "runtimeOutput": "rules/runtime/index.json",
-  "migration": "Use scripts/compile-rule-specifications.mjs; do not edit runtime output directly."
-}
