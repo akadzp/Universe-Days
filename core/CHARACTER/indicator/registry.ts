@@ -12,6 +12,9 @@ const evolvingContinuous = (key: string, description: string): CharacterIndicato
 const evolvingOrdinal = (key: string, description: string): CharacterIndicatorDefinition => Object.freeze({
   key, type: 'ORDINAL', persistence: 'EVOLVING', mutable: true, description
 });
+const reference = (key: string, description: string): CharacterIndicatorDefinition => Object.freeze({
+  key, type: 'REFERENCE', persistence: 'DYNAMIC', mutable: true, description
+});
 const evolvingBoolean = (key: string, description: string): CharacterIndicatorDefinition => Object.freeze({
   key, type: 'BOOLEAN', persistence: 'EVOLVING', mutable: true, description
 });
@@ -42,6 +45,10 @@ export const CHARACTER_INDICATOR_DEFINITIONS: readonly CharacterIndicatorDefinit
   continuous('urgency', 'Current urgency associated with active motivation.'),
   continuous('desireIntensity', 'Current intensity of active desire.'),
   continuous('fearIntensity', 'Current intensity of active fear.'),
+  reference('currentGoalReference', 'Reference to the currently active character goal.'),
+  evolvingOrdinal('currentPriority', 'Current priority ordering for the active goal.'),
+  evolvingOrdinal('decisionSpeed', 'Typical speed of decision making.'),
+  evolvingOrdinal('responseIntensity', 'Typical intensity of behavioral response.'),
   evolvingOrdinal('trustTendency', 'General tendency to trust other actors.'),
   evolvingOrdinal('cooperationTendency', 'General tendency to cooperate with others.'),
   evolvingOrdinal('leadershipTendency', 'General tendency to lead or assume responsibility.'),
