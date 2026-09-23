@@ -3,28 +3,31 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
-import { createProductionRuntime } from './core/platform/final/runtime.ts';
-import { createGenericSeedUniverse } from './core/universe/model/seed.ts';
-import { INSTANCE_MANAGEMENT_ACTOR } from './core/platform/universe/instance.ts';
-import { inspectDeploymentReadiness } from './core/platform/deploy-runtime.ts';
-import { EntityIdentityFactory } from './core/universe/model/identity.ts';
-import { RevisionHistoryManager } from './core/universe/model/history.ts';
-import { createProvenanceMetadata } from './core/universe/model/provenance.ts';
-import { EntityType, EntityLifecycleStatus } from './core/universe/model/types.ts';
-import { makeSystemID, makeDomainID, makeEntityID } from './core/types/identifiers.ts';
-import { TemporalStatus } from './core/types/temporal.ts';
-import { DailyProductionPipeline } from './core/production/pipeline.ts';
-import { DeterministicMockProductionRenderer } from './core/production/mock-renderer.ts';
-import { TimePoint } from './core/temporal/time-point.ts';
-import { StoryTriggerType } from './core/story/daily/trigger.ts';
-import type { CharacterEntity } from './core/universe/model/character.ts';
+import { createProductionRuntime } from './core/INFRA/FINAL/runtime.ts';
+import { createGenericSeedUniverse } from './core/VALIDATION/fixtures/universe-seed.ts';
+import { INSTANCE_MANAGEMENT_ACTOR } from './core/INFRA/INSTANCE/instance.ts';
+import { inspectDeploymentReadiness } from './core/INFRA/FINAL/deploy-runtime.ts';
+import { EntityIdentityFactory } from './core/SHARED/identity.ts';
+import { RevisionHistoryManager } from './core/SHARED/history.ts';
+import { createProvenanceMetadata } from './core/SHARED/provenance.ts';
+import { EntityType, EntityLifecycleStatus } from './core/SHARED/model-types.ts';
+import { makeSystemID, makeDomainID, makeEntityID } from './core/SHARED/identifiers.ts';
+import { TemporalStatus } from './core/RUNTIME/TEMPORAL/types.ts';
+import { DailyProductionPipeline } from './core/INFRA/PRODUCTION/legacy/pipeline.ts';
+import { DeterministicMockProductionRenderer } from './core/INFRA/PRODUCTION/legacy/mock-renderer.ts';
+import { TimePoint } from './core/RUNTIME/TEMPORAL/time-point.ts';
+import { StoryTriggerType } from './core/DAILY-STORY/trigger.ts';
+import type { CharacterEntity } from './core/CHARACTER/character.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+  const args = process.argv.slice(2);
+  const portIndex = args.indexOf('--port');
+  const cliPort = portIndex !== -1 && args[portIndex + 1] ? parseInt(args[portIndex + 1], 10) : null;
+  const PORT = cliPort || (process.env.APP_PORT ? parseInt(process.env.APP_PORT, 10) : 3000);
 
   app.use(express.json());
 

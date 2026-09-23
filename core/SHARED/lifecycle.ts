@@ -1,0 +1,9 @@
+export enum EntityLifecycleStatus {
+  DRAFT = 'DRAFT',
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  SUSPENDED = 'SUSPENDED',
+  TERMINATED = 'TERMINATED',
+  ARCHIVED = 'ARCHIVED',
+  DESTROYED = 'DESTROYED'
+}
