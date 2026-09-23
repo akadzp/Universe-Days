@@ -155,7 +155,7 @@ export class EventRegistry {
 
     // Check explicit prerequisites
     for (const prereq of event.prerequisites) {
-      let isSat = prereq.satisfied ?? false;
+      let isSat: boolean | undefined = prereq.satisfied;
       if (prereq.type === 'DEPENDENCY' && prereq.targetRef && context.satisfiedDependencies) {
         isSat = context.satisfiedDependencies.has(prereq.targetRef);
       } else if (prereq.type === 'STATE' && prereq.targetRef && context.stateFlags) {
@@ -163,7 +163,7 @@ export class EventRegistry {
         isSat = val === prereq.expectedValue;
       }
       evaluatedPrereqs.push({ ...prereq, satisfied: isSat });
-      if (!isSat) {
+      if (isSat !== true) {
         allSatisfied = false;
       }
     }
@@ -207,7 +207,7 @@ export class EventRegistry {
 
     // Verify prerequisites unless explicitly forced by authority
     if (!forced) {
-      const hasUnsatisfied = event.prerequisites.some(p => p.satisfied === false);
+      const hasUnsatisfied = event.prerequisites.some(p => p.satisfied !== true);
       if (hasUnsatisfied) {
         return failure(
           `Cannot mark event occurred with unsatisfied prerequisites: ${eventId}`,

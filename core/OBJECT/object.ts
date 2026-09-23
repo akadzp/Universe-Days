@@ -341,6 +341,9 @@ export class ObjectSystem {
     }
 
     const source = input.source ?? ObjectDataSource.USER_DEFINED;
+    if (!input.effectiveTime?.trim()) {
+      return failure(EngineErrorCode.INVALID_DOMAIN_REQUEST, 'Object creation requires explicit effectiveTime from Universe/command context; wall-clock fallback is prohibited.');
+    }
     if (source === ObjectDataSource.AI_PROPOSAL) {
       return failure(
         EngineErrorCode.UNAUTHORIZED_DOMAIN_MUTATION,
@@ -355,7 +358,7 @@ export class ObjectSystem {
       );
     }
 
-    const effectiveTime = input.effectiveTime ?? new Date().toISOString();
+    const effectiveTime = input.effectiveTime.trim();
     const actor = input.actorId ?? this.OWNER_ID;
     const displayName = input.displayName ?? input.objectName ?? input.objectId;
     const objectName = input.objectName ?? displayName;
@@ -497,37 +500,10 @@ export class ObjectSystem {
       };
     }
 
-    // Emerges as a new story-derived object
-    const objectId = input.proposedId ?? `OBJ_STORY_${Date.now()}_${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
-    const createRes = this.createObject({
-      objectId,
-      displayName: mention,
-      objectName: mention,
-      category: input.category ?? 'OBJECT',
-      categoryPath: input.categoryPath,
-      objectType: input.objectType ?? ObjectType.PHYSICAL,
-      ownershipRef: input.ownerCandidate ?? null,
-      possessionRef: input.holderCandidate ?? null,
-      currentUserRef: input.userCandidate ?? null,
-      currentWearerRef: input.wearerCandidate ?? null,
-      locationRef: input.locationCandidate ?? '',
-      condition: input.conditionCandidate ?? ObjectCondition.INTACT,
-      source: ObjectDataSource.STORY_DERIVED,
-      effectiveTime: input.effectiveTime,
-      trigger: `Emerged from story context: ${input.contextDescription ?? mention}`
-    });
-
-    if (!createRes.success || !createRes.data) {
-      return {
-        result: ObjectEmergenceResult.BLOCKED,
-        reason: createRes.message ?? 'Failed to instantiate story-derived object.'
-      };
-    }
-
+    // Story text is evidence/proposal only. Canon materialization must use an explicit authoritative Event/Command path.
     return {
-      result: ObjectEmergenceResult.CREATED,
-      object: createRes.data,
-      reason: `Object "${mention}" emerged successfully as persistent entity ${objectId}.`
+      result: ObjectEmergenceResult.REQUIRES_RESOLUTION,
+      reason: `Story mention "${mention}" is eligible for persistence but cannot create Canon directly. Resolve it through an authoritative Event/Command mutation.`
     };
   }
 

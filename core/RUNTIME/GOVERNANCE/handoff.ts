@@ -75,6 +75,9 @@ export function validateHandoff<T>(handoff: unknown): Result<HandoffContract<T>>
   if (!h.traceability || typeof h.traceability !== 'object') {
     return failure('Handoff missing traceability metadata');
   }
+  if (h.effectiveTime === undefined || h.effectiveTime === null || h.effectiveTime === '') {
+    return failure('Handoff missing explicit effectiveTime; wall-clock fallback is prohibited.');
+  }
 
   const validHandoff: HandoffContract<T> = {
     sourceSystem: h.sourceSystem,
@@ -85,7 +88,7 @@ export function validateHandoff<T>(handoff: unknown): Result<HandoffContract<T>>
     temporalContextRef: h.temporalContextRef,
     entityReferences: h.entityReferences,
     requestedChange: h.requestedChange,
-    effectiveTime: h.effectiveTime ?? Date.now(),
+    effectiveTime: h.effectiveTime,
     dependencies: Array.isArray(h.dependencies) ? h.dependencies : [],
     constraints: Array.isArray(h.constraints) ? h.constraints : [],
     sourceReferences: Array.isArray(h.sourceReferences) ? h.sourceReferences : [],

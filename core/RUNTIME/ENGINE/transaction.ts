@@ -13,6 +13,7 @@ import { UniverseRepository } from '../../UNIVERSE/CANON/repository.ts';
 import { UniverseModel, UniverseModelFactory } from '../../UNIVERSE/CANON/universe.ts';
 import { UniverseModelValidator } from '../../VALIDATION/universe-model.ts';
 import { ExecutionContext } from './context.ts';
+import { getOwner, isKnownDomain } from '../GOVERNANCE/ownership.ts';
 
 export interface PendingDomainMutation<TEntity = unknown> {
   domain: DomainID;
@@ -39,7 +40,17 @@ export class TransactionBoundary {
     if (this.isCommitted || this.isAborted) {
       throw new Error(`Transaction ${this.executionId} is already closed.`);
     }
-    this.pendingMutations.push(mutation);
+
+    const domain = String(mutation.domain).toUpperCase();
+    const owner = getOwner(domain);
+    if (!isKnownDomain(domain) || !owner) {
+      throw new Error(`Transaction ${this.executionId} rejected mutation for unknown domain '${domain}'.`);
+    }
+    if (mutation.authoritativeOwner !== owner.ownerId) {
+      throw new Error(`Transaction ${this.executionId} rejected mutation for domain '${domain}': declared owner '${mutation.authoritativeOwner}' is not the registered owner '${owner.ownerId}'.`);
+    }
+
+    this.pendingMutations.push(Object.freeze({ ...mutation }));
   }
 
   /**

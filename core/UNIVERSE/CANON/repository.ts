@@ -36,6 +36,13 @@ export class InMemoryUniverseRepository implements UniverseRepository {
   }
 
   public saveUniverse(universe: UniverseModel, actor: SystemID): Result<boolean> {
+    const owner = getOwner('INSTANCE_MANAGEMENT');
+    if (!owner || owner.ownerId !== actor) {
+      return failure(
+        EngineErrorCode.UNAUTHORIZED_REPOSITORY_MUTATION,
+        `Actor '${actor}' is not the authoritative persistence owner. Universe snapshot write rejected.`
+      );
+    }
     if (!universe.universeId) {
       return failure(EngineErrorCode.UNIVERSE_VALIDATION_FAILED, 'Universe ID is required');
     }

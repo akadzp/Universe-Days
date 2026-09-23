@@ -311,26 +311,16 @@ export class ActorLifecycle {
         reasons: Object.freeze([`Story emergence cannot create a duplicate Actor for existing ID "${input.existingActorId}".`])
       };
     }
-
     if (!input.narrativeInfluence) {
       return {
         result: ActorEmergenceResult.IGNORED_TRANSIENT,
-        reasons: Object.freeze([
-          'Actor has no meaningful narrative influence and does not require a persistent Actor record.'
-        ])
+        reasons: Object.freeze(['Actor has no meaningful narrative influence and does not require a persistent Actor record.'])
       };
     }
-
-    const actor = createActorEntity(input, ActorDataSource.STORY_DERIVED, 'Story-derived Actor emergence');
-    const validation = validateActorClassification(actor.classification);
-    if (!validation.valid) {
-      return {
-        result: ActorEmergenceResult.BLOCKED,
-        reasons: Object.freeze(validation.issues.map(issue => issue.message))
-      };
-    }
-
-    return { result: ActorEmergenceResult.CREATED, data: actor, reasons: Object.freeze([]) };
+    return {
+      result: ActorEmergenceResult.REQUIRES_INPUT,
+      reasons: Object.freeze(['Story-derived Actor emergence is proposal/input only. Canon Actor creation must be materialized by an explicit authoritative Character command/Event path.'])
+    };
   }
 
   public static changeGroup(

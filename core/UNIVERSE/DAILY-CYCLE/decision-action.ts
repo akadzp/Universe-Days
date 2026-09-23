@@ -135,11 +135,24 @@ export class DecisionActionManager {
     if (!action) {
       return failure(`Action not found: ${actionId}`, EngineErrorCode.DECISION_ACTION_CONFLICT);
     }
+    if (!eventId?.trim()) {
+      return failure('Action execution requires an explicit occurred Event reference.', EngineErrorCode.DECISION_ACTION_CONFLICT);
+    }
+    if (action.status !== ActionStatus.PENDING && action.status !== ActionStatus.IN_PROGRESS) {
+      return failure(`Action '${actionId}' cannot execute from status '${action.status}'.`, EngineErrorCode.DECISION_ACTION_CONFLICT);
+    }
+    if (!action.decisionRef) {
+      return failure(`Action '${actionId}' has no Decision reference and cannot be actualized.`, EngineErrorCode.DECISION_ACTION_CONFLICT);
+    }
+    const decision = this.decisions.get(action.decisionRef);
+    if (!decision || decision.status !== DecisionStatus.APPROVED) {
+      return failure(`Action '${actionId}' requires an APPROVED Decision before execution.`, EngineErrorCode.DECISION_ACTION_CONFLICT);
+    }
 
     const updated: UniverseAction = {
       ...action,
       status: ActionStatus.EXECUTED,
-      eventId
+      eventId: eventId.trim()
     };
     this.actions.set(actionId, updated);
     return success(updated);
