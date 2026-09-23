@@ -1,39 +1,24 @@
-# Universe-Days Character Indicator — Final Integration Patch
+# Character Aggregate + State/Event Integration
 
-This patch consolidates Stages 1–6 into one additive Character Indicator layer and provides the Stage 7 integration contract.
+Patch ini menyelesaikan tiga tahap secara additive:
+
+1. Character Aggregate sebagai composition/coordinator boundary.
+2. State/Event integration yang tetap menghormati ownership domain.
+3. Test/validation artifacts untuk memeriksa invariant Character, indicator, event participant, dan state transition.
 
 ## Ownership
+- Character Aggregate: composition + coordination, bukan owner domain lain.
+- Indicator: tetap melalui registry/lifecycle dan memiliki history sendiri.
+- State: tetap authoritative di `core/DOMAIN/STATE`.
+- Event: hanya menjadi pemicu/evidence; tidak melakukan direct mutation.
+- AI proposal tetap tidak authoritative.
+- Group/Level tetap mengikuti Actor rules.
 
-- CharacterProfile remains authoritative for profile/identity/descriptive data.
-- Behavior remains authoritative for behavioral evidence, context, and history.
-- CharacterStyle remains authoritative for expression/communication style.
-- CharacterState remains authoritative for factual current state.
-- Relationship remains authoritative for pairwise relationships.
-- ActorClassification / ActorGroupMembership remain authoritative for Level and Group.
-- Indicators are rule-facing parameters and dynamic/evolving values; they are not a replacement store for those domains.
+## Important
+Patch ini tidak menghapus atau mengganti field `CharacterEntity` yang sudah ada.
 
-## Mutation flow
+## Validation status
 
-AI may propose effects but never mutates Character directly:
-
-AI proposal -> Event/Story -> effect resolution -> validation -> Indicator Lifecycle -> history/state integration
-
-## Binary rules
-
-BOOLEAN rules use TRUE/FALSE/UNKNOWN. Missing indicators are UNKNOWN, never FALSE.
-
-## Level / Group
-
-Level is evaluated from story-impact evidence, not frequency, personality, gender, or group. Group rules remain CORE required/fixed, MAJOR required/mutable, IMPACT forbidden, PERIPHERAL forbidden, ENTITY required/mutable.
-
-## Backward compatibility
-
-No existing CharacterProfile, Behavior, CharacterStyle, CharacterState, ActorClassification, or ActorGroupMembership attributes are removed by this patch. The CharacterEntity indicator field is additive.
-
-## Stage 7 scope
-
-The integration contract is intentionally conservative: it consolidates the layers without inventing direct EventEntity -> Character mutation or changing existing domain gateway ownership. Those connections should be wired through the existing validation/domain-gateway architecture in a later implementation pass if needed.
-
-
-## Audit Correction
-This correction patch addresses three audit findings without deleting existing Character attributes: `currentPriority` is DYNAMIC, Level evaluation can explicitly return UNKNOWN/null when evidence is insufficient, and Event Effect resolution validates target indicator presence while requiring modulation factors to be explicitly supplied rather than inferred silently.
+- New aggregate/integration TypeScript was type-checked in an isolated contract harness with TypeScript 5.8.3.
+- Integration tests are included for aggregate validation, indicator mutation/history, AI-authority rejection, Event participant gating, and Level/Group policy.
+- The current repository package manifest uses `npm run lint` for repository-wide TypeScript validation. A complete repository-wide execution could not be run in this environment because the repository could not be cloned and its dependency tree is not locally available. No claim of a full repository test-suite pass is made.
