@@ -8,7 +8,7 @@ import {
   createProtocolMessage,
   validateProtocolMessage
 } from '../../../core/architecture/protocol.ts';
-import { makeSystemID, makeDomainID, makeCorrelationID } from '../../../core/types/identifiers.ts';
+import { makeSystemID, makeDomainID, makeCorrelationID, makeRequestID } from '../../../core/types/identifiers.ts';
 import { ResultStatus } from '../../../core/types/result.ts';
 
 describe('Architecture Integration - Mutation Authority and Inter-System Request Flow', () => {
@@ -72,7 +72,8 @@ describe('Architecture Integration - Mutation Authority and Inter-System Request
       MessageType.REQUEST,
       consumerSystem,
       owner.ownerId,
-      mutationPayload
+      mutationPayload,
+      { requestId: makeRequestID('REQ_MUTATION_STATE_001'), timestamp: 0 }
     );
 
     const messageValidation = validateProtocolMessage(requestMessage);
@@ -108,7 +109,7 @@ describe('Architecture Integration - Mutation Authority and Inter-System Request
       owner.ownerId,
       consumerSystem,
       { success: true, newVersion: domainState.version, metricValue: domainState.metricValue },
-      makeCorrelationID(requestMessage.requestId)
+      { requestId: makeRequestID('REQ_RESULT_STATE_001'), timestamp: 0, correlationId: makeCorrelationID(requestMessage.requestId) }
     );
     responseMessage.status = ProtocolStatus.PROCESSED;
 

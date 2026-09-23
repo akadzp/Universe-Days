@@ -33,70 +33,50 @@ export interface ProtocolMessage<T = unknown> {
   timestamp: number;
 }
 
-/**
- * Validates whether a given object is a compliant ProtocolMessage.
- */
+export interface ProtocolMessageContext {
+  requestId: RequestID;
+  timestamp: number;
+  correlationId?: CorrelationID;
+}
+
 export function validateProtocolMessage(msg: unknown): Result<ProtocolMessage> {
-  if (!msg || typeof msg !== 'object') {
-    return failure('Message must be a non-null object');
-  }
-
+  if (!msg || typeof msg !== 'object') return failure('Message must be a non-null object');
   const candidate = msg as Partial<ProtocolMessage>;
-
-  if (!candidate.requestId || typeof candidate.requestId !== 'string' || candidate.requestId.trim() === '') {
-    return failure('Missing required field: requestId');
-  }
-
-  if (!candidate.source || typeof candidate.source !== 'string' || candidate.source.trim() === '') {
-    return failure('Missing required field: source system');
-  }
-
-  if (!candidate.target || typeof candidate.target !== 'string' || candidate.target.trim() === '') {
-    return failure('Missing required field: target system');
-  }
-
+  if (!candidate.requestId || typeof candidate.requestId !== 'string' || candidate.requestId.trim() === '') return failure('Missing required field: requestId');
+  if (!candidate.source || typeof candidate.source !== 'string' || candidate.source.trim() === '') return failure('Missing required field: source system');
+  if (!candidate.target || typeof candidate.target !== 'string' || candidate.target.trim() === '') return failure('Missing required field: target system');
   const validTypes = Object.values(MessageType) as string[];
-  if (!candidate.type || !validTypes.includes(candidate.type)) {
-    return failure(`Invalid message type: "${candidate.type}". Supported types: ${validTypes.join(', ')}`);
-  }
-
+  if (!candidate.type || !validTypes.includes(candidate.type)) return failure(`Invalid message type: "${candidate.type}". Supported types: ${validTypes.join(', ')}`);
   const validStatuses = Object.values(ProtocolStatus) as string[];
-  if (candidate.status && !validStatuses.includes(candidate.status)) {
-    return failure(`Invalid protocol status: "${candidate.status}"`);
-  }
-
+  if (candidate.status && !validStatuses.includes(candidate.status)) return failure(`Invalid protocol status: "${candidate.status}"`);
   const validatedMessage: ProtocolMessage = {
     requestId: candidate.requestId,
     correlationId: candidate.correlationId,
     type: candidate.type,
     source: candidate.source,
     target: candidate.target,
-    status: candidate.status || ProtocolStatus.PENDING,
+    status: candidate.status ?? ProtocolStatus.PENDING,
     payload: candidate.payload,
-    timestamp: candidate.timestamp || Date.now()
+    timestamp: candidate.timestamp ?? 0
   };
-
   return success(validatedMessage);
 }
 
-/**
- * Convenience factory to create a strongly typed protocol message.
- */
 export function createProtocolMessage<T>(
   type: MessageType,
   source: SourceSystem,
   target: TargetSystem,
-  payload?: T,
-  correlationId?: CorrelationID
+  payload: T | undefined,
+  context: ProtocolMessageContext
 ): ProtocolMessage<T> {
   return {
-    requestId: makeRequestID(`REQ-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`),
-    correlationId,
+    requestId: context.requestId,
+    correlationId: context.correlationId,
     type,
     source,
     target,
     status: ProtocolStatus.PENDING,
     payload,
-    timestamp: Date.now()
+    timestamp: context.timestamp
   };
 }
