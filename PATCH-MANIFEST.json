@@ -1,9 +1,39 @@
 {
-  "stage": 5,
-  "name": "character-indicator-event-effects",
-  "type": "additive",
-  "files": ["core/CHARACTER/indicator/event-effects.ts"],
+  "patch": "character-indicator-final-integration",
+  "version": 1,
+  "stages": [1,2,3,4,5,6,7],
+  "mode": "additive",
   "preservesExistingAttributes": true,
-  "aiIsProposerNotAuthority": true,
-  "directCharacterMutation": false
+  "files": [
+    "core/CHARACTER/character.ts",
+    "core/CHARACTER/indicator/indicator.ts",
+    "core/CHARACTER/indicator/registry.ts",
+    "core/CHARACTER/indicator/mapping.ts",
+    "core/CHARACTER/indicator/validation.ts",
+    "core/CHARACTER/indicator/effects.ts",
+    "core/CHARACTER/indicator/lifecycle.ts",
+    "core/CHARACTER/indicator/rules.ts",
+    "core/CHARACTER/indicator/rule-validation.ts",
+    "core/CHARACTER/indicator/event-effects.ts",
+    "core/CHARACTER/indicator/level-evaluation.ts",
+    "core/CHARACTER/indicator/group-rules.ts"
+  ],
+  "authority": {
+    "profile": "CharacterProfile",
+    "behavior": "BehaviorEntity",
+    "style": "CharacterStyleEntity",
+    "state": "CharacterStateEntity",
+    "relationship": "Relationship domain",
+    "classification": "ActorClassification / ActorGroupMembership",
+    "indicator": "CharacterIndicators"
+  },
+  "aiAuthority": "PROPOSER_ONLY",
+  "binaryLogic": "THREE_VALUED_TRUE_FALSE_UNKNOWN",
+  "notes": [
+    "Stage 2 mapping is kept separate conceptually but consolidated here.",
+    "Stage 3 lifecycle owns indicator mutation/history semantics.",
+    "Stage 4 rules never mutate Character directly.",
+    "Stage 5 event effects produce validated effect proposals/resolution inputs.",
+    "Stage 6 level/group evaluation does not use indicator scores as Level truth."
+  ]
 }
