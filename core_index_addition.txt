@@ -1,5 +1,0 @@
-Existing file: core/index.ts
-
-Add one export line at the end (after the existing core exports):
-
-export * from './platform/index.ts';

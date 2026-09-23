@@ -1,6 +1,0 @@
-{
-  "name": "Pocer Universe Engine",
-  "description": "Deterministic runtime rule engine, compact rule model, temporal engine, state machines, and evaluation pipeline for the Pocer Universe Engine.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
