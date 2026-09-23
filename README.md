@@ -1,34 +1,20 @@
-# Universe-Days — 16-Stage Consolidated Reconstruction
+# POCER — Post-Integration Integrity Patch
 
-This is the single consolidated patch for the current reconstruction pass.
+Base target: `eb1c19ecae0ef61b01479756672eb25bb41063a9`
 
-Base required: `50c5d44c11fb1f9e3d043418e6d434c5d904ad74`
+## Scope
+- Removes synthetic relationship defaults from the Character Workspace API projection.
+- Removes synthetic knowledge acquisition-source fallback from the Character Workspace API projection.
+- Makes the corresponding UI relationship fields optional so unknown/unset values remain unknown.
 
-It is intentionally **one apply operation**, not a sequence of domain patches.
-
-## Included
-
-- Restores the UI layer from the reconstructed POCER surface and its API web boundary.
-- Applies the audited Object/Relationship/Knowledge/Location/Mystery UI/API contract corrections.
-- Removes audited semantic creation fallbacks (`Unknown != default`) in the creation paths.
-- Removes the audited temporal fallback from day advancement and daily context.
-- Keeps explicit seed data such as the generic seed date intact; seed fixtures are not semantic runtime defaults.
-- Makes ProtocolMessage construction deterministic: request ID and timestamp are caller-supplied context rather than wall-clock/random generation.
-- Updates the affected protocol tests and mutation-authority integration test to use deterministic context.
+No core authority, temporal model, Object System, or persistence behavior is changed.
 
 ## Apply
-
-From the repository root:
+From repository root:
 
 ```bash
-node /path/to/apply-final.mjs
+node apply-post-integrity.mjs
 npm run lint
-npm test
-npm run build
 ```
 
-The script refuses to apply against another commit or over an existing UI. If application fails, it attempts to restore the previous state.
-
-## Important
-
-This package is a consolidated implementation artifact from the already-completed 16-stage audit. It is not seven sequential patches and should not be applied piecemeal.
+The script is fail-fast and requires exactly one match for every replacement.
