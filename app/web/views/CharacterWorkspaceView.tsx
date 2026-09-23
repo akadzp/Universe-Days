@@ -81,6 +81,7 @@ export function CharacterWorkspaceView({
   const [newCharTraits, setNewCharTraits] = useState('');
   const [newCharOccupation, setNewCharOccupation] = useState('');
   const [newCharGoal, setNewCharGoal] = useState('');
+  const [createStep, setCreateStep] = useState(0);
 
   // Edit Form states
   const [editDisplayName, setEditDisplayName] = useState('');
@@ -227,6 +228,7 @@ export function CharacterWorkspaceView({
       setNewCharTraits('');
       setNewCharOccupation('');
       setNewCharGoal('');
+      setCreateStep(0);
       setIsCreateCharModalOpen(false);
     } finally {
       setIsSubmitting(false);
@@ -366,85 +368,114 @@ export function CharacterWorkspaceView({
           </Card>
         )}
 
-        {/* Modal: Buat Tokoh */}
+        {/* Modal: Character Builder */}
         <Modal
           isOpen={isCreateCharModalOpen}
-          onClose={() => setIsCreateCharModalOpen(false)}
-          title="Buat Tokoh Baru"
-          subtitle="Daftarkan karakter baru ke dalam dunia cerita aktif."
+          onClose={() => { setIsCreateCharModalOpen(false); setCreateStep(0); }}
+          title="Buat Tokoh"
+          subtitle="Susun identitas dan karakterisasi tokoh tanpa mengisi fakta yang belum Anda tentukan."
         >
-          <form onSubmit={handleCreateCharacter} className="space-y-4 text-xs">
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Nama Tokoh *</label>
-              <input
-                type="text"
-                required
-                value={newCharName}
-                onChange={(e) => setNewCharName(e.target.value)}
-                placeholder="Contoh: Kaelen"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-hidden focus:border-amber-400"
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Peran Naratif</label>
-                <input
-                  type="text"
-                  value={newCharRole}
-                  onChange={(e) => setNewCharRole(e.target.value)}
-                  placeholder="Contoh: Protagonis / Pendamping"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-hidden focus:border-amber-400"
-                />
-              </div>
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Pekerjaan / Peran</label>
-                <input
-                  type="text"
-                  value={newCharOccupation}
-                  onChange={(e) => setNewCharOccupation(e.target.value)}
-                  placeholder="Contoh: Tabib / Peneliti"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-hidden focus:border-amber-400"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Tipe Kepribadian</label>
-              <input
-                type="text"
-                value={newCharPersonality}
-                onChange={(e) => setNewCharPersonality(e.target.value)}
-                placeholder="Contoh: Tenang & Waspada"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-hidden focus:border-amber-400"
-              />
-            </div>
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Sifat & Karakter (Pisahkan koma)</label>
-              <input
-                type="text"
-                value={newCharTraits}
-                onChange={(e) => setNewCharTraits(e.target.value)}
-                placeholder="Contoh: Gigih, Cerdas, Setia"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-hidden focus:border-amber-400"
-              />
-            </div>
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Tujuan Pribadi</label>
-              <input
-                type="text"
-                value={newCharGoal}
-                onChange={(e) => setNewCharGoal(e.target.value)}
-                placeholder="Contoh: Menemukan obat penawar untuk desanya"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-hidden focus:border-amber-400"
-              />
+          <form onSubmit={handleCreateCharacter} className="space-y-5 text-xs">
+            <div className="grid grid-cols-4 gap-1.5">
+              {['Identitas', 'Karakter', 'Narasi', 'Review'].map((label, index) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => index <= createStep && setCreateStep(index)}
+                  className={`rounded-xl px-2 py-2 text-[11px] font-bold transition ${index === createStep
+                    ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                    : index < createStep
+                      ? 'bg-slate-100 text-slate-700 border border-slate-200'
+                      : 'bg-white text-slate-400 border border-slate-200'
+                  }`}
+                >
+                  <span className="block text-[10px] opacity-60">{index + 1}</span>
+                  {label}
+                </button>
+              ))}
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
-              <Button type="button" kind="secondary" size="sm" onClick={() => setIsCreateCharModalOpen(false)}>
-                Batal
-              </Button>
-              <Button type="submit" kind="clay" size="sm" disabled={isSubmitting || !newCharName.trim()}>
-                {isSubmitting ? 'Mendaftarkan...' : 'Simpan Tokoh'}
-              </Button>
+            {createStep === 0 && (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+                  <p className="font-black text-slate-900">Mulai dari siapa tokoh ini?</p>
+                  <p className="mt-1 leading-relaxed text-slate-600">
+                    Nama adalah satu-satunya informasi wajib. Peran, pekerjaan, dan informasi lain dapat ditentukan nanti.
+                  </p>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1.5">Nama Tokoh *</label>
+                  <input autoFocus type="text" required value={newCharName} onChange={(e) => setNewCharName(e.target.value)} placeholder="Masukkan nama tokoh" className="w-full px-3.5 py-3 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-900 focus:outline-hidden focus:border-amber-400" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1.5">Peran Naratif</label>
+                    <input type="text" value={newCharRole} onChange={(e) => setNewCharRole(e.target.value)} placeholder="Belum ditentukan" className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-hidden focus:border-amber-400" />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1.5">Pekerjaan / Peran</label>
+                    <input type="text" value={newCharOccupation} onChange={(e) => setNewCharOccupation(e.target.value)} placeholder="Belum ditentukan" className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-hidden focus:border-amber-400" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {createStep === 1 && (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="font-black text-slate-900">Karakterisasi</p>
+                  <p className="mt-1 leading-relaxed text-slate-600">Isi hanya karakteristik yang sudah Anda ketahui. Tidak ada tipe kepribadian atau sifat yang dipilih otomatis.</p>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1.5">Tipe Kepribadian</label>
+                  <input type="text" value={newCharPersonality} onChange={(e) => setNewCharPersonality(e.target.value)} placeholder="Belum ditentukan" className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-hidden focus:border-amber-400" />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1.5">Sifat & Karakter</label>
+                  <input type="text" value={newCharTraits} onChange={(e) => setNewCharTraits(e.target.value)} placeholder="Pisahkan beberapa sifat dengan koma" className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-hidden focus:border-amber-400" />
+                  <p className="mt-1 text-[11px] text-slate-400">Contoh format: sabar, teliti, keras kepala. Contoh ini tidak akan disimpan.</p>
+                </div>
+              </div>
+            )}
+
+            {createStep === 2 && (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="font-black text-slate-900">Narasi</p>
+                  <p className="mt-1 leading-relaxed text-slate-600">Tujuan pribadi bersifat opsional dan dapat ditambahkan atau diubah setelah tokoh dibuat.</p>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1.5">Tujuan Pribadi</label>
+                  <textarea rows={4} value={newCharGoal} onChange={(e) => setNewCharGoal(e.target.value)} placeholder="Belum ditentukan" className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-hidden focus:border-amber-400 resize-none" />
+                </div>
+              </div>
+            )}
+
+            {createStep === 3 && (
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+                  <p className="font-black text-slate-900">Review sebelum dibuat</p>
+                  <p className="mt-1 leading-relaxed text-slate-600">Periksa nilai yang akan dikirim. Field yang kosong tidak akan diisi secara otomatis.</p>
+                </div>
+                {[
+                  ['Nama', newCharName], ['Peran naratif', newCharRole], ['Pekerjaan / peran', newCharOccupation],
+                  ['Tipe kepribadian', newCharPersonality], ['Sifat & karakter', newCharTraits], ['Tujuan pribadi', newCharGoal],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-start justify-between gap-4 rounded-xl border border-slate-200 px-3.5 py-3">
+                    <span className="font-bold text-slate-500">{label}</span>
+                    <span className={`text-right font-semibold ${value ? 'text-slate-900' : 'text-slate-400 italic'}`}>{value || 'Belum ditentukan'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200">
+              <Button type="button" kind="secondary" size="sm" onClick={() => createStep > 0 ? setCreateStep(createStep - 1) : setIsCreateCharModalOpen(false)}>{createStep > 0 ? 'Kembali' : 'Batal'}</Button>
+              {createStep < 3 ? (
+                <Button type="button" kind="clay" size="sm" disabled={createStep === 0 && !newCharName.trim()} onClick={() => setCreateStep(createStep + 1)}>Lanjut <ChevronRight className="h-4 w-4" /></Button>
+              ) : (
+                <Button type="submit" kind="clay" size="sm" disabled={isSubmitting || !newCharName.trim()}>{isSubmitting ? 'Mendaftarkan...' : 'Buat Tokoh'}</Button>
+              )}
             </div>
           </form>
         </Modal>
