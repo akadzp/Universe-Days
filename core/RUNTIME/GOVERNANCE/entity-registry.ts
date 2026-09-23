@@ -1,12 +1,28 @@
 /**
  * Phase 8: Entity Type and Domain Metadata Registry
  *
- * Provides architectural metadata describing registered entity types, their authoritative owner systems,
- * identifier strategies, validation schemas, and relation capabilities.
+ * Corrective structural patch:
+ * - EntityType is owned by this governance registry.
+ * - EntityType is declared before EntityTypeRegistry static initialization.
+ * - No dependency on SHARED/model-types.ts, preventing the previous circular dependency.
  */
 
 import { DomainID, SystemID, makeDomainID, makeSystemID } from '../../SHARED/identifiers.ts';
-import { EntityType } from '../../SHARED/model-types.ts';
+
+export enum EntityType {
+  CHARACTER = 'CHARACTER',
+  RELATIONSHIP = 'RELATIONSHIP',
+  OBJECT = 'OBJECT',
+  KNOWLEDGE = 'KNOWLEDGE',
+  STATE = 'STATE',
+  LOCATION = 'LOCATION',
+  EVENT = 'EVENT',
+  PROCESS = 'PROCESS',
+  UNRESOLVED_CONDITION = 'UNRESOLVED_CONDITION',
+  BEHAVIOR = 'BEHAVIOR',
+  STYLE = 'STYLE',
+  CONTINUITY = 'CONTINUITY'
+}
 
 export interface EntityTypeMetadata {
   readonly entityType: EntityType;
@@ -158,19 +174,4 @@ export class EntityTypeRegistry {
   public static getAll(): EntityTypeMetadata[] {
     return Array.from(this.registry.values());
   }
-}
-
-export enum EntityType {
-  CHARACTER = 'CHARACTER',
-  RELATIONSHIP = 'RELATIONSHIP',
-  OBJECT = 'OBJECT',
-  KNOWLEDGE = 'KNOWLEDGE',
-  STATE = 'STATE',
-  LOCATION = 'LOCATION',
-  EVENT = 'EVENT',
-  PROCESS = 'PROCESS',
-  UNRESOLVED_CONDITION = 'UNRESOLVED_CONDITION',
-  BEHAVIOR = 'BEHAVIOR',
-  STYLE = 'STYLE',
-  CONTINUITY = 'CONTINUITY'
 }
