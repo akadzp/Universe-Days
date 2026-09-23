@@ -1,29 +1,20 @@
-# Universe-Days Character Indicator Foundation Patch
+# Character Indicator Lifecycle — Stage 3
 
-Base reference: `0644d63b911a231e8a5e7b4693b4e1ae0d5be61f`
+Additive patch for explicit Character Indicator lifecycle.
 
-## Purpose
-Add the first Character Indicator layer as an additive foundation.
+## Changes
+- Adds `core/CHARACTER/indicator/lifecycle.ts`.
+- Separates current-value mutation from baseline evolution.
+- Allows baseline evolution only for `CONTINUOUS + EVOLVING` indicators.
+- Keeps `PERSISTENT` and `DERIVED` indicators immutable through lifecycle mutation.
+- Requires callers to provide effective/recorded timestamps; no `Date.now()` is introduced.
+- Appends immutable change records through `appendIndicatorChange()`.
+- Corrects registry persistence: evolving continuous indicators (empathy, resilience, emotionalSensitivity, capabilities) are `EVOLVING`; motivation/condition continuous indicators remain `DYNAMIC`.
 
-## Safety constraints
-- Existing CharacterProfile attributes are preserved.
-- Existing Behavior, Style, State, Knowledge, Relationship, Level, and Group models are not replaced.
-- `CharacterEntity.indicators` is optional and additive.
-- Binary rules remain first-class.
-- Continuous values use an explicit range (initially 0..100 for registered continuous indicators).
-- UNKNOWN/absence is not converted to zero or false.
-- AI proposals cannot become authoritative indicator effects.
+## Ownership
+Profile, Behavior, CharacterStyle, CharacterState, Level, and Group remain their existing sources of truth. This patch does not replace or delete their attributes.
 
-## Added
-- `core/CHARACTER/indicator/indicator.ts`
-- `core/CHARACTER/indicator/registry.ts`
-- `core/CHARACTER/indicator/validation.ts`
-- `core/CHARACTER/indicator/effects.ts`
-- additive `indicators?: CharacterIndicators` in `core/CHARACTER/character.ts`
-
-## Deliberately not included
-- Automatic Level calculation.
-- Automatic Group calculation.
-- Event mutation integration.
-- Replacement of existing Behavior/Style/State systems.
-- Deletion or renaming of existing Character attributes.
+## Not included yet
+- Binary/rule evaluation engine (Stage 4).
+- Event/story effect integration (Stage 5).
+- Level/Group evaluator (Stage 6).

@@ -5,6 +5,10 @@ const continuous = (key: string, description: string): CharacterIndicatorDefinit
   key, type: 'CONTINUOUS', persistence: 'DYNAMIC', mutable: true,
   range: Object.freeze({ min: 0, max: 100 }), description
 });
+const evolvingContinuous = (key: string, description: string): CharacterIndicatorDefinition => Object.freeze({
+  key, type: 'CONTINUOUS', persistence: 'EVOLVING', mutable: true,
+  range: Object.freeze({ min: 0, max: 100 }), description
+});
 const evolvingOrdinal = (key: string, description: string): CharacterIndicatorDefinition => Object.freeze({
   key, type: 'ORDINAL', persistence: 'EVOLVING', mutable: true, description
 });
@@ -15,11 +19,11 @@ const evolvingBoolean = (key: string, description: string): CharacterIndicatorDe
 export const CHARACTER_INDICATOR_DEFINITIONS: readonly CharacterIndicatorDefinition[] = Object.freeze([
   evolvingOrdinal('patience', 'Tendency to tolerate delay, frustration, or repetition.'),
   evolvingOrdinal('assertiveness', 'Tendency to express needs, positions, or decisions directly.'),
-  continuous('empathy', 'Modeled degree of empathic disposition.'),
+  evolvingContinuous('empathy', 'Modeled degree of empathic disposition.'),
   evolvingOrdinal('discipline', 'Tendency to maintain self-control and planned behavior.'),
   evolvingOrdinal('curiosity', 'Tendency to seek information, novelty, or explanation.'),
-  continuous('resilience', 'Modeled capacity to recover from pressure or adverse experience.'),
-  continuous('emotionalSensitivity', 'Modeled sensitivity to emotionally significant stimuli.'),
+  evolvingContinuous('resilience', 'Modeled capacity to recover from pressure or adverse experience.'),
+  evolvingContinuous('emotionalSensitivity', 'Modeled sensitivity to emotionally significant stimuli.'),
   evolvingOrdinal('independence', 'Tendency to act without relying on others.'),
   evolvingOrdinal('sociability', 'Tendency to seek or sustain social interaction.'),
   evolvingOrdinal('riskTolerance', 'Tendency to accept uncertain or risky actions.'),
@@ -29,12 +33,12 @@ export const CHARACTER_INDICATOR_DEFINITIONS: readonly CharacterIndicatorDefinit
   evolvingBoolean('actsImpulsively', 'Whether impulsive action is an established response disposition.'),
   evolvingBoolean('seeksApproval', 'Whether seeking approval is an established response disposition.'),
   evolvingBoolean('avoidsAttention', 'Whether avoiding attention is an established response disposition.'),
-  continuous('physicalCapability', 'Modeled physical capability.'),
-  continuous('cognitiveCapability', 'Modeled cognitive capability.'),
-  continuous('communicationCapability', 'Modeled communication capability.'),
-  continuous('socialCapability', 'Modeled social capability.'),
-  continuous('technicalCapability', 'Modeled technical capability.'),
-  continuous('creativeCapability', 'Modeled creative capability.'),
+  evolvingContinuous('physicalCapability', 'Modeled physical capability.'),
+  evolvingContinuous('cognitiveCapability', 'Modeled cognitive capability.'),
+  evolvingContinuous('communicationCapability', 'Modeled communication capability.'),
+  evolvingContinuous('socialCapability', 'Modeled social capability.'),
+  evolvingContinuous('technicalCapability', 'Modeled technical capability.'),
+  evolvingContinuous('creativeCapability', 'Modeled creative capability.'),
   continuous('urgency', 'Current urgency associated with active motivation.'),
   continuous('desireIntensity', 'Current intensity of active desire.'),
   continuous('fearIntensity', 'Current intensity of active fear.'),
