@@ -1,18 +1,9 @@
 {
-  "stage": 2,
-  "name": "character-indicator-mapping",
-  "mode": "additive",
-  "files": [
-    "core/CHARACTER/indicator/mapping.ts",
-    "core/CHARACTER/indicator/registry.ts",
-    "PATCH-README.md",
-    "PATCH-MANIFEST.json"
-  ],
-  "doesNotInclude": [
-    "indicator lifecycle",
-    "binary rules",
-    "story/event effects",
-    "level evaluation",
-    "group evaluation"
-  ]
+  "stage": 5,
+  "name": "character-indicator-event-effects",
+  "type": "additive",
+  "files": ["core/CHARACTER/indicator/event-effects.ts"],
+  "preservesExistingAttributes": true,
+  "aiIsProposerNotAuthority": true,
+  "directCharacterMutation": false
 }
