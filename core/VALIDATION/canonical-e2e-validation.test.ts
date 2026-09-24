@@ -1,4 +1,7 @@
-import { assert, assertEquals, assertNotEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+const assertEquals = (actual: unknown, expected: unknown): void => { assert.deepStrictEqual(actual, expected); };
+const assertNotEquals = (actual: unknown, expected: unknown): void => { assert.notDeepStrictEqual(actual, expected); };
 import { stableSerialize } from '../SHARED/determinism.ts';
 import { integrateResolvedEventWithCharacter } from '../CHARACTER/resolved-event-integration.ts';
 import { CharacterAggregate } from '../CHARACTER/character-aggregate.ts';
@@ -68,7 +71,7 @@ function runCanonicalScenario() {
   });
 }
 
-Deno.test('canonical E2E: resolved Event -> Character effect -> Knowledge reference', () => {
+test('canonical E2E: resolved Event -> Character effect -> Knowledge reference', () => {
   const result = runCanonicalScenario();
   assert(result.valid);
   assertEquals(result.appliedEffects, ['eff_e2e_mood']);
@@ -78,14 +81,14 @@ Deno.test('canonical E2E: resolved Event -> Character effect -> Knowledge refere
   assertEquals(result.knowledge?.[0]?.knowerRef, 'char_e2e_001');
 });
 
-Deno.test('canonical E2E is replay-deterministic for identical explicit inputs', () => {
+test('canonical E2E is replay-deterministic for identical explicit inputs', () => {
   const first = runCanonicalScenario();
   const second = runCanonicalScenario();
   assert(first.valid && second.valid);
   assertEquals(stableSerialize(first), stableSerialize(second));
 });
 
-Deno.test('canonical integration does not mutate the input aggregate', () => {
+test('canonical integration does not mutate the input aggregate', () => {
   const aggregate = fixture();
   const before = stableSerialize(aggregate);
   const result = integrateResolvedEventWithCharacter({
@@ -105,7 +108,7 @@ Deno.test('canonical integration does not mutate the input aggregate', () => {
   assertNotEquals(stableSerialize(result.aggregate), before);
 });
 
-Deno.test('unresolved Event blocks the entire canonical effect chain', () => {
+test('unresolved Event blocks the entire canonical effect chain', () => {
   const aggregate = fixture();
   const event = { ...resolvedEvent(), status: 'OCCURRING' };
   const result = integrateResolvedEventWithCharacter({

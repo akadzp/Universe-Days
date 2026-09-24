@@ -1,4 +1,6 @@
-import { assert, assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+const assertEquals = (actual: unknown, expected: unknown): void => { assert.deepStrictEqual(actual, expected); };
 import {
   CharacterAggregate,
   CharacterAggregateLifecycle,
@@ -57,7 +59,7 @@ function fixture(): CharacterAggregate {
   };
 }
 
-Deno.test('aggregate validates and indicator effect is recorded', () => {
+test('aggregate validates and indicator effect is recorded', () => {
   const aggregate = fixture();
   assert(validateCharacterAggregate(aggregate).valid);
   const effect: CharacterIndicatorEffect = {
@@ -75,7 +77,7 @@ Deno.test('aggregate validates and indicator effect is recorded', () => {
   assertEquals(result.aggregate?.character.indicators?.history.length, 1);
 });
 
-Deno.test('AI effect cannot become authoritative', () => {
+test('AI effect cannot become authoritative', () => {
   const aggregate = fixture();
   const effect: CharacterIndicatorEffect = {
     effectId: 'eff_ai', characterId: 'char_001', indicatorKey: 'mood', triggerType: 'EVENT',
@@ -89,7 +91,7 @@ Deno.test('AI effect cannot become authoritative', () => {
   assert(!result.valid);
 });
 
-Deno.test('event integration requires participant and can apply indicator effect', () => {
+test('event integration requires participant and can apply indicator effect', () => {
   const aggregate = fixture();
   const effect: CharacterIndicatorEffect = {
     effectId: 'eff_evt', characterId: 'char_001', indicatorKey: 'mood', triggerType: 'EVENT',
@@ -106,7 +108,7 @@ Deno.test('event integration requires participant and can apply indicator effect
   assertEquals(result.aggregate?.character.indicators?.condition.mood?.current, 65);
 });
 
-Deno.test('event integration blocks non-participant', () => {
+test('event integration blocks non-participant', () => {
   const aggregate = fixture();
   const event = {
     eventId: 'evt_002', eventType: 'OTHER', title: 'Other', participantRefs: [makeEntityID('char_999')],
@@ -118,7 +120,7 @@ Deno.test('event integration blocks non-participant', () => {
   assert(!result.valid);
 });
 
-Deno.test('level/group policy stays separate from indicator values', () => {
+test('level/group policy stays separate from indicator values', () => {
   assertEquals(CHARACTER_AGGREGATE_LEVEL_GROUP_POLICY[ActorLevel.CORE], { groupRequired: true, groupMutable: false });
   assertEquals(CHARACTER_AGGREGATE_LEVEL_GROUP_POLICY[ActorLevel.MAJOR], { groupRequired: true, groupMutable: true });
   assertEquals(CHARACTER_AGGREGATE_LEVEL_GROUP_POLICY[ActorLevel.IMPACT], { groupRequired: false, groupMutable: false });

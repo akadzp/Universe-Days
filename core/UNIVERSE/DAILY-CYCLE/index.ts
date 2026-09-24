@@ -18,3 +18,4 @@ export * from './handoff-placeholder';
 
 export * from './consequence-mediator.ts';
 export * from './canonical-reconciliation.ts';
+export * from './contracts.ts';

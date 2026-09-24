@@ -1,4 +1,6 @@
-import { assert, assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+const assertEquals = (actual: unknown, expected: unknown): void => { assert.deepStrictEqual(actual, expected); };
 import { integrateEventKnowledgeWithCharacter } from './character-knowledge-integration.ts';
 import { ActorDataSource } from './actor.ts';
 import { TemporalStatus } from '../RUNTIME/TEMPORAL/types.ts';
@@ -37,7 +39,7 @@ const event = {
   validationStatus: ModelValidationStatus.VALID, provenance
 } as any;
 
-Deno.test('resolved event acquires authoritative story-derived knowledge and binds only reference', () => {
+test('resolved event acquires authoritative story-derived knowledge and binds only reference', () => {
   const result = integrateEventKnowledgeWithCharacter({
     event,
     aggregate: fixture(),
@@ -54,7 +56,7 @@ Deno.test('resolved event acquires authoritative story-derived knowledge and bin
   assertEquals(result.knowledge?.[0].temporalValidity.effectiveFrom, '2026-01-03');
 });
 
-Deno.test('unresolved event cannot grant knowledge', () => {
+test('unresolved event cannot grant knowledge', () => {
   const result = integrateEventKnowledgeWithCharacter({
     event: { ...event, status: 'OCCURRING' }, aggregate: fixture(),
     acquisitions: [{ knowledgeId: 'know_002', referencedSubject: 'obj_002', statement: 'X', knowledgeStatus: 'KNOWN', acquisitionSource: 'EVENT' }],
@@ -63,7 +65,7 @@ Deno.test('unresolved event cannot grant knowledge', () => {
   assert(!result.valid);
 });
 
-Deno.test('AI proposal cannot become authoritative knowledge', () => {
+test('AI proposal cannot become authoritative knowledge', () => {
   const result = integrateEventKnowledgeWithCharacter({
     event, aggregate: fixture(),
     acquisitions: [{ knowledgeId: 'know_ai', referencedSubject: 'obj', statement: 'AI claim', knowledgeStatus: 'KNOWN', acquisitionSource: 'AI', source: ActorDataSource.AI_PROPOSAL }],
@@ -72,7 +74,7 @@ Deno.test('AI proposal cannot become authoritative knowledge', () => {
   assert(!result.valid);
 });
 
-Deno.test('event cannot bind knowledge belonging to another character', () => {
+test('event cannot bind knowledge belonging to another character', () => {
   const result = integrateEventKnowledgeWithCharacter({
     event, aggregate: fixture(),
     acquisitions: [{ knowledgeId: 'know_other', knowerRef: 'char_999', referencedSubject: 'obj', statement: 'Other', knowledgeStatus: 'KNOWN', acquisitionSource: 'EVENT' }],

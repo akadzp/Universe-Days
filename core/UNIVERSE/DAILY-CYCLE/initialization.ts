@@ -3,16 +3,20 @@
  * Initializes a new period or continues from a previous period without inventing data.
  */
 
-import { UniverseClock } from '../../RUNTIME/TEMPORAL/clock.ts';
 import { TimePoint } from '../../RUNTIME/TEMPORAL/time-point.ts';
-import { Result, success, failure } from '../../SHARED/result.ts';
+import { Result } from '../../SHARED/result.ts';
 import { EngineErrorCode } from '../../SHARED/errors.ts';
-import { UniversePeriod, createUniversePeriod } from '../../UNIVERSE/DAILY-CYCLE/period.ts';
-import { PeriodLifecycleManager } from '../../UNIVERSE/DAILY-CYCLE/lifecycle.ts';
-import { initializePeriodCore } from './period-initializer-core.ts';
+import { ContinuityItem } from '../../UNIVERSE/CONTINUITY/continuity-model.ts';
+import { UniverseEvent } from '../../UNIVERSE/DAILY-CYCLE/event.ts';
+import { UniverseProcess } from '../../UNIVERSE/DAILY-CYCLE/process.ts';
+import { UnresolvedCondition } from '../../UNIVERSE/DAILY-CYCLE/unresolved.ts';
+import { FutureInformation } from '../../UNIVERSE/DAILY-CYCLE/decision-action.ts';
 import type { UniverseModel } from '../../UNIVERSE/CANON/universe.ts';
 import type { UniversePeriodContext, PeriodInitializationMode } from './contracts.ts';
+import { initializePeriodCore } from './period-initializer-core.ts';
 import { DailyUniverseContinuation } from './continuation.ts';
+
+export type { UniversePeriodContext, PeriodInitializationMode };
 
 export interface InitializePeriodParams {
   startTime?: TimePoint;
@@ -29,22 +33,6 @@ export interface InitializePeriodParams {
   isFirstPeriod?: boolean;
 }
 
-export interface UniversePeriodContext {
-  period: UniversePeriod;
-  initializationMode: PeriodInitializationMode;
-  lifecycle: PeriodLifecycleManager;
-  clock: UniverseClock;
-  traces: PeriodTraceRecorder;
-  continuityItems: ContinuityItem[];
-  unresolvedConditions: UnresolvedCondition[];
-  processes: UniverseProcess[];
-  futureInfo: FutureInformation[];
-  events: UniverseEvent[];
-  consequences: UniverseConsequence[];
-  metadata: Record<string, unknown>;
-  carryoverResult?: CarryoverBatchResult;
-}
-
 export class PeriodInitializer {
   /**
    * Initializes a Daily Universe period. Universe-backed continuation is
@@ -52,4 +40,9 @@ export class PeriodInitializer {
    * kept dependency-free so the Daily-Cycle graph remains acyclic.
    */
   public static initialize(params: InitializePeriodParams): Result<UniversePeriodContext, { code: EngineErrorCode; message: string }> {
-    if (params.
+    if (params.universe) {
+      return DailyUniverseContinuation.initializeAuthoritativePeriod(params.universe, params);
+    }
+    return initializePeriodCore(params);
+  }
+}

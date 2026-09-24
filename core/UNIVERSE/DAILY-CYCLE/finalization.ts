@@ -4,6 +4,7 @@
  */
 
 import type { UniversePeriodContext, FinalizationResult } from './contracts.ts';
+export type { FinalizationResult };
 import { DailyUniverseStatus } from '../../UNIVERSE/DAILY-CYCLE/period.ts';
 import { PeriodLifecycleEvent } from '../../UNIVERSE/DAILY-CYCLE/lifecycle.ts';
 import { NextPeriodContext, createNextPeriodContext } from '../../UNIVERSE/DAILY-CYCLE/next-period.ts';
