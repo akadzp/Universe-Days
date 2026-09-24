@@ -1,4 +1,4 @@
-import { makeSystemID } from '../../core/SHARED/identifiers.ts';
+import { makeSystemID, makeDomainID } from '../../core/SHARED/identifiers.ts';
 import { CHARACTER_OWNER_CAPABILITY } from '../../core/RUNTIME/GOVERNANCE/ownership.ts';
 import { success, failure } from '../../core/SHARED/result.ts';
 import type { WorkflowDefinition } from '../../core/RUNTIME/ENGINE/workflow.ts';
@@ -14,26 +14,14 @@ export function createCharacterWorkflow(payload: CreateCharacterPayload): Workfl
       name: 'Validate Character aggregate and stage canonical mutation',
       executor: (ctx, tx) => {
         const id = String(payload.character.identity.id);
-        if (ctx.universeSnapshot.characters[id]) {
-          return failure('CHARACTER_ALREADY_EXISTS', `Character '${id}' already exists.`);
-        }
+        if (ctx.universeSnapshot.characters[id]) return failure('CHARACTER_ALREADY_EXISTS', `Character '${id}' already exists.`);
 
-        const aggregate = {
-          character: payload.character,
-          behaviors: Object.freeze({}),
-          styles: Object.freeze({}),
-        };
-
+        const aggregate = { character: payload.character, behaviors: Object.freeze({}), styles: Object.freeze({}) };
         const report = validateCharacterAggregate(aggregate);
-        if (!report.valid) {
-          return failure(
-            'INVALID_CHARACTER_AGGREGATE',
-            report.issues.map(issue => issue.message).join('; '),
-          );
-        }
+        if (!report.valid) return failure('INVALID_CHARACTER_AGGREGATE', report.issues.map(issue => issue.message).join('; '));
 
         tx.stageMutation({
-          domain: 'CHARACTER',
+          domain: makeDomainID('CHARACTER'),
           entityId: id,
           entityData: payload.character,
           ownerCapability: CHARACTER_OWNER_CAPABILITY,
