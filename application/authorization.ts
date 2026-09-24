@@ -26,10 +26,7 @@ export class ApplicationAuthorizer {
     if (!this.has(command.actor, permission)) {
       throw new Error(`Application authorization rejected: role '${command.actor.role}' lacks '${permission}'.`);
     }
-    if (
-      actorMutation(command.commandType) &&
-      command.actor.role === 'AI_AGENT'
-    ) {
+    if (actorMutation(command.commandType) && command.actor.role === 'AI_AGENT') {
       throw new Error('AI_AGENT may propose but may not execute authoritative Character mutation commands.');
     }
   }

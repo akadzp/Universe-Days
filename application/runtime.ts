@@ -2,7 +2,16 @@ import type { PocerExecutionEngine } from '../core/RUNTIME/ENGINE/orchestrator.t
 import type { UniverseCommand } from '../core/RUNTIME/ENGINE/command.ts';
 import type { WorkflowDefinition } from '../core/RUNTIME/ENGINE/workflow.ts';
 import { ApplicationAuthorizer } from './authorization.ts';
-import type { ApplicationCommand, CommandResult } from './contracts.ts';
+import type {
+  ApplicationCommand,
+  CommandResult,
+  CreateCharacterPayload,
+  ApplyCharacterIndicatorEffectPayload,
+  ProposeCharacterResponsePayload,
+} from './contracts.ts';
+import { createCharacterWorkflow } from './commands/create-character.ts';
+import { applyCharacterIndicatorEffectWorkflow } from './commands/apply-character-indicator-effect.ts';
+import { proposeCharacterResponseWorkflow } from './commands/propose-character-response.ts';
 
 export interface ApplicationRuntimeDependencies {
   readonly executionEngine: PocerExecutionEngine;
@@ -30,12 +39,15 @@ export class ApplicationCommandBus {
     private readonly authorizer: ApplicationAuthorizer,
   ) {}
 
-  public async execute<TPayload, TResult = unknown>(
-    command: ApplicationCommand<TPayload>,
-    workflow: WorkflowDefinition,
+  public async execute<TResult = unknown>(
+    command: ApplicationCommand,
   ): Promise<CommandResult<TResult>> {
     try {
       this.authorizer.authorize(command);
+
+      // The caller does not supply a workflow. The Application boundary owns
+      // the command -> canonical workflow mapping.
+      const workflow = canonicalWorkflow(command);
 
       const coreCommand: Partial<UniverseCommand> = {
         commandId: command.commandId,
@@ -81,7 +93,24 @@ export class ApplicationCommandBus {
   }
 }
 
-function workflowTarget(command: ApplicationCommand<unknown>): UniverseCommand['target'] {
+function canonicalWorkflow(command: ApplicationCommand): WorkflowDefinition {
+  switch (command.commandType) {
+    case 'CREATE_CHARACTER':
+      return createCharacterWorkflow(command.payload as CreateCharacterPayload);
+    case 'APPLY_CHARACTER_INDICATOR_EFFECT':
+      return applyCharacterIndicatorEffectWorkflow(
+        command.payload as ApplyCharacterIndicatorEffectPayload,
+      );
+    case 'PROPOSE_CHARACTER_RESPONSE':
+      return proposeCharacterResponseWorkflow(
+        command.payload as ProposeCharacterResponsePayload,
+      );
+    default:
+      throw new Error(`No canonical workflow is registered for '${command.commandType}'.`);
+  }
+}
+
+function workflowTarget(command: ApplicationCommand): UniverseCommand['target'] {
   switch (command.commandType) {
     case 'CREATE_CHARACTER':
     case 'APPLY_CHARACTER_INDICATOR_EFFECT':
