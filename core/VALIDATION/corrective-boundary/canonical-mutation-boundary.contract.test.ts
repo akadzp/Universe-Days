@@ -19,7 +19,10 @@ assert(orchestrator.includes('ArchitectureAction.APPLY_CHANGE'));
 // Transactions require explicit temporal truth and never invent a default date.
 assert(!transaction.includes('2024-01-01'));
 assert(transaction.includes('Transaction requires an explicit, valid Universe Time.'));
-assert(transaction.includes('ctx.actor !== owner.ownerId'));
+assert(transaction.includes('isValidDomainOwnerCapability'));
+assert(transaction.includes('mutation.ownerCapability'));
+assert(!transaction.includes('ctx.actor !== owner.ownerId'));
+assert(transaction.includes('authorizedOwners')); 
 assert(transaction.includes('INSTANCE_MANAGEMENT_ACTOR'));
 
 // Universe evolution is immutable and preserves fields not being mutated.

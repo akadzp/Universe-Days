@@ -13,7 +13,7 @@ import { UniverseRepository } from '../../UNIVERSE/CANON/repository.ts';
 import { UniverseModel, UniverseModelFactory } from '../../UNIVERSE/CANON/universe.ts';
 import { UniverseModelValidator } from '../../VALIDATION/universe-model.ts';
 import { ExecutionContext } from './context.ts';
-import { getOwner, isKnownDomain } from '../GOVERNANCE/ownership.ts';
+import { getOwner, isKnownDomain, DomainOwnerCapability, isValidDomainOwnerCapability } from '../GOVERNANCE/ownership.ts';
 import { TimePoint } from '../TEMPORAL/time-point.ts';
 import { INSTANCE_MANAGEMENT_ACTOR } from '../../INFRA/INSTANCE/instance.ts';
 
@@ -21,7 +21,9 @@ export interface PendingDomainMutation<TEntity = unknown> {
   domain: DomainID;
   entityId: string;
   entityData: TEntity;
-  /** Must match the registered owner AND the execution actor. */
+  /** Registered opaque capability proving the mutation's domain owner. */
+  ownerCapability: DomainOwnerCapability;
+  /** Derived owner identity retained for audit/readability; never trusted as proof. */
   authoritativeOwner: SystemID;
 }
 
@@ -53,8 +55,11 @@ export class TransactionBoundary {
     if (!isKnownDomain(domain) || !owner) {
       throw new Error(`Transaction ${this.executionId} rejected mutation for unknown domain '${domain}'.`);
     }
+    if (!isValidDomainOwnerCapability(mutation.ownerCapability) || mutation.ownerCapability.ownerId !== owner.ownerId || mutation.ownerCapability.domainId !== owner.domainId) {
+      throw new Error(`Transaction ${this.executionId} rejected mutation for domain '${domain}': invalid domain-owner capability.`);
+    }
     if (mutation.authoritativeOwner !== owner.ownerId) {
-      throw new Error(`Transaction ${this.executionId} rejected mutation for domain '${domain}': declared owner '${mutation.authoritativeOwner}' is not the registered owner '${owner.ownerId}'.`);
+      throw new Error(`Transaction ${this.executionId} rejected mutation for domain '${domain}': audit owner does not match the registered owner.`);
     }
 
     // The staged envelope records semantic authority. The transaction later
@@ -92,8 +97,11 @@ export class TransactionBoundary {
       if (!owner) {
         return failure(EngineErrorCode.DOMAIN_OWNER_NOT_FOUND, `No registered owner exists for '${domain}'.`);
       }
+      if (!isValidDomainOwnerCapability(mutation.ownerCapability) || mutation.ownerCapability.ownerId !== owner.ownerId || mutation.ownerCapability.domainId !== owner.domainId) {
+        return failure(EngineErrorCode.CROSS_DOMAIN_AUTHORITY_VIOLATION, `Mutation '${mutation.entityId}' carries an invalid domain-owner capability for '${domain}'.`);
+      }
       if (mutation.authoritativeOwner !== owner.ownerId) {
-        return failure(EngineErrorCode.CROSS_DOMAIN_AUTHORITY_VIOLATION, `Mutation '${mutation.entityId}' declares forged authority for '${domain}'.`);
+        return failure(EngineErrorCode.CROSS_DOMAIN_AUTHORITY_VIOLATION, `Mutation '${mutation.entityId}' carries an inconsistent owner audit field for '${domain}'.`);
       }
       if (!authorizedOwners.has(owner.ownerId)) {
         return blocked(
@@ -130,7 +138,7 @@ export class TransactionBoundary {
     for (const mutation of this.pendingMutations) {
       const domain = normalizedMutationDomain(mutation.domain);
       const owner = getOwner(domain);
-      if (!owner || mutation.authoritativeOwner !== owner.ownerId) {
+      if (!owner || !isValidDomainOwnerCapability(mutation.ownerCapability) || mutation.ownerCapability.ownerId !== owner.ownerId || mutation.ownerCapability.domainId !== owner.domainId || mutation.authoritativeOwner !== owner.ownerId) {
         this.abort(ctx, `Commit authority mismatch for domain '${domain}'.`);
         return failure(
           EngineErrorCode.UNAUTHORIZED_DOMAIN_MUTATION,

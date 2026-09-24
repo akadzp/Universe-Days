@@ -148,3 +148,35 @@ export function isKnownDomain(domain: string): domain is CoreDomain {
 export function getAllOwners(): DomainOwner[] {
   return Object.values(DOMAIN_OWNERS);
 }
+
+/**
+ * Opaque proof that a mutation was prepared through a registered domain-owner
+ * capability. The WeakSet prevents forged plain-object lookalikes.
+ */
+export interface DomainOwnerCapability {
+  readonly ownerId: SystemID;
+  readonly domainId: DomainID;
+}
+
+const capabilityRegistry = new WeakSet<object>();
+
+function registerCapability(owner: DomainOwner): DomainOwnerCapability {
+  const capability = Object.freeze({ ownerId: owner.ownerId, domainId: owner.domainId });
+  capabilityRegistry.add(capability);
+  return capability;
+}
+
+export const CHARACTER_OWNER_CAPABILITY = registerCapability(DOMAIN_OWNERS.CHARACTER);
+export const KNOWLEDGE_OWNER_CAPABILITY = registerCapability(DOMAIN_OWNERS.KNOWLEDGE);
+export const RELATIONSHIP_OWNER_CAPABILITY = registerCapability(DOMAIN_OWNERS.RELATIONSHIP);
+export const OBJECT_OWNER_CAPABILITY = registerCapability(DOMAIN_OWNERS.OBJECT);
+export const STATE_OWNER_CAPABILITY = registerCapability(DOMAIN_OWNERS.STATE);
+export const LOCATION_OWNER_CAPABILITY = registerCapability(DOMAIN_OWNERS.LOCATION);
+export const EVENT_OWNER_CAPABILITY = registerCapability(DOMAIN_OWNERS.EVENT);
+export const PROCESS_OWNER_CAPABILITY = registerCapability(DOMAIN_OWNERS.PROCESS);
+export const UNRESOLVED_OWNER_CAPABILITY = registerCapability(DOMAIN_OWNERS.UNRESOLVED);
+export const TEMPORAL_OWNER_CAPABILITY = registerCapability(DOMAIN_OWNERS.TEMPORAL);
+
+export function isValidDomainOwnerCapability(value: unknown): value is DomainOwnerCapability {
+  return typeof value === 'object' && value !== null && capabilityRegistry.has(value);
+}
