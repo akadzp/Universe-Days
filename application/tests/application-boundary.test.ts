@@ -2,11 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ApplicationAuthorizer } from '../authorization.ts';
 
-const actor = (role: 'AI_AGENT' | 'OBSERVER') => ({
+const actor = (role: 'AI_AGENT' | 'OBSERVER' | 'AUTHOR') => ({
   actorId: `TEST_${role}`,
   role,
   requestTimestamp: 0,
 } as any);
+
+const queryContext = (role: 'AI_AGENT' | 'OBSERVER' | 'AUTHOR') => ({
+  actor: actor(role),
+  universeId: 'U1',
+  requestedAt: 0,
+});
 
 test('AI_AGENT cannot authorize authoritative Character mutation', () => {
   const authorizer = new ApplicationAuthorizer();
@@ -35,5 +41,31 @@ test('OBSERVER cannot authorize Character mutation', () => {
       payload: {},
     }),
     /lacks 'CHARACTER_MUTATE'/,
+  );
+});
+
+test('AI_AGENT cannot authorize Daily Cycle query', () => {
+  const authorizer = new ApplicationAuthorizer();
+  assert.throws(
+    () => authorizer.authorizeQuery(queryContext('AI_AGENT'), 'GET_DAILY_CYCLE_STATUS'),
+    /lacks 'DAILY_READ'/,
+  );
+});
+
+test('AI_AGENT may authorize Character read query', () => {
+  const authorizer = new ApplicationAuthorizer();
+  assert.doesNotThrow(
+    () => authorizer.authorizeQuery(queryContext('AI_AGENT'), 'GET_CHARACTER_SUMMARY'),
+  );
+});
+
+test('query authorization requires an explicit universe scope', () => {
+  const authorizer = new ApplicationAuthorizer();
+  assert.throws(
+    () => authorizer.authorizeQuery(
+      { ...queryContext('AUTHOR'), universeId: '' },
+      'GET_UNIVERSE_STATUS',
+    ),
+    /universeId is required/,
   );
 });

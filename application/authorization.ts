@@ -1,4 +1,10 @@
-import type { ApplicationCommand, ApplicationRole, ActorContext } from './contracts.ts';
+import type {
+  ApplicationCommand,
+  ApplicationRole,
+  ActorContext,
+  ApplicationQueryContext,
+  ApplicationQueryType,
+} from './contracts.ts';
 
 export type ApplicationPermission =
   | 'UNIVERSE_READ'
@@ -31,6 +37,18 @@ export class ApplicationAuthorizer {
     }
   }
 
+  public authorizeQuery(query: ApplicationQueryContext, queryType: ApplicationQueryType): void {
+    const permission = this.requiredQueryPermission(queryType);
+    if (!this.has(query.actor, permission)) {
+      throw new Error(
+        `Application query authorization rejected: role '${query.actor.role}' lacks '${permission}'.`,
+      );
+    }
+    if (!query.universeId) {
+      throw new Error('Application query authorization rejected: universeId is required.');
+    }
+  }
+
   private requiredPermission(commandType: string): ApplicationPermission {
     switch (commandType) {
       case 'CREATE_CHARACTER':
@@ -40,6 +58,20 @@ export class ApplicationAuthorizer {
         return 'CHARACTER_PROPOSE';
       default:
         throw new Error(`Unknown application command '${commandType}'.`);
+    }
+  }
+
+  private requiredQueryPermission(queryType: ApplicationQueryType): ApplicationPermission {
+    switch (queryType) {
+      case 'GET_UNIVERSE_STATUS':
+        return 'UNIVERSE_READ';
+      case 'GET_CHARACTER_SUMMARY':
+      case 'LIST_CHARACTERS':
+        return 'CHARACTER_READ';
+      case 'GET_DAILY_CYCLE_STATUS':
+        return 'DAILY_READ';
+      default:
+        throw new Error(`Unknown application query '${queryType}'.`);
     }
   }
 }

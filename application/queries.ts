@@ -2,13 +2,24 @@ import type { PocerExecutionEngine } from '../core/RUNTIME/ENGINE/orchestrator.t
 import type { UniverseQuery } from '../core/RUNTIME/ENGINE/query.ts';
 import type { UniverseModel } from '../core/UNIVERSE/CANON/universe.ts';
 import type { CharacterEntity } from '../core/CHARACTER/character.ts';
-import type { CharacterSummaryDTO, DailyCycleStatusDTO, UniverseSummaryDTO } from './contracts.ts';
+import type {
+  ApplicationQueryContext,
+  ApplicationQueryType,
+  CharacterSummaryDTO,
+  DailyCycleStatusDTO,
+  UniverseSummaryDTO,
+} from './contracts.ts';
+import { ApplicationAuthorizer } from './authorization.ts';
 
 export class ApplicationQueryService {
-  public constructor(private readonly executionEngine: PocerExecutionEngine) {}
+  public constructor(
+    private readonly executionEngine: PocerExecutionEngine,
+    private readonly authorizer: ApplicationAuthorizer = new ApplicationAuthorizer(),
+  ) {}
 
-  public universeStatus(universeId: string, requestedBy: string, requestedAt = 0): UniverseSummaryDTO {
-    const universe = this.snapshot(universeId, requestedBy, requestedAt);
+  public universeStatus(context: ApplicationQueryContext): UniverseSummaryDTO {
+    this.authorize(context, 'GET_UNIVERSE_STATUS');
+    const universe = this.snapshot(context);
 
     return Object.freeze({
       universeId: universe.universeId,
@@ -22,52 +33,46 @@ export class ApplicationQueryService {
   }
 
   public characterSummary(
-    universeId: string,
+    context: ApplicationQueryContext,
     characterId: string,
-    requestedBy: string,
-    requestedAt = 0,
   ): CharacterSummaryDTO | null {
+    this.authorize(context, 'GET_CHARACTER_SUMMARY');
     const result = this.execute({
-      queryId: `APP_CHARACTER_${characterId}`,
+      queryId: `APP_CHARACTER_${context.universeId}_${characterId}`,
       queryType: 'ENTITY',
       targetDomain: 'CHARACTER',
       targetEntityId: characterId,
-      universeId,
-      requestedBy,
-      requestedAt,
+      universeId: context.universeId,
+      requestedBy: context.actor.actorId,
+      requestedAt: context.requestedAt,
     });
 
     const character = result.data as CharacterEntity | undefined;
     return character ? this.toCharacterSummary(character) : null;
   }
 
-  public listCharacters(
-    universeId: string,
-    requestedBy: string,
-    requestedAt = 0,
-  ): readonly CharacterSummaryDTO[] {
-    const universe = this.snapshot(universeId, requestedBy, requestedAt);
+  public listCharacters(context: ApplicationQueryContext): readonly CharacterSummaryDTO[] {
+    this.authorize(context, 'LIST_CHARACTERS');
+    const universe = this.snapshot(context);
 
     return Object.freeze(
       Object.values(universe.characters).map(character => this.toCharacterSummary(character)),
     );
   }
 
-  public dailyCycleStatus(
-    universeId: string,
-    requestedBy: string,
-    requestedAt = 0,
-  ): DailyCycleStatusDTO {
+  public dailyCycleStatus(context: ApplicationQueryContext): DailyCycleStatusDTO {
+    this.authorize(context, 'GET_DAILY_CYCLE_STATUS');
+
     const temporalResult = this.execute({
-      queryId: `APP_DAILY_${universeId}`,
+      queryId: `APP_DAILY_${context.universeId}`,
       queryType: 'TEMPORAL',
-      universeId,
-      requestedBy,
-      requestedAt,
+      universeId: context.universeId,
+      requestedBy: context.actor.actorId,
+      requestedAt: context.requestedAt,
     });
 
     const temporal = temporalResult.data as UniverseModel['temporalContext'];
-    const snapshot = this.snapshot(universeId, requestedBy, requestedAt);
+    const snapshot = this.snapshot(context);
 
     return Object.freeze({
       universeDate: temporal.currentUniverseDate,
@@ -82,13 +87,17 @@ export class ApplicationQueryService {
     });
   }
 
-  private snapshot(universeId: string, requestedBy: string, requestedAt: number): UniverseModel {
+  private authorize(context: ApplicationQueryContext, queryType: ApplicationQueryType): void {
+    this.authorizer.authorizeQuery(context, queryType);
+  }
+
+  private snapshot(context: ApplicationQueryContext): UniverseModel {
     const result = this.execute({
-      queryId: `APP_SNAPSHOT_${universeId}`,
+      queryId: `APP_SNAPSHOT_${context.universeId}`,
       queryType: 'SNAPSHOT',
-      universeId,
-      requestedBy,
-      requestedAt,
+      universeId: context.universeId,
+      requestedBy: context.actor.actorId,
+      requestedAt: context.requestedAt,
     });
 
     return result.data as UniverseModel;

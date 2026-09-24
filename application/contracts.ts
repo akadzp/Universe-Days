@@ -27,6 +27,18 @@ export interface ApplicationCommand<TPayload = unknown> {
   readonly idempotencyKey?: string;
 }
 
+export interface ApplicationQueryContext {
+  readonly actor: ActorContext;
+  readonly universeId: string;
+  readonly requestedAt: number;
+}
+
+export type ApplicationQueryType =
+  | 'GET_UNIVERSE_STATUS'
+  | 'GET_CHARACTER_SUMMARY'
+  | 'LIST_CHARACTERS'
+  | 'GET_DAILY_CYCLE_STATUS';
+
 export interface CommandResult<T = unknown> {
   readonly success: boolean;
   readonly status: string;
@@ -89,4 +101,3 @@ export interface DailyCycleStatusDTO {
   readonly unresolvedCount: number;
   readonly activeProcessCount: number;
 }
-
