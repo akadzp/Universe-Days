@@ -1,15 +1,16 @@
 /**
  * Explicit Character command/materialization boundary.
- * Callers submit input; Character owns authoritative entity construction.
+ *
+ * This service is intentionally a pure Character-domain materializer.
+ * It does not persist or remount Universe state. Canonical persistence
+ * belongs exclusively to the runtime TransactionBoundary.
  */
-import type { UniverseInstanceManager } from '../INFRA/INSTANCE/instance.ts';
 import type { MountedUniverse } from '../INFRA/INSTANCE/authority.ts';
 import type { CharacterEntity } from './character.ts';
 import {
   ActorDataSource, ActorEntityType, ActorGender, ActorLevel, ActorLifecycle
 } from './actor.ts';
 import { TemporalStatus } from '../RUNTIME/TEMPORAL/types.ts';
-import { INSTANCE_MANAGEMENT_ACTOR } from '../INFRA/INSTANCE/instance.ts';
 
 export interface CreateCharacterCommandInput {
   readonly id: string;
@@ -27,7 +28,6 @@ function normalizeId(id: string): string {
 export class CharacterCommandService {
   public static createCharacter(
     mounted: MountedUniverse,
-    manager: UniverseInstanceManager,
     input: CreateCharacterCommandInput
   ): CharacterEntity {
     if (!input.id.trim() || !input.displayName.trim()) {
@@ -58,7 +58,7 @@ export class CharacterCommandService {
     }
 
     const a = actor.data;
-    const character: CharacterEntity = Object.freeze({
+    return Object.freeze({
       identity: a.identity,
       actor: a.classification,
       roleReferences: Object.freeze(input.role ? [input.role] : []),
@@ -72,17 +72,5 @@ export class CharacterCommandService {
       history: a.history,
       provenance: a.provenance
     });
-
-    const next = {
-      ...mounted.universe,
-      characters: Object.freeze({
-        ...mounted.universe.characters,
-        [id]: character
-      })
-    };
-
-    manager.persist(next, INSTANCE_MANAGEMENT_ACTOR);
-    manager.load(next.universeId, mounted.universeScope);
-    return character;
   }
 }
