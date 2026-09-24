@@ -208,37 +208,9 @@ export class PocerExecutionEngine {
 
     ctx.lifecycle.transition(ExecutionLifecycleEvent.START_PREPARATION);
 
-    if (command.target?.domain) {
-      const domainStr = String(command.target.domain);
-      const applyAuth = canPerformAction(
-        command.requestedBy,
-        domainStr,
-        ArchitectureAction.APPLY_CHANGE
-      );
-
-      const isAllowed = applyAuth.success && Boolean(applyAuth.data?.allowed);
-
-      if (!isAllowed) {
-        ctx.lifecycle.transition(ExecutionLifecycleEvent.ENCOUNTER_BLOCK);
-
-        ctx.recordValidation('AuthorityGate', false, [
-          `Actor "${command.requestedBy}" lacks authority to mutate domain "${domainStr}".`
-        ]);
-
-        const blockRes = this.assembleResult(
-          ctx,
-          EngineExecutionStatus.BLOCKED,
-          startTime,
-          {
-            code: EngineErrorCode.COMMAND_UNAUTHORIZED,
-            message: `Actor "${command.requestedBy}" is not authorized for target domain "${domainStr}".`
-          }
-        );
-
-        this.eventBus.emit('execution.blocked', executionId, blockRes);
-        return blockRes;
-      }
-    }
+    // Command actor and semantic domain owner are separate authorities.
+    // Domain ownership is proven by staged owner capabilities and enforced
+    // by TransactionBoundary.
 
     ctx.lifecycle.transition(ExecutionLifecycleEvent.MARK_READY);
     ctx.lifecycle.transition(ExecutionLifecycleEvent.START_EXECUTION);
@@ -327,7 +299,7 @@ export class PocerExecutionEngine {
       };
     }
 
-    const prepRes = tx.prepare(ctx);
+    const prepRes = tx.prepare(ctx, tx.getPendingOwners());
 
     if (!prepRes.success) {
       ctx.lifecycle.transition(ExecutionLifecycleEvent.ENCOUNTER_FAILURE);

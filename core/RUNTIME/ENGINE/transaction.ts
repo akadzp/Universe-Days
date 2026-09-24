@@ -268,6 +268,14 @@ export class TransactionBoundary {
     ctx.tracer.record({ stepId: 'TRANSACTION_ABORT', action: 'ROLLBACK_TRANSACTION', resultStatus: 'ABORTED', details: { reason } });
   }
 
+  /**
+   * Returns the registered semantic owners required by staged mutations.
+   * The execution actor is deliberately not inferred as a domain owner.
+   */
+  public getPendingOwners(): ReadonlySet<SystemID> {
+    return new Set(this.pendingMutations.map(mutation => mutation.authoritativeOwner));
+  }
+
   public getPendingCount(): number { return this.pendingMutations.length; }
   public isTransactionAborted(): boolean { return this.isAborted; }
   public getStatus(): 'PENDING' | 'PREPARED' | 'COMMITTED' | 'ABORTED' {
