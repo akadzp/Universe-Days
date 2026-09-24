@@ -1,7 +1,7 @@
 diff --git a/core/RUNTIME/ENGINE/orchestrator.ts b/core/RUNTIME/ENGINE/orchestrator.ts
 --- a/core/RUNTIME/ENGINE/orchestrator.ts
 +++ b/core/RUNTIME/ENGINE/orchestrator.ts
-@@
+@@ -211,31 +211,4 @@
 -    if (command.target?.domain) {
 -      const domainStr = String(command.target.domain);
 -      const applyAuth = canPerformAction(
@@ -9,12 +9,16 @@ diff --git a/core/RUNTIME/ENGINE/orchestrator.ts b/core/RUNTIME/ENGINE/orchestra
 -        domainStr,
 -        ArchitectureAction.APPLY_CHANGE
 -      );
+-
 -      const isAllowed = applyAuth.success && Boolean(applyAuth.data?.allowed);
+-
 -      if (!isAllowed) {
 -        ctx.lifecycle.transition(ExecutionLifecycleEvent.ENCOUNTER_BLOCK);
+-
 -        ctx.recordValidation('AuthorityGate', false, [
 -          `Actor "${command.requestedBy}" lacks authority to mutate domain "${domainStr}".`
 -        ]);
+-
 -        const blockRes = this.assembleResult(
 -          ctx,
 -          EngineExecutionStatus.BLOCKED,
@@ -24,6 +28,7 @@ diff --git a/core/RUNTIME/ENGINE/orchestrator.ts b/core/RUNTIME/ENGINE/orchestra
 -            message: `Actor "${command.requestedBy}" is not authorized for target domain "${domainStr}".`
 -          }
 -        );
+-
 -        this.eventBus.emit('execution.blocked', executionId, blockRes);
 -        return blockRes;
 -      }
@@ -31,14 +36,14 @@ diff --git a/core/RUNTIME/ENGINE/orchestrator.ts b/core/RUNTIME/ENGINE/orchestra
 +    // Command actor and semantic domain owner are separate authorities.
 +    // Domain ownership is proven by staged owner capabilities and enforced
 +    // by TransactionBoundary.
-@@
+@@ -330,1 +303,1 @@
 -    const prepRes = tx.prepare(ctx);
 +    const prepRes = tx.prepare(ctx, tx.getPendingOwners());
 
 diff --git a/core/RUNTIME/ENGINE/transaction.ts b/core/RUNTIME/ENGINE/transaction.ts
 --- a/core/RUNTIME/ENGINE/transaction.ts
 +++ b/core/RUNTIME/ENGINE/transaction.ts
-@@
+@@ -270,1 +270,8 @@
 +  /**
 +   * Returns the registered semantic owners required by staged mutations.
 +   * The execution actor is deliberately not inferred as a domain owner.
