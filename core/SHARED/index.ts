@@ -7,6 +7,5 @@ export * from './identity';
 export * from './history';
 export * from './provenance';
 export * from './references';
-export * from './platform';
 export * from './lifecycle';
 export * from './model-types';

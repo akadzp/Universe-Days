@@ -4,11 +4,11 @@
  * Time advancement (explicit only) -> continuity transitions -> events -> processes -> consequences -> unresolved -> trace.
  */
 
-import { UniversePeriodContext } from '../../UNIVERSE/DAILY-CYCLE/initialization.ts';
+import type { UniversePeriodContext } from '../../UNIVERSE/DAILY-CYCLE/initialization.ts';
 import { DailyUniverseStatus } from '../../UNIVERSE/DAILY-CYCLE/period.ts';
 import { PeriodLifecycleEvent } from '../../UNIVERSE/DAILY-CYCLE/lifecycle.ts';
 import { UniverseEventStatus } from '../../UNIVERSE/DAILY-CYCLE/event.ts';
-import { UniverseProcessStatus } from '../../UNIVERSE/DAILY-CYCLE/process.ts';
+import { UniverseProcessStatus, ProcessRegistry } from '../../UNIVERSE/DAILY-CYCLE/process.ts';
 import { ContinuityValidator } from '../../UNIVERSE/CONTINUITY/validator.ts';
 import { Transition } from '../../UNIVERSE/CONTINUITY/transition.ts';
 import { ContinuityItem, ContinuityStatus } from '../../UNIVERSE/CONTINUITY/continuity-model.ts';
@@ -16,6 +16,9 @@ import { Duration } from '../../RUNTIME/TEMPORAL/duration.ts';
 import { TimePoint } from '../../RUNTIME/TEMPORAL/time-point.ts';
 import { Result, success, failure } from '../../SHARED/result.ts';
 import { EngineErrorCode } from '../../SHARED/errors.ts';
+import { EventRegistry } from '../../UNIVERSE/DAILY-CYCLE/event.ts';
+import { UnresolvedConditionRegistry } from '../../UNIVERSE/DAILY-CYCLE/unresolved.ts';
+import { ConsequenceMediator } from '../../UNIVERSE/DAILY-CYCLE/consequence-mediator.ts';
 
 export interface ProgressionStepInput {
   advanceTimeBy?: Duration;
@@ -146,102 +149,93 @@ export class ProgressionEngine {
       }
     }
 
-    // 3. Process Event readiness and explicit trigger requests
+    // 3. Process Event readiness and explicit trigger requests through lifecycle authority.
     let eventsEvaluated = 0;
     let eventsOccurred = 0;
     let consequencesTriggered = 0;
 
-    // Evaluate pending events against current clock
+    const eventRegistry = new EventRegistry(ctx.events);
+    const satisfiedDependencies = new Set<string>(ctx.events.filter(e => e.status === UniverseEventStatus.OCCURRED).map(e => e.eventId));
+    const stateFlags = new Map<string, unknown>();
+
     for (const event of ctx.events) {
-      if (event.status === UniverseEventStatus.PENDING) {
-        eventsEvaluated++;
-        const parsed = TimePoint.parse(event.temporalReference);
-        if (parsed.success && parsed.data) {
-          // If event temporal target is reached or passed, mark ready
-          if (parsed.data.toCanonical() <= currentClockTime.toCanonical()) {
-            event.status = UniverseEventStatus.READY;
-            for (const p of event.prerequisites) {
-              if (p.type === 'TEMPORAL') {
-                p.satisfied = true;
-              }
-            }
-          }
-        }
+      if (event.status !== UniverseEventStatus.PENDING) continue;
+      eventsEvaluated++;
+      const ready = eventRegistry.evaluateReadiness(event.eventId, {
+        currentUniverseTime: currentClockTime,
+        satisfiedDependencies,
+        stateFlags
+      });
+      if (!ready.success || !ready.data) {
+        return failure({ code: EngineErrorCode.INVALID_EVENT_TRANSITION, message: ready.message ?? `Could not evaluate Event '${event.eventId}'.` }, ready.message);
       }
     }
 
-    // Explicitly trigger requested events
-    if (input.triggerEventIds && input.triggerEventIds.length > 0) {
-      for (const eventId of input.triggerEventIds) {
-        const ev = ctx.events.find(e => e.eventId === eventId);
-        if (!ev) {
-          const msg = `Event to trigger not found: ${eventId}`;
-          return failure(
-            { code: EngineErrorCode.INVALID_EVENT_TRANSITION, message: msg },
-            msg
-          );
-        }
-        if (ev.status === UniverseEventStatus.CANCELLED || ev.status === UniverseEventStatus.FAILED) {
-          const msg = `Cannot occur cancelled/failed event: ${eventId}`;
-          return failure(
-            { code: EngineErrorCode.INVALID_EVENT_TRANSITION, message: msg },
-            msg
-          );
-        }
-        for (const p of ev.prerequisites) {
-          if (p.type === 'TEMPORAL') {
-            const parsed = TimePoint.parse(ev.temporalReference);
-            if (parsed.success && parsed.data && parsed.data.toCanonical() <= currentClockTime.toCanonical()) {
-              p.satisfied = true;
-            }
-          }
-        }
-        ev.status = UniverseEventStatus.OCCURRED;
-        eventsOccurred++;
-
-        traces.record({
-          operation: 'EVENT_OCCURRED',
-          periodId: period.periodId,
-          universeTime: currentClockTime.toCanonical(),
-          previousState: 'READY',
-          transition: 'OCCUR',
-          result: 'OCCURRED',
-          affectedReferences: [eventId],
-          validationResult: { valid: true }
-        });
+    for (const eventId of input.triggerEventIds ?? []) {
+      const ev = eventRegistry.get(eventId);
+      if (!ev) {
+        const msg = `Event to trigger not found: ${eventId}`;
+        return failure({ code: EngineErrorCode.INVALID_EVENT_TRANSITION, message: msg }, msg);
       }
+      const occurred = eventRegistry.markOccurred(eventId);
+      if (!occurred.success || !occurred.data) {
+        const msg = occurred.message ?? `Event '${eventId}' could not become OCCURRED.`;
+        return failure({ code: EngineErrorCode.INVALID_EVENT_TRANSITION, message: msg }, msg);
+      }
+      ctx.events.splice(ctx.events.findIndex(e => e.eventId === eventId), 1, occurred.data);
+      satisfiedDependencies.add(eventId);
+      eventsOccurred++;
+
+      traces.record({
+        operation: 'EVENT_OCCURRED',
+        periodId: period.periodId,
+        universeTime: currentClockTime.toCanonical(),
+        previousState: ev.status,
+        transition: 'OCCUR',
+        result: 'OCCURRED',
+        affectedReferences: [eventId],
+        validationResult: { valid: true }
+      });
     }
 
-    // 4. Progress active processes (interrupt, complete)
-    if (input.interruptProcessIds) {
-      for (const req of input.interruptProcessIds) {
-        const proc = ctx.processes.find(p => p.processId === req.processId);
-        if (proc && proc.currentStatus === UniverseProcessStatus.ACTIVE) {
-          proc.currentStatus = UniverseProcessStatus.INTERRUPTED;
-          proc.metadata = { ...proc.metadata, interruptReason: req.reason };
-        }
+    // 4. Progress Processes through ProcessRegistry rather than raw status replacement.
+    const processRegistry = new ProcessRegistry(ctx.processes);
+    for (const req of input.interruptProcessIds ?? []) {
+      const res = processRegistry.interrupt(req.processId, req.reason);
+      if (!res.success || !res.data) {
+        return failure({ code: EngineErrorCode.INVALID_PROCESS_TRANSITION, message: res.message ?? `Cannot interrupt process '${req.processId}'.` }, res.message);
       }
     }
+    for (const procId of input.completeProcessIds ?? []) {
+      const res = processRegistry.complete(procId, `Explicit completion request at ${currentClockTime.toCanonical()}`);
+      if (!res.success || !res.data) {
+        return failure({ code: EngineErrorCode.INVALID_PROCESS_TRANSITION, message: res.message ?? `Cannot complete process '${procId}'.` }, res.message);
+      }
+    }
+    ctx.processes.splice(0, ctx.processes.length, ...processRegistry.getAll());
 
-    if (input.completeProcessIds) {
-      for (const procId of input.completeProcessIds) {
-        const proc = ctx.processes.find(p => p.processId === procId);
-        if (proc && (proc.currentStatus === UniverseProcessStatus.ACTIVE || proc.currentStatus === UniverseProcessStatus.PAUSED)) {
-          proc.currentStatus = UniverseProcessStatus.COMPLETED;
-        }
+    // 5. Resolve unresolved conditions through their lifecycle registry.
+    const unresolvedRegistry = new UnresolvedConditionRegistry(ctx.unresolvedConditions);
+    for (const req of input.resolveUnresolvedIds ?? []) {
+      const res = unresolvedRegistry.resolve(req.unresolvedId, req.resolutionRef);
+      if (!res.success || !res.data) {
+        return failure({ code: EngineErrorCode.UNRESOLVED_CONDITION_ERROR, message: res.message ?? `Cannot resolve '${req.unresolvedId}'.` }, res.message);
       }
     }
+    ctx.unresolvedConditions.splice(0, ctx.unresolvedConditions.length, ...unresolvedRegistry.getAll());
 
-    // 5. Explicitly resolve unresolved conditions
-    if (input.resolveUnresolvedIds) {
-      for (const req of input.resolveUnresolvedIds) {
-        const unres = ctx.unresolvedConditions.find(u => u.unresolvedId === req.unresolvedId);
-        if (unres && unres.lifecycleStatus !== 'CLOSED') {
-          unres.lifecycleStatus = 'RESOLVED' as any;
-          unres.resolutionReference = req.resolutionRef;
-        }
-      }
+    // 6. Central consequence mediation. It may trigger lifecycle and emit proposals,
+    // but it never mutates a foreign Canon domain itself.
+    const mediation = ConsequenceMediator.mediate(ctx.events, ctx.consequences, currentClockTime.toCanonical());
+    if (!mediation.success || !mediation.data) {
+      return failure({ code: EngineErrorCode.INVALID_CONDITION, message: mediation.message ?? 'Consequence mediation failed.' }, mediation.message);
     }
+    consequencesTriggered = mediation.data.triggered;
+    ctx.consequences.splice(0, ctx.consequences.length, ...mediation.data.consequences);
+    ctx.metadata = {
+      ...ctx.metadata,
+      consequenceProposals: mediation.data.proposals
+    };
 
     const activeProcesses = ctx.processes.filter(p => p.currentStatus === UniverseProcessStatus.ACTIVE).length;
     const openUnresolved = ctx.unresolvedConditions.filter(

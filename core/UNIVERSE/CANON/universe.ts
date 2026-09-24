@@ -8,7 +8,7 @@
  * Individual domain entities retain their authoritative ownership via Phase 7 domain owners.
  */
 
-import { DomainID, SystemID, makeSystemID, makeDomainID } from '../../SHARED/identifiers.ts';
+import { DomainID, SystemID, RequestID, makeSystemID, makeDomainID, makeRequestID } from '../../SHARED/identifiers.ts';
 import { CharacterEntity } from '../../CHARACTER/character.ts';
 import { RelationshipEntity } from '../../DOMAIN/RELATIONSHIP/relationship.ts';
 import { ObjectEntity, ObjectRelationEntity } from '../../OBJECT/object.ts';
@@ -121,7 +121,10 @@ export class UniverseModelFactory {
       { domainId: makeDomainID('OBJECT'), ownerId: makeSystemID('OBJECT_SYSTEM'), version: '1.0.0' },
       { domainId: makeDomainID('KNOWLEDGE'), ownerId: makeSystemID('KNOWLEDGE_SYSTEM'), version: '1.0.0' },
       { domainId: makeDomainID('STATE'), ownerId: makeSystemID('STATE_SYSTEM'), version: '1.0.0' },
-      { domainId: makeDomainID('LOCATION'), ownerId: makeSystemID('LOCATION_SYSTEM'), version: '1.0.0' }
+      { domainId: makeDomainID('LOCATION'), ownerId: makeSystemID('LOCATION_SYSTEM'), version: '1.0.0' },
+      { domainId: makeDomainID('EVENT'), ownerId: makeSystemID('EVENT_SYSTEM'), version: '1.0.0' },
+      { domainId: makeDomainID('PROCESS'), ownerId: makeSystemID('PROCESS_SYSTEM'), version: '1.0.0' },
+      { domainId: makeDomainID('UNRESOLVED'), ownerId: makeSystemID('UNRESOLVED_SYSTEM'), version: '1.0.0' }
     ];
 
     const revisionHistory = RevisionHistoryManager.createInitial(
@@ -176,6 +179,100 @@ export class UniverseModelFactory {
       domainBindings: Object.freeze([...defaultBindings]),
       revisionHistory,
       provenance
+    });
+  }
+
+  /**
+   * Creates a new Canon snapshot by evolving an existing snapshot without
+   * dropping structural fields. Unlike create(), this preserves domain bindings,
+   * behaviors, styles, periods, continuity, and the complete revision chain.
+   */
+  public static evolve(
+    base: UniverseModel,
+    params: {
+      universeDate?: string;
+      universeTime?: string;
+      periodRef?: string;
+      previousPeriodRef?: string;
+      periodSequence?: number;
+      periodLifecycleState?: string;
+      activeTimezoneOrEra?: string;
+      characters?: Record<string, CharacterEntity>;
+      relationships?: Record<string, RelationshipEntity>;
+      objects?: Record<string, ObjectEntity>;
+      objectRelations?: Record<string, ObjectRelationEntity>;
+      knowledge?: Record<string, KnowledgeEntity>;
+      states?: Record<string, StateEntity>;
+      locations?: Record<string, LocationEntity>;
+      behaviors?: Record<string, BehaviorEntity>;
+      styles?: Record<string, CharacterStyleEntity>;
+      events?: Record<string, EventEntity>;
+      processes?: Record<string, ProcessEntity>;
+      unresolvedConditions?: Record<string, UnresolvedConditionEntity>;
+      periods?: Record<string, UniversePeriodRecord>;
+      continuityContext?: UniverseContinuityContext;
+      sourceSystem: SystemID;
+      effectiveTime: string;
+      changedFields: string[];
+      reason: string;
+      sourceRequestId?: string;
+    }
+  ): UniverseModel {
+    const universeTime = params.universeTime ?? base.temporalContext.currentUniverseTime;
+    const universeDate = params.universeDate ?? base.temporalContext.currentUniverseDate;
+    const revisionHistory = RevisionHistoryManager.appendRevision(
+      base.revisionHistory,
+      params.sourceSystem,
+      params.effectiveTime,
+      params.changedFields,
+      params.reason
+    );
+
+    const nextProvenance = createProvenanceMetadata(
+      params.sourceSystem,
+      makeDomainID('UNIVERSE_ROOT'),
+      revisionHistory.currentRevisionId,
+      AuthorityLevel.AUTHORITATIVE,
+      params.sourceRequestId ? makeRequestID(params.sourceRequestId) : undefined
+    );
+
+    const freezeMap = <T>(map: Readonly<Record<string, T>>): Readonly<Record<string, T>> => {
+      const result: Record<string, T> = {};
+      for (const [k, v] of Object.entries(map)) result[k] = Object.freeze(v);
+      return Object.freeze(result);
+    };
+
+    return Object.freeze({
+      ...base,
+      temporalContext: Object.freeze({
+        currentUniverseDate: universeDate,
+        currentUniverseTime: universeTime,
+        currentPeriodRef: params.periodRef ?? base.temporalContext.currentPeriodRef,
+        previousPeriodRef: params.previousPeriodRef ?? base.temporalContext.previousPeriodRef,
+        periodSequence: params.periodSequence ?? base.temporalContext.periodSequence,
+        periodLifecycleState: params.periodLifecycleState ?? base.temporalContext.periodLifecycleState,
+        activeTimezoneOrEra: params.activeTimezoneOrEra ?? base.temporalContext.activeTimezoneOrEra
+      }),
+      characters: freezeMap(params.characters ?? base.characters),
+      relationships: freezeMap(params.relationships ?? base.relationships),
+      objects: freezeMap(params.objects ?? base.objects),
+      objectRelations: freezeMap(params.objectRelations ?? (base.objectRelations ?? {})),
+      knowledge: freezeMap(params.knowledge ?? base.knowledge),
+      states: freezeMap(params.states ?? base.states),
+      locations: freezeMap(params.locations ?? base.locations),
+      behaviors: freezeMap(params.behaviors ?? base.behaviors),
+      styles: freezeMap(params.styles ?? base.styles),
+      events: freezeMap(params.events ?? base.events),
+      processes: freezeMap(params.processes ?? base.processes),
+      unresolvedConditions: freezeMap(params.unresolvedConditions ?? base.unresolvedConditions),
+      periods: freezeMap(params.periods ?? (base.periods ?? {})),
+      continuityContext: Object.freeze({
+        activeConditionRefs: Object.freeze([...(params.continuityContext?.activeConditionRefs ?? base.continuityContext.activeConditionRefs)]),
+        activeChainRefs: Object.freeze([...(params.continuityContext?.activeChainRefs ?? base.continuityContext.activeChainRefs)])
+      }),
+      domainBindings: Object.freeze([...base.domainBindings]),
+      revisionHistory,
+      provenance: nextProvenance
     });
   }
 }

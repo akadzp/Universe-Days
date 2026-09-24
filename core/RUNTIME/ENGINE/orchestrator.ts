@@ -181,6 +181,31 @@ export class PocerExecutionEngine {
       runtimeClock: this.runtimeClock
     });
 
+    if (ctx.temporalContext.universeTime !== universe.temporalContext.currentUniverseTime) {
+      const temporalAuth = canPerformAction(
+        command.requestedBy,
+        'TEMPORAL',
+        ArchitectureAction.APPLY_CHANGE
+      );
+      if (!temporalAuth.success || !temporalAuth.data?.allowed) {
+        ctx.lifecycle.transition(ExecutionLifecycleEvent.ENCOUNTER_BLOCK);
+        ctx.recordValidation('TemporalAuthorityGate', false, [
+          `Actor "${command.requestedBy}" cannot change Universe Time. Temporal changes belong to TEMPORAL_SYSTEM.`
+        ]);
+        const blockRes = this.assembleResult(
+          ctx,
+          EngineExecutionStatus.BLOCKED,
+          startTime,
+          {
+            code: EngineErrorCode.COMMAND_UNAUTHORIZED,
+            message: `Actor "${command.requestedBy}" is not authorized to mutate Universe Time.`
+          }
+        );
+        this.eventBus.emit('execution.blocked', executionId, blockRes);
+        return blockRes;
+      }
+    }
+
     ctx.lifecycle.transition(ExecutionLifecycleEvent.START_PREPARATION);
 
     if (command.target?.domain) {
@@ -191,8 +216,7 @@ export class PocerExecutionEngine {
         ArchitectureAction.APPLY_CHANGE
       );
 
-      const isAllowed =
-        applyAuth.success || command.requestedBy === 'ENGINE_SYSTEM';
+      const isAllowed = applyAuth.success && Boolean(applyAuth.data?.allowed);
 
       if (!isAllowed) {
         ctx.lifecycle.transition(ExecutionLifecycleEvent.ENCOUNTER_BLOCK);
@@ -241,29 +265,6 @@ export class PocerExecutionEngine {
     }
 
     const tx = new TransactionBoundary(this.repository, executionId);
-    const prepRes = tx.prepare(ctx);
-
-    if (!prepRes.success) {
-      ctx.lifecycle.transition(ExecutionLifecycleEvent.ENCOUNTER_FAILURE);
-
-      const failRes = this.assembleResult(
-        ctx,
-        EngineExecutionStatus.FAILED,
-        startTime,
-        {
-          code:
-            (prepRes.error as any) ??
-            EngineErrorCode.TRANSACTION_PRE_VALIDATION_FAILED,
-          message:
-            prepRes.message ||
-            'Transaction preparation failed.'
-        }
-      );
-
-      this.eventBus.emit('execution.failed', executionId, failRes);
-      return failRes;
-    }
-
     let workflowSummary: Record<string, unknown> = {};
 
     if (customWorkflow) {
@@ -324,6 +325,29 @@ export class PocerExecutionEngine {
         input: command.input,
         status: 'PROCESSED'
       };
+    }
+
+    const prepRes = tx.prepare(ctx);
+
+    if (!prepRes.success) {
+      ctx.lifecycle.transition(ExecutionLifecycleEvent.ENCOUNTER_FAILURE);
+
+      const failRes = this.assembleResult(
+        ctx,
+        EngineExecutionStatus.FAILED,
+        startTime,
+        {
+          code:
+            (prepRes.error as any) ??
+            EngineErrorCode.TRANSACTION_PRE_VALIDATION_FAILED,
+          message:
+            prepRes.message ||
+            'Transaction preparation failed.'
+        }
+      );
+
+      this.eventBus.emit('execution.failed', executionId, failRes);
+      return failRes;
     }
 
     ctx.lifecycle.transition(ExecutionLifecycleEvent.START_VALIDATION);

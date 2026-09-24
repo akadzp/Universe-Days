@@ -26,6 +26,8 @@ import { ScheduledProductionDispatcher } from '../../INFRA/SCHEDULER/dispatcher.
 import { CostController } from '../../INFRA/COST/controller.ts';
 import { ProviderRegistry, createOpenAICompatibleAdapterFromEnv } from '../../INFRA/PROVIDERS';
 import { UniverseAuthorityStore, UniverseInstanceManager } from '../../INFRA/INSTANCE';
+import { InstanceUniverseRepository } from '../../INFRA/INSTANCE/repository.ts';
+import { PocerExecutionEngine } from '../../RUNTIME/ENGINE/orchestrator.ts';
 
 export interface ProductionRuntime {
   readonly pageCatalog: PageCatalog;
@@ -56,6 +58,8 @@ export interface ProductionRuntime {
   readonly costController: CostController;
   readonly providerRegistry: ProviderRegistry;
   readonly hardening: HardenedRuntimeBoundary;
+  readonly executionRepository: InstanceUniverseRepository;
+  readonly executionEngine: PocerExecutionEngine;
 }
 
 export interface ProductionRuntimeOptions {
@@ -105,6 +109,8 @@ export function createProductionRuntime(options?: ProductionRuntimeOptions): Pro
   const scheduler = new PageProductionScheduler(pageCatalog);
   const universeAuthority = new UniverseAuthorityStore();
   const universeInstances = new UniverseInstanceManager(universeAuthority, universeStore);
+  const executionRepository = new InstanceUniverseRepository(universeInstances);
+  const executionEngine = new PocerExecutionEngine({ repository: executionRepository });
   const dailyBridge = new DailyProductionBridge({ productionRunner, pageBatchExecutor, listPageDefinitions: () => pageCatalog.list({ enabledOnly: true }) });
   const scheduledJobStore = new FileScheduledJobStore({ rootDir: options?.scheduledDataDir });
   const schedulerDispatcher = new ScheduledProductionDispatcher({ scheduler, pageCatalog, bridge: dailyBridge, authority: universeAuthority, executor: pageBatchExecutor as BoundedPageBatchExecutor<any, any>, jobStore: scheduledJobStore });
@@ -147,6 +153,8 @@ export function createProductionRuntime(options?: ProductionRuntimeOptions): Pro
     universeStartupLoadError,
     costController,
     providerRegistry,
-    hardening
+    hardening,
+    executionRepository,
+    executionEngine
   });
 }

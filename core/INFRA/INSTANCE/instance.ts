@@ -81,6 +81,14 @@ export class UniverseInstanceManager {
     this.store.clearCurrent();
   }
 
+  public getMounted(): MountedUniverse | null {
+    return this.authority.get();
+  }
+
+  public requireMountedUniverse(): UniverseModel {
+    return this.authority.require().universe;
+  }
+
   public status(): UniverseInstanceStatus {
     const mounted = this.authority.get();
     return Object.freeze({

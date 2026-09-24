@@ -32,7 +32,8 @@ export class RevisionHistoryManager {
   public static createInitial(
     source: SystemID,
     effectiveTime: string,
-    initialReason: string = 'Initial creation'
+    initialReason: string = 'Initial creation',
+    recordedTime: number = 0
   ): RevisionHistory {
     const rootRev: RevisionRecord = Object.freeze({
       revisionId: 'REV_0001',
@@ -40,7 +41,7 @@ export class RevisionHistoryManager {
       changedFields: Object.freeze(['*']),
       changeSource: source,
       effectiveTime,
-      recordedTime: Date.now(),
+      recordedTime,
       validationStatus: ModelValidationStatus.VALID,
       reason: initialReason
     });
@@ -60,7 +61,8 @@ export class RevisionHistoryManager {
     effectiveTime: string,
     changedFields: string[],
     reason: string,
-    validationStatus: ModelValidationStatus = ModelValidationStatus.VALID
+    validationStatus: ModelValidationStatus = ModelValidationStatus.VALID,
+    recordedTime: number = 0
   ): RevisionHistory {
     const nextSeq = history.revisions.length + 1;
     const nextRevId = `REV_${String(nextSeq).padStart(4, '0')}`;
@@ -71,7 +73,7 @@ export class RevisionHistoryManager {
       changedFields: Object.freeze([...changedFields]),
       changeSource: source,
       effectiveTime,
-      recordedTime: Date.now(),
+      recordedTime,
       validationStatus,
       reason
     });

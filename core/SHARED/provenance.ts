@@ -24,7 +24,8 @@ export function createProvenanceMetadata(
   revision: string = 'REV_0001',
   authorityLevel: AuthorityLevel = AuthorityLevel.AUTHORITATIVE,
   sourceRequestId?: RequestID,
-  provenanceReference?: string
+  provenanceReference?: string,
+  recordedTimestamp: number = 0
 ): SourceAuthorityMetadata {
   return Object.freeze({
     ownerSystem,
@@ -34,6 +35,6 @@ export function createProvenanceMetadata(
     revision,
     sourceRequestId,
     provenanceReference,
-    recordedTimestamp: Date.now()
+    recordedTimestamp
   });
 }

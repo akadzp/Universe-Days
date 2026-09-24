@@ -335,17 +335,19 @@ export class DailyProductionBridge {
       return { context: null, reason: startTime.message ?? 'Universe temporal context could not be parsed as a TimePoint.' };
     }
 
-    const init = PeriodInitializer.initialize({
-      universe: input.universe,
-      startTime: startTime.data,
-      universeScope: input.universeScope,
-      previousPeriodRef: input.previousPeriodRef,
-      sequenceNumber: input.sequenceNumber,
-      previousContinuityItems: [],
-      previousUnresolvedConditions: [],
-      previousProcesses: [],
-      previousFutureInfo: []
-    });
+    const init = input.dailyContext
+      ? { success: true as const, data: input.dailyContext, message: 'OWNER_CONTEXT' }
+      : PeriodInitializer.initialize({
+          universe: input.universe,
+          startTime: startTime.data,
+          universeScope: input.universeScope,
+          previousPeriodRef: input.previousPeriodRef,
+          sequenceNumber: input.sequenceNumber,
+          previousContinuityItems: [],
+          previousUnresolvedConditions: [],
+          previousProcesses: [],
+          previousFutureInfo: []
+        });
 
     if (!init.success || !init.data) {
       return { context: null, reason: init.message ?? 'Daily Universe period initialization failed.' };

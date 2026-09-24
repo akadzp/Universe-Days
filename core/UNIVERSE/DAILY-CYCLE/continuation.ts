@@ -18,13 +18,14 @@ import { RevisionHistoryManager } from '../../SHARED/history.ts';
 import { ProcessEntity, ProcessStatus } from '../../UNIVERSE/CANON/process.ts';
 import { UnresolvedConditionEntity, UnresolvedConditionStatus } from '../../UNIVERSE/CANON/unresolved.ts';
 import { DailyUniverseStatus, PeriodIdentity, UniversePeriod } from '../../UNIVERSE/DAILY-CYCLE/period.ts';
-import { PeriodInitializer, UniversePeriodContext } from '../../UNIVERSE/DAILY-CYCLE/initialization.ts';
+import type { UniversePeriodContext, FinalizationResult } from './contracts.ts';
+import { initializePeriodCore } from './period-initializer-core.ts';
 import { ContinuityItem } from '../../UNIVERSE/CONTINUITY/continuity-model.ts';
 import { UniverseProcess, UniverseProcessStatus } from '../../UNIVERSE/DAILY-CYCLE/process.ts';
 import { UnresolvedCondition, UnresolvedStatus } from '../../UNIVERSE/DAILY-CYCLE/unresolved.ts';
 import { FutureInformation } from '../../UNIVERSE/DAILY-CYCLE/decision-action.ts';
 import { UniverseEvent } from '../../UNIVERSE/DAILY-CYCLE/event.ts';
-import { FinalizationResult } from '../../UNIVERSE/DAILY-CYCLE/finalization.ts';
+import { DailyCanonicalReconciliationService } from './canonical-reconciliation.ts';
 
 export type PredecessorDiscoveryStatus =
   | 'GENUINELY_NEW'
@@ -325,7 +326,7 @@ export class DailyUniverseContinuation {
           traceability: {
             requestId: makeRequestID('REQ_UNRES_CARRYOVER'),
             sourceSystem: entity.sourceSystem ?? this.DAILY_UNIVERSE_SYSTEM_ACTOR,
-            timestamp: Date.now(),
+            timestamp: 0,
             version: '1.0.0'
           }
         });
@@ -354,7 +355,7 @@ export class DailyUniverseContinuation {
           traceability: {
             requestId: makeRequestID('REQ_PROC_CARRYOVER'),
             sourceSystem: entity.sourceSystem ?? this.DAILY_UNIVERSE_SYSTEM_ACTOR,
-            timestamp: Date.now(),
+            timestamp: 0,
             version: '1.0.0'
           }
         });
@@ -375,7 +376,7 @@ export class DailyUniverseContinuation {
       initialEvents: options.initialEvents ?? []
     };
 
-    return PeriodInitializer.initialize(initParams);
+    return initializePeriodCore(initParams);
   }
 
   /**
@@ -387,140 +388,9 @@ export class DailyUniverseContinuation {
     periodOrCtx: UniversePeriod | UniversePeriodContext,
     options?: { finalization?: FinalizationResult }
   ): UniverseModel {
-    const period: UniversePeriod = 'period' in periodOrCtx ? periodOrCtx.period : periodOrCtx;
-    const ctx: UniversePeriodContext | undefined = 'period' in periodOrCtx ? periodOrCtx : undefined;
-
-    const source = this.DAILY_UNIVERSE_SYSTEM_ACTOR;
-    const periodEndTime = period.endTime?.toCanonical() ?? period.currentUniverseTime.toCanonical();
-    const periodEndDate = period.endTime?.date?.toCanonical() ?? period.currentUniverseTime.date?.toCanonical() ?? universe.temporalContext.currentUniverseDate;
-
-    // Build period record
-    const periodRecord: UniversePeriodRecord = Object.freeze({
-      periodId: period.periodId,
-      universeScope: period.universeScope,
-      startTime: period.startTime.toCanonical(),
-      endTime: periodEndTime,
-      sequenceNumber: period.isFirstPeriod ? 1 : (universe.temporalContext?.periodSequence ? universe.temporalContext.periodSequence + 1 : 1),
-      status: period.status,
-      previousPeriodRef: period.previousPeriodRef,
-      isFirstPeriod: period.isFirstPeriod,
-      openUnresolvedCount: options?.finalization?.openUnresolvedCount ?? ctx?.unresolvedConditions.filter(u => u.lifecycleStatus !== UnresolvedStatus.RESOLVED && u.lifecycleStatus !== UnresolvedStatus.CLOSED).length,
-      activeProcessCount: options?.finalization?.activeProcessCount ?? ctx?.processes.filter(p => p.currentStatus === UniverseProcessStatus.ACTIVE).length
-    });
-
-    const updatedPeriods: Record<string, UniversePeriodRecord> = {
-      ...(universe.periods ?? {}),
-      [period.periodId]: periodRecord
-    };
-
-    // Update unresolved conditions map with any additions or status changes
-    const updatedUnresolved: Record<string, UnresolvedConditionEntity> = {
-      ...(universe.unresolvedConditions ?? {})
-    };
-
-    if (ctx?.unresolvedConditions) {
-      for (const u of ctx.unresolvedConditions) {
-        let currentStatus: UnresolvedConditionStatus = 'CARRYOVER';
-        if (u.lifecycleStatus === UnresolvedStatus.RESOLVED || u.lifecycleStatus === UnresolvedStatus.CLOSED) {
-          currentStatus = 'RESOLVED';
-        } else if (u.lifecycleStatus === UnresolvedStatus.BLOCKED) {
-          currentStatus = 'PENDING';
-        }
-
-        const existing = updatedUnresolved[u.unresolvedId];
-        updatedUnresolved[u.unresolvedId] = Object.freeze({
-          conditionId: u.unresolvedId,
-          conditionType: existing?.conditionType ?? 'DAILY_UNRESOLVED',
-          description: u.reason,
-          ownerDomain: existing?.ownerDomain ?? makeDomainID('DAILY_UNIVERSE'),
-          targetEntityRef: u.ownerReference ?? existing?.targetEntityRef,
-          temporalScope: {
-            effectiveFrom: u.temporalReference,
-            temporalCategory: TemporalStatus.ACTUAL
-          },
-          dependencyRefs: existing?.dependencyRefs ?? [],
-          currentStatus,
-          createdAt: existing?.createdAt ?? period.startTime.toCanonical(),
-          lastUpdated: periodEndTime,
-          resolutionRef: u.resolutionReference ?? existing?.resolutionRef,
-          sourceSystem: source,
-          validationStatus: ModelValidationStatus.VALID,
-          provenance: existing?.provenance ?? createProvenanceMetadata(
-            source,
-            makeDomainID('DAILY_UNIVERSE'),
-            'REV_INITIAL',
-            AuthorityLevel.AUTHORITATIVE
-          )
-        });
-      }
+    const result = DailyCanonicalReconciliationService.reconcile(universe, periodOrCtx, options);
+    if (!result.success || !result.data) {
+      throw new Error(result.message ?? 'Daily → Canon reconciliation failed.');
     }
-
-    // Update processes map with any additions or status changes
-    const updatedProcesses: Record<string, ProcessEntity> = {
-      ...(universe.processes ?? {})
-    };
-
-    if (ctx?.processes) {
-      for (const proc of ctx.processes) {
-        let currentStatus: ProcessStatus = 'ACTIVE';
-        if (proc.currentStatus === UniverseProcessStatus.COMPLETED) currentStatus = 'COMPLETED';
-        else if (proc.currentStatus === UniverseProcessStatus.PAUSED) currentStatus = 'PAUSED';
-        else if (proc.currentStatus === UniverseProcessStatus.SUSPENDED) currentStatus = 'BLOCKED';
-        else if (proc.currentStatus === UniverseProcessStatus.CANCELLED || proc.currentStatus === UniverseProcessStatus.FAILED) currentStatus = 'TERMINATED';
-
-        const existing = updatedProcesses[proc.processId];
-        const locationRef = (proc.metadata as Record<string, unknown> | undefined)?.locationRef as string | undefined;
-
-        updatedProcesses[proc.processId] = Object.freeze({
-          processId: proc.processId,
-          processType: existing?.processType ?? 'UNIVERSE_PROCESS',
-          title: existing?.title ?? `Process ${proc.processId}`,
-          participantRefs: (existing?.participantRefs ?? []) as readonly EntityID[],
-          objectRefs: (existing?.objectRefs ?? []) as readonly EntityID[],
-          locationRef: locationRef ?? existing?.locationRef,
-          startTime: proc.startReference,
-          endCondition: proc.completionCriteria?.[0] ?? existing?.endCondition,
-          currentStatus,
-          progressRatio: currentStatus === 'COMPLETED' ? 1.0 : (existing?.progressRatio ?? 0.0),
-          dependencies: [...proc.dependencies],
-          unresolvedConditionRefs: existing?.unresolvedConditionRefs ?? [],
-          temporalValidity: {
-            effectiveFrom: proc.startReference,
-            temporalCategory: TemporalStatus.ACTUAL
-          },
-          sourceSystem: source,
-          validationStatus: ModelValidationStatus.VALID,
-          history: existing?.history ?? RevisionHistoryManager.createInitial(
-            source,
-            periodEndTime,
-            `Process ${proc.processId} registered`
-          ),
-          provenance: existing?.provenance ?? createProvenanceMetadata(
-            source,
-            makeDomainID('DAILY_UNIVERSE'),
-            'REV_INITIAL',
-            AuthorityLevel.AUTHORITATIVE
-          )
-        });
-      }
-    }
-
-    const nextSeq = period.isFirstPeriod ? 1 : (universe.temporalContext?.periodSequence ? universe.temporalContext.periodSequence + 1 : 1);
-
-    return Object.freeze({
-      ...universe,
-      temporalContext: Object.freeze({
-        currentUniverseDate: periodEndDate,
-        currentUniverseTime: periodEndTime,
-        currentPeriodRef: period.periodId,
-        previousPeriodRef: period.previousPeriodRef,
-        periodSequence: nextSeq,
-        periodLifecycleState: period.status,
-        activeTimezoneOrEra: universe.temporalContext?.activeTimezoneOrEra
-      }),
-      periods: Object.freeze(updatedPeriods),
-      unresolvedConditions: Object.freeze(updatedUnresolved),
-      processes: Object.freeze(updatedProcesses)
-    });
-  }
-}
+    return result.data;
+  }}

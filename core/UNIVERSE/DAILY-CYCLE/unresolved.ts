@@ -58,7 +58,7 @@ export function createUnresolvedCondition(params: CreateUnresolvedParams): Unres
     lifecycleStatus: params.initialStatus ?? UnresolvedStatus.UNRESOLVED,
     traceability: {
       requestId: makeRequestID(`REQ_UNRES_${params.unresolvedId}`),
-      sourceSystem: makeSystemID('DAILY_UNIVERSE_CORE'),
+      sourceSystem: makeSystemID('DAILY_UNIVERSE_SYSTEM'),
       timestamp: 0,
       version: '1.0.0'
     }

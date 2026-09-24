@@ -7,20 +7,12 @@ import { UniverseClock } from '../../RUNTIME/TEMPORAL/clock.ts';
 import { TimePoint } from '../../RUNTIME/TEMPORAL/time-point.ts';
 import { Result, success, failure } from '../../SHARED/result.ts';
 import { EngineErrorCode } from '../../SHARED/errors.ts';
-import { DailyUniverseStatus, UniversePeriod, createUniversePeriod } from '../../UNIVERSE/DAILY-CYCLE/period.ts';
-import { PeriodLifecycleManager, PeriodLifecycleEvent } from '../../UNIVERSE/DAILY-CYCLE/lifecycle.ts';
-import { CarryoverManager, CarryoverBatchResult } from '../../UNIVERSE/DAILY-CYCLE/carryover.ts';
-import { ContinuityItem } from '../../UNIVERSE/CONTINUITY/continuity-model.ts';
-import { UniverseEvent } from '../../UNIVERSE/DAILY-CYCLE/event.ts';
-import { UniverseConsequence } from '../../UNIVERSE/DAILY-CYCLE/consequence.ts';
-import { UniverseProcess } from '../../UNIVERSE/DAILY-CYCLE/process.ts';
-import { UnresolvedCondition } from '../../UNIVERSE/DAILY-CYCLE/unresolved.ts';
-import { FutureInformation } from '../../UNIVERSE/DAILY-CYCLE/decision-action.ts';
-import { PeriodTraceRecorder } from '../../UNIVERSE/DAILY-CYCLE/trace.ts';
+import { UniversePeriod, createUniversePeriod } from '../../UNIVERSE/DAILY-CYCLE/period.ts';
+import { PeriodLifecycleManager } from '../../UNIVERSE/DAILY-CYCLE/lifecycle.ts';
+import { initializePeriodCore } from './period-initializer-core.ts';
 import type { UniverseModel } from '../../UNIVERSE/CANON/universe.ts';
-import { DailyUniverseContinuation } from '../../UNIVERSE/DAILY-CYCLE/continuation.ts';
-
-export type PeriodInitializationMode = 'FIRST_PERIOD' | 'NORMAL_CONTINUATION';
+import type { UniversePeriodContext, PeriodInitializationMode } from './contracts.ts';
+import { DailyUniverseContinuation } from './continuation.ts';
 
 export interface InitializePeriodParams {
   startTime?: TimePoint;
@@ -49,176 +41,15 @@ export interface UniversePeriodContext {
   futureInfo: FutureInformation[];
   events: UniverseEvent[];
   consequences: UniverseConsequence[];
+  metadata: Record<string, unknown>;
   carryoverResult?: CarryoverBatchResult;
 }
 
 export class PeriodInitializer {
   /**
-   * Initializes a Daily Universe period.
-   * Strictly distinguishes FIRST_PERIOD from NORMAL_CONTINUATION.
-   * Invariants: never invents previous state, characters, stories, or events.
+   * Initializes a Daily Universe period. Universe-backed continuation is
+   * delegated to the continuation authority; the pure period initializer is
+   * kept dependency-free so the Daily-Cycle graph remains acyclic.
    */
   public static initialize(params: InitializePeriodParams): Result<UniversePeriodContext, { code: EngineErrorCode; message: string }> {
-    if (params.universe) {
-      return DailyUniverseContinuation.initializeAuthoritativePeriod(params.universe, params);
-    }
-
-    if (!params.startTime) {
-      const msg = 'Period initialization requires a valid startTime when not initialized from a UniverseModel.';
-      return failure(
-        { code: EngineErrorCode.INVALID_TIME_POINT, message: msg },
-        msg
-      );
-    }
-
-    const isFirstPeriod = !params.previousPeriodRef;
-    const mode: PeriodInitializationMode = isFirstPeriod ? 'FIRST_PERIOD' : 'NORMAL_CONTINUATION';
-
-    // 1. Resolve Universe Clock from target start time
-    const clockRes = UniverseClock.create(params.startTime);
-    if (!clockRes.success || !clockRes.data) {
-      const msg = `Failed to resolve target Universe Time: ${clockRes.message ?? clockRes.error}`;
-      return failure(
-        { code: EngineErrorCode.PERIOD_INITIALIZATION_FAILED, message: msg },
-        msg
-      );
-    }
-    const clock = clockRes.data;
-
-    // 2. Create base UniversePeriod
-    const period = createUniversePeriod({
-      startTime: params.startTime,
-      endTime: params.endTime,
-      previousPeriodRef: params.previousPeriodRef,
-      sequenceNumber: params.sequenceNumber,
-      universeScope: params.universeScope,
-      isFirstPeriod
-    });
-
-    const lifecycle = new PeriodLifecycleManager(period.status);
-    const traces = new PeriodTraceRecorder();
-
-    // 3. Start initialization lifecycle
-    const initTransition = lifecycle.transition(PeriodLifecycleEvent.START_INIT, {
-      periodId: period.periodId
-    });
-    if (!initTransition.success) {
-      const msg = initTransition.error?.message ?? 'Failed to start initialization';
-      return failure(
-        { code: EngineErrorCode.INVALID_PERIOD_LIFECYCLE, message: msg },
-        msg
-      );
-    }
-    period.status = lifecycle.getStatus();
-    period.initializationState = 'IN_PROGRESS';
-
-    traces.record({
-      operation: 'START_INITIALIZATION',
-      periodId: period.periodId,
-      universeTime: period.startTime.toCanonical(),
-      previousState: DailyUniverseStatus.UNINITIALIZED,
-      transition: PeriodLifecycleEvent.START_INIT,
-      result: 'IN_PROGRESS',
-      affectedReferences: [period.periodId],
-      validationResult: { valid: true }
-    });
-
-    // 4. Carryover continuity references
-    let carryoverRes: CarryoverBatchResult | undefined;
-    let continuityItems: ContinuityItem[] = [];
-
-    if (mode === 'NORMAL_CONTINUATION') {
-      const prevItems = params.previousContinuityItems ?? [];
-      carryoverRes = CarryoverManager.processCarryover(prevItems, params.startTime);
-
-      if (!carryoverRes.allowed) {
-        // Block lifecycle if carryover is blocked
-        lifecycle.transition(PeriodLifecycleEvent.BLOCK, {
-          periodId: period.periodId,
-          reason: carryoverRes.blockedReasons.join('; ')
-        });
-        period.status = lifecycle.getStatus();
-        period.initializationState = 'FAILED';
-
-        traces.record({
-          operation: 'CARRYOVER_BLOCKED',
-          periodId: period.periodId,
-          universeTime: period.startTime.toCanonical(),
-          previousState: DailyUniverseStatus.INITIALIZING,
-          transition: PeriodLifecycleEvent.BLOCK,
-          result: 'BLOCKED',
-          affectedReferences: prevItems.map(i => i.identity.continuityId),
-          validationResult: { valid: false, errors: carryoverRes.blockedReasons }
-        });
-
-        const msg = `Period initialization blocked by carryover: ${carryoverRes.blockedReasons.join('; ')}`;
-        return failure(
-          { code: EngineErrorCode.PERIOD_BLOCKED, message: msg },
-          msg
-        );
-      }
-
-      continuityItems = carryoverRes.items
-        .filter(i => i.severity === 'VALID')
-        .map(i => i.continuityItem);
-    } else {
-      // First period: no carryover, do not invent history!
-      continuityItems = params.previousContinuityItems ?? [];
-    }
-
-    // 5. Carry forward unresolved conditions (no automatic reset/deletion)
-    const unresolvedConditions: UnresolvedCondition[] = (params.previousUnresolvedConditions ?? []).map(u => ({
-      ...u
-    }));
-
-    // 6. Carry forward active processes (preserve process identity across period boundaries)
-    const processes: UniverseProcess[] = (params.previousProcesses ?? []).map(p => ({
-      ...p
-    }));
-
-    // 7. Carry forward future information (remains non-actualized)
-    const futureInfo: FutureInformation[] = (params.previousFutureInfo ?? []).map(f => ({
-      ...f
-    }));
-
-    // 8. Complete initialization lifecycle
-    const completeRes = lifecycle.transition(PeriodLifecycleEvent.COMPLETE_INIT, {
-      periodId: period.periodId
-    });
-    if (!completeRes.success) {
-      const msg = completeRes.error?.message ?? 'Failed to complete initialization';
-      return failure(
-        { code: EngineErrorCode.INVALID_PERIOD_LIFECYCLE, message: msg },
-        msg
-      );
-    }
-    period.status = lifecycle.getStatus();
-    period.initializationState = 'INITIALIZED';
-
-    traces.record({
-      operation: 'COMPLETE_INITIALIZATION',
-      periodId: period.periodId,
-      universeTime: period.startTime.toCanonical(),
-      previousState: DailyUniverseStatus.INITIALIZING,
-      transition: PeriodLifecycleEvent.COMPLETE_INIT,
-      result: 'INITIALIZED',
-      affectedReferences: [period.periodId],
-      validationResult: { valid: true }
-    });
-
-    return success({
-      period,
-      initializationMode: mode,
-      lifecycle,
-      clock,
-      traces,
-      continuityItems,
-      unresolvedConditions,
-      processes,
-      futureInfo,
-      events: params.initialEvents ?? [],
-      consequences: [],
-      carryoverResult: carryoverRes
-    });
-  }
-}
+    if (params.

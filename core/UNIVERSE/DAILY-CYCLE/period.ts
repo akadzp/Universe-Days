@@ -89,7 +89,7 @@ export function createUniversePeriod(params: CreatePeriodParams): UniversePeriod
     isFirstPeriod: isFirst,
     traceability: {
       requestId: makeRequestID(`REQ_PERIOD_CREATE_${periodId}`),
-      sourceSystem: makeSystemID('DAILY_UNIVERSE_CORE'),
+      sourceSystem: makeSystemID('DAILY_UNIVERSE_SYSTEM'),
       timestamp: 0,
       version: '1.0.0'
     }

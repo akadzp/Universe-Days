@@ -13,7 +13,10 @@ export type CoreDomain =
   | 'DAILY_PAGE'
   | 'NARRATOR'
   | 'INSTANCE_MANAGEMENT'
-  | 'ENGINE';
+  | 'ENGINE'
+  | 'EVENT'
+  | 'PROCESS'
+  | 'UNRESOLVED';
 
 export interface DomainOwner {
   ownerId: SystemID;
@@ -99,6 +102,24 @@ export const DOMAIN_OWNERS: Record<CoreDomain, DomainOwner> = {
     ownerId: makeSystemID('ENGINE_SYSTEM'),
     domainId: makeDomainID('ENGINE'),
     description: 'Authoritative owner of execution orchestration, state machine transitions, and task routing.',
+    authorityLevel: 1
+  },
+  EVENT: {
+    ownerId: makeSystemID('EVENT_SYSTEM'),
+    domainId: makeDomainID('EVENT'),
+    description: 'Authoritative owner of canonical Universe Event facts and occurrence lifecycle.',
+    authorityLevel: 1
+  },
+  PROCESS: {
+    ownerId: makeSystemID('PROCESS_SYSTEM'),
+    domainId: makeDomainID('PROCESS'),
+    description: 'Authoritative owner of canonical Universe Process state and lifecycle.',
+    authorityLevel: 1
+  },
+  UNRESOLVED: {
+    ownerId: makeSystemID('UNRESOLVED_SYSTEM'),
+    domainId: makeDomainID('UNRESOLVED'),
+    description: 'Authoritative owner of canonical unresolved-condition lifecycle and resolution state.',
     authorityLevel: 1
   }
 };

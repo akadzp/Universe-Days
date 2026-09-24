@@ -16,6 +16,7 @@ export enum UniverseEventStatus {
   PENDING = 'PENDING',
   READY = 'READY',
   OCCURRED = 'OCCURRED',
+  RESOLVED = 'RESOLVED',
   CANCELLED = 'CANCELLED',
   FAILED = 'FAILED',
   UNRESOLVED = 'UNRESOLVED',
@@ -77,7 +78,7 @@ export function createUniverseEvent(params: CreateEventParams): UniverseEvent {
     metadata: params.metadata,
     traceability: {
       requestId: makeRequestID(`REQ_EV_${params.eventId}`),
-      sourceSystem: makeSystemID('DAILY_UNIVERSE_CORE'),
+      sourceSystem: makeSystemID('DAILY_UNIVERSE_SYSTEM'),
       timestamp: 0,
       version: '1.0.0'
     }
@@ -220,6 +221,27 @@ export class EventRegistry {
       ...event,
       status: UniverseEventStatus.OCCURRED,
       result: executionResult
+    };
+    this.events.set(eventId, updated);
+    return success(updated);
+  }
+
+  /**
+   * Resolves an occurred event. Resolution is explicit and is the only Daily
+   * status that may reconcile to Canon RESOLVED / feed Knowledge integration.
+   */
+  public markResolved(eventId: string, resolution?: unknown): Result<UniverseEvent> {
+    const event = this.events.get(eventId);
+    if (!event) {
+      return failure(`Event not found: ${eventId}`, EngineErrorCode.INVALID_EVENT_TRANSITION);
+    }
+    if (event.status !== UniverseEventStatus.OCCURRED) {
+      return failure(`Cannot resolve event '${eventId}' from status '${event.status}'.`, EngineErrorCode.INVALID_EVENT_TRANSITION);
+    }
+    const updated: UniverseEvent = {
+      ...event,
+      status: UniverseEventStatus.RESOLVED,
+      result: resolution === undefined ? event.result : resolution
     };
     this.events.set(eventId, updated);
     return success(updated);

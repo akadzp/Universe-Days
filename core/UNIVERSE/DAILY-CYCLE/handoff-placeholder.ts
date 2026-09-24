@@ -7,6 +7,7 @@ import { HandoffContract, HandoffStatus, validateHandoff } from '../../RUNTIME/G
 import { MessageType } from '../../RUNTIME/GOVERNANCE/protocol.ts';
 import { makeRequestID, makeSystemID } from '../../SHARED/identifiers.ts';
 import { Result, success, failure } from '../../SHARED/result.ts';
+import { EngineErrorCode } from '../../SHARED/errors.ts';
 
 export interface DomainChangeRequest<T = unknown> {
   targetDomain: string;
@@ -40,10 +41,10 @@ export class DomainHandoffRouter {
   public async requestDomainChange<T>(
     request: DomainChangeRequest<T>
   ): Promise<Result<DomainChangeResponse>> {
-    const requestId = makeRequestID(`REQ_HANDOFF_${request.targetDomain}_${Date.now()}`);
+    const requestId = makeRequestID(`REQ_HANDOFF_${request.targetDomain}_${request.sourcePeriodId}_${request.entityReferences.join('_')}`);
 
     const contract: HandoffContract<T> = {
-      sourceSystem: makeSystemID('DAILY_UNIVERSE_CORE'),
+      sourceSystem: makeSystemID('DAILY_UNIVERSE_SYSTEM'),
       targetSystem: makeSystemID(request.targetDomain),
       requestId,
       messageType: MessageType.REQUEST,
@@ -58,7 +59,7 @@ export class DomainHandoffRouter {
       version: '1.0.0',
       traceability: {
         requestId,
-        sourceSystem: makeSystemID('DAILY_UNIVERSE_CORE'),
+        sourceSystem: makeSystemID('DAILY_UNIVERSE_SYSTEM'),
         timestamp: 0,
         version: '1.0.0'
       }
@@ -71,12 +72,10 @@ export class DomainHandoffRouter {
 
     const handler = this.handlers.get(request.targetDomain);
     if (!handler) {
-      // Return accepted placeholder if no mock/real handler is registered
-      return success({
-        requestId,
-        status: 'ACCEPTED',
-        result: { acknowledgedBy: 'PLACEHOLDER_NOOP', domain: request.targetDomain }
-      });
+      return failure(
+        `No authoritative handler is registered for target domain '${request.targetDomain}'.`,
+        EngineErrorCode.MISSING_REQUIRED_CONTEXT
+      );
     }
 
     const response = await handler.handleHandoff(contract);

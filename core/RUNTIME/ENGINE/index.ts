@@ -31,3 +31,5 @@ export * from './dependency-graph.ts';
 export * from './conditions.ts';
 export { ContextBuilder, type ValidationState } from './context-builder.ts';
 export * from './task-resolver.ts';
+
+export * from './cross-domain-transaction-coordinator.ts';

@@ -4,3 +4,5 @@ export {
   type UniverseInstanceStatus,
   type UniverseInstanceManagerOptions
 } from '../../INFRA/INSTANCE/instance.ts';
+
+export * from './repository.ts';

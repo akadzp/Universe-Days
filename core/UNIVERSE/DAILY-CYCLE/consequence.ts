@@ -30,6 +30,9 @@ export interface UniverseConsequence {
   consequenceType: ConsequenceType;
   dependencies: string[];
   affectedReferences: string[];
+  /** Optional explicit domain-operation envelope. Never treated as a direct mutation command. */
+  targetDomain?: string;
+  operation?: string;
   validationState: boolean;
   payload?: unknown;
   traceability: TraceabilityMetadata;
@@ -72,7 +75,7 @@ export function createUniverseConsequence(params: CreateConsequenceParams): Resu
     payload: params.payload,
     traceability: {
       requestId: makeRequestID(`REQ_CONSEQ_${params.consequenceId}`),
-      sourceSystem: makeSystemID('DAILY_UNIVERSE_CORE'),
+      sourceSystem: makeSystemID('DAILY_UNIVERSE_SYSTEM'),
       timestamp: 0,
       version: '1.0.0'
     }

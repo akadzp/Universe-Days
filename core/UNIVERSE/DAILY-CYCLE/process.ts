@@ -65,7 +65,7 @@ export function createUniverseProcess(params: CreateProcessParams): UniverseProc
     metadata: params.metadata,
     traceability: {
       requestId: makeRequestID(`REQ_PROC_${params.processId}`),
-      sourceSystem: makeSystemID('DAILY_UNIVERSE_CORE'),
+      sourceSystem: makeSystemID('DAILY_UNIVERSE_SYSTEM'),
       timestamp: 0,
       version: '1.0.0'
     }

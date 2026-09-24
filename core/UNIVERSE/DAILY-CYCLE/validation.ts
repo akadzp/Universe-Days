@@ -4,7 +4,7 @@
  */
 
 import { UniversePeriod, DailyUniverseStatus } from '../../UNIVERSE/DAILY-CYCLE/period.ts';
-import { UniversePeriodContext } from '../../UNIVERSE/DAILY-CYCLE/initialization.ts';
+import type { UniversePeriodContext } from './initialization.ts';
 import { CarryoverBatchResult } from '../../UNIVERSE/DAILY-CYCLE/carryover.ts';
 import { FinalizationResult } from '../../UNIVERSE/DAILY-CYCLE/finalization.ts';
 import { NextPeriodContext } from '../../UNIVERSE/DAILY-CYCLE/next-period.ts';

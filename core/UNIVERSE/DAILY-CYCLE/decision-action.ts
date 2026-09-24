@@ -7,6 +7,7 @@ import { TimePoint } from '../../RUNTIME/TEMPORAL/time-point.ts';
 import { TraceabilityMetadata } from '../../SHARED/common.ts';
 import { makeRequestID, makeSystemID } from '../../SHARED/identifiers.ts';
 import { Result, success, failure } from '../../SHARED/result.ts';
+import { createUniverseEvent, UniverseEventStatus, UniverseEvent } from './event.ts';
 import { EngineErrorCode } from '../../SHARED/errors.ts';
 
 export enum DecisionStatus {
@@ -66,6 +67,27 @@ export class DecisionActionManager {
   private decisions: Map<string, UniverseDecision> = new Map();
   private actions: Map<string, UniverseAction> = new Map();
   private futureRecords: Map<string, FutureInformation> = new Map();
+  /**
+   * Converts an executed Action into an explicit Event proposal. This method
+   * never marks the Event as occurred; occurrence remains an Event-authority operation.
+   */
+  public createEventProposalFromExecutedAction(actionId: string, eventId: string): Result<UniverseEvent> {
+    const action = this.actions.get(actionId);
+    if (!action || action.status !== ActionStatus.EXECUTED) {
+      return failure(`Executed Action '${actionId}' is required before creating an Event proposal.`, EngineErrorCode.DECISION_ACTION_CONFLICT);
+    }
+    if (action.eventId && action.eventId !== eventId) {
+      return failure(`Action '${actionId}' is already bound to Event '${action.eventId}'.`, EngineErrorCode.DECISION_ACTION_CONFLICT);
+    }
+    return success(createUniverseEvent({
+      eventId,
+      temporalReference: action.effectiveTime,
+      sourceReference: actionId,
+      initialStatus: UniverseEventStatus.PENDING,
+      metadata: { actionRef: actionId }
+    }));
+  }
+
 
   public registerDecision(decision: UniverseDecision): Result<void> {
     this.decisions.set(decision.decisionId, { ...decision });
@@ -103,7 +125,7 @@ export class DecisionActionManager {
       effectiveTime: timeStr,
       traceability: {
         requestId: makeRequestID(`REQ_ACT_${actionId}`),
-        sourceSystem: makeSystemID('DAILY_UNIVERSE_CORE'),
+        sourceSystem: makeSystemID('DAILY_UNIVERSE_SYSTEM'),
         timestamp: 0,
         version: '1.0.0'
       }

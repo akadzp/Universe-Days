@@ -3,7 +3,7 @@
  * Finalizes the active period and prepares NextPeriodContext without erasing state or resetting time.
  */
 
-import { UniversePeriodContext } from '../../UNIVERSE/DAILY-CYCLE/initialization.ts';
+import type { UniversePeriodContext, FinalizationResult } from './contracts.ts';
 import { DailyUniverseStatus } from '../../UNIVERSE/DAILY-CYCLE/period.ts';
 import { PeriodLifecycleEvent } from '../../UNIVERSE/DAILY-CYCLE/lifecycle.ts';
 import { NextPeriodContext, createNextPeriodContext } from '../../UNIVERSE/DAILY-CYCLE/next-period.ts';
@@ -18,13 +18,7 @@ export interface FinalizePeriodOptions {
   advancePeriodDuration?: Duration;
 }
 
-export interface FinalizationResult {
-  periodId: string;
-  finalStatus: DailyUniverseStatus;
-  nextPeriodContext: NextPeriodContext;
-  openUnresolvedCount: number;
-  activeProcessCount: number;
-}
+
 
 export class PeriodFinalizer {
   /**

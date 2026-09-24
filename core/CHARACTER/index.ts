@@ -12,3 +12,5 @@ export * from './character-continuity-integration';
 export * from './character-response-engine';
 export * from './character-command';
 export * from './indicator/index.ts';
+
+export * from './resolved-event-integration';

@@ -4,7 +4,6 @@
  * event, process, and unresolved states.
  */
 
-import { UniversePeriodContext } from '../../UNIVERSE/DAILY-CYCLE/initialization.ts';
 import { UniversePeriod } from '../../UNIVERSE/DAILY-CYCLE/period.ts';
 import { UniverseEventStatus } from '../../UNIVERSE/DAILY-CYCLE/event.ts';
 import { UniverseProcessStatus } from '../../UNIVERSE/DAILY-CYCLE/process.ts';
@@ -21,6 +20,20 @@ export interface GateFinding {
   targetRef?: string;
 }
 
+export interface DailyUniverseGateContext {
+  clock?: { readCurrentTime(): { toCanonical(): string } };
+  continuityItems?: readonly { identity?: { continuityId?: string }; status?: ContinuityStatus }[];
+  events?: readonly UniverseEventLike[];
+  processes?: readonly { processId: string; currentStatus: UniverseProcessStatus }[];
+  unresolvedConditions?: readonly { unresolvedId: string; sourceReference?: string }[];
+}
+
+interface UniverseEventLike {
+  eventId: string;
+  status: UniverseEventStatus;
+  prerequisites: readonly { satisfied?: boolean; description: string }[];
+}
+
 export interface GateEvaluationResult {
   status: GateStatus;
   passed: boolean;
@@ -33,7 +46,7 @@ export class DailyUniverseGate {
    */
   public static evaluate(
     period: UniversePeriod,
-    context: Partial<UniversePeriodContext>
+    context: DailyUniverseGateContext
   ): GateEvaluationResult {
     const findings: GateFinding[] = [];
 
@@ -86,7 +99,7 @@ export class DailyUniverseGate {
     // 3. Event Consistency
     if (context.events) {
       for (const ev of context.events) {
-        if (ev.status === UniverseEventStatus.OCCURRED) {
+        if (ev.status === UniverseEventStatus.OCCURRED || ev.status === UniverseEventStatus.RESOLVED) {
           const unsatisfiedPrereq = ev.prerequisites.find(p => p.satisfied === false);
           if (unsatisfiedPrereq) {
             findings.push({
